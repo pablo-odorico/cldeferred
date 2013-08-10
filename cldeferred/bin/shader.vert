@@ -3,15 +3,18 @@
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projMatrix;
+// Precomputed projMatrix * viewMatrix * modelMatrix matrix
+uniform mat4 mvpMatrix;
 
-layout (location = 0) in vec4 position;
-layout (location = 3) in vec4 normal;
+// Inputs in fefault Qt3D locations
+layout (location = 0) in vec4 inPosition;
+layout (location = 3) in vec2 inTexCoord;
 
-out vec4 outNormal;
+out vec2 texCoord;
 
 void main()
 {
-    gl_Position = projMatrix * viewMatrix * modelMatrix * position;
-    outNormal= normal;
+    gl_Position = mvpMatrix * inPosition;
+    texCoord= inTexCoord;
 }
 

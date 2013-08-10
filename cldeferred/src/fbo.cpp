@@ -60,62 +60,43 @@ void FBO::clear()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void FBO::drawToScreen(const int& viewportWidth, const int& viewportHeight)
+QImage FBO::diffuseToImage()
 {
-    bind();
-
-    // Bind myself for reading
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, _id);
-    // Bind window FBO for writing
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
-    glViewport(0, 0, viewportWidth, viewportHeight);
-
-    glClearColor(0.0, 0.0, 0.0, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // Copy
-
-   /* glBlitFramebuffer(
-        0, 0, _width, _height,
-        0, 0, viewportWidth, viewportHeight,
-        GL_COLOR_BUFFER_BIT, GL_LINEAR);*/
-
-    // Remember to swap buffers
-}
-
-QImage FBO::colorToImage()
-{
-    bind(GL_READ_FRAMEBUFFER);
-
-
     QImage dst(_width, _height, QImage::Format_RGB32);
 
-    float buf[_width * _height];
-    glReadBuffer(GL_DEPTH_ATTACHMENT);
-    glReadPixels(0,0, _width,_height, GL_DEPTH_COMPONENT, GL_FLOAT,
-                 (GLvoid*)buf);
+    bind(GL_READ_FRAMEBUFFER);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glReadPixels(0,0, _width,_height, GL_BGRA, GL_UNSIGNED_BYTE,
+                 static_cast<GLvoid*>(dst.bits()));
+    unbind(GL_READ_FRAMEBUFFER);
 
+    QTransform transform;
+    transform.rotate(180);
+    return dst.transformed(transform);
+}
+
+QImage FBO::depthToImage()
+{
+    QImage dst(_width, _height, QImage::Format_RGB32);
+
+    bind(GL_READ_FRAMEBUFFER);
+    glReadBuffer(GL_DEPTH_ATTACHMENT);
+    // Read float data to the image buffer (sizeof float == sizeof RGB32)
+    glReadPixels(0,0, _width,_height, GL_DEPTH_COMPONENT, GL_FLOAT,
+                 static_cast<GLvoid*>(dst.bits()));
+    unbind(GL_READ_FRAMEBUFFER);
+
+    // Convert float values to colors
     for(int y=0; y<_height; y++) {
         for(int x=0; x<_width; x++) {
-            const uchar d= buf[x + y * _width] * 255.0f;
-            dst.setPixel(x, y, qRgb(d,d,d));
+            const int index= x + y * _width;
+            const float df= ((float*)dst.bits())[index];
+            const uchar d= df * 255.0f;
+            ((QRgb*)dst.bits())[index]= (df == 1.0f) ? qRgb(128,128,255) : qRgb(d,d,d);
         }
     }
 
-
-
-    /*
-    glReadBuffer(GL_COLOR_ATTACHMENT0);
-    glReadPixels(0,0, _width,_height, GL_BGRA, GL_UNSIGNED_BYTE,
-                 (GLvoid*)dst.bits());
     QTransform transform;
     transform.rotate(180);
-    dst= dst.transformed(transform);
-
-    */
-
-    unbind(GL_READ_FRAMEBUFFER);
-
-    return dst;
+    return dst.transformed(transform);
 }

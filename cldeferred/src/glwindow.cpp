@@ -17,6 +17,7 @@ void GLWindow::initialize()
     modelMatrixUniform = program->uniformLocation("modelMatrix");
     viewMatrixUniform = program->uniformLocation("viewMatrix");
     projMatrixUniform = program->uniformLocation("projMatrix");
+    mvpMatrixUniform = program->uniformLocation("mvpMatrix");
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -44,7 +45,7 @@ void GLWindow::render()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     projMatrix.setToIdentity();
-    projMatrix.perspective(60.0f, (float)width()/height(), 0.1f, 100.0f);
+    projMatrix.perspective(60.0f, (float)width()/height(), 1.0f, 50.0f);
 
     viewMatrix.setToIdentity();
     viewMatrix.lookAt(QVector3D(5,5,5), QVector3D(0,0,0), QVector3D(0,1,0));
@@ -60,6 +61,8 @@ void GLWindow::render()
     program->setUniformValue(viewMatrixUniform, viewMatrix);
     program->setUniformValue(projMatrixUniform, projMatrix);
     program->setUniformValue(modelMatrixUniform, modelMatrix);
+    program->setUniformValue(mvpMatrixUniform, projMatrix * viewMatrix * modelMatrix);
+
 
     if(!painter)
         painter= new QGLPainter(this);
@@ -70,6 +73,8 @@ void GLWindow::render()
 
     static int frameId= 0;
     frameId++;
-    if(frameId==10)
-        fbo.colorToImage().save("test.png");
+    if(frameId==10) {
+        fbo.diffuseToImage().save("diffuse.png");
+        fbo.depthToImage().save("depth.png");
+    }
 }

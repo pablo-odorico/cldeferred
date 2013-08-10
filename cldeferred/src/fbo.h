@@ -15,9 +15,9 @@ public:
     void bind(GLenum target= GL_DRAW_FRAMEBUFFER);
     void unbind(GLenum target= GL_DRAW_FRAMEBUFFER);
     void clear();
-    void drawToScreen(const int& viewportWidth, const int& viewportHeight);
 
-    QImage colorToImage();
+    QImage diffuseToImage();
+    QImage depthToImage();
 
 private:
     // Create and attach a buffer object to the FBO, returns the buffer id
@@ -28,6 +28,7 @@ private:
 
     GLuint _id;
 
+    // NOTICE: if any buffer format changes, update diffuseToImage and depthToImage
     // COLOR0: Diffuse texture sample + Specular power
     GLuint _diffuseSpecBufferId;
     static const GLenum _diffuseSpecFormat= GL_RGBA;

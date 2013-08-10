@@ -36,6 +36,8 @@ private:
     GLuint projMatrixUniform;
     QMatrix4x4 projMatrix;
 
+    GLuint mvpMatrixUniform;
+
     QTimer timer;
 
     FBO fbo;
