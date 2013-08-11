@@ -18,31 +18,37 @@ bool FBO::init(QSize size)
     _width= size.width();
     _height= size.height();
 
-    initializeOpenGLFunctions();
+    if(!_initialized) {
+        initializeOpenGLFunctions();
+        _initialized= true;
+    } else {
+        unbind();
+        cleanup();
+    }
 
     // Generate and bind FBO
     glGenFramebuffers(1, &_id);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _id);
 
-    // Create DEPTH buffer
-    _depthBufferId= attachBuffer(_depthFormat, GL_DEPTH_ATTACHMENT);
     // Create COLOR0 buffer
     _diffuseSpecBufferId= attachBuffer(_diffuseSpecFormat, GL_COLOR_ATTACHMENT0);
     // Create COLOR1 buffer
     _normalsBufferId= attachBuffer(_normalsFormat, GL_COLOR_ATTACHMENT1);
+    // Create DEPTH buffer
+    _depthBufferId= attachBuffer(_depthFormat, GL_DEPTH_ATTACHMENT);
 
     // Only return true if the framebuffer is fully supported
     return glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
 }
 
-bool FBO::cleanup()
+void FBO::cleanup()
 {
+    glDeleteRenderbuffers(1, &_diffuseSpecBufferId);
+    glDeleteRenderbuffers(1, &_normalsBufferId);
     glDeleteRenderbuffers(1, &_depthBufferId);
 
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    unbind();
     glDeleteFramebuffers(1, &_id);
-
-    return true;
 }
 
 void FBO::bind(GLenum target)
@@ -62,41 +68,39 @@ void FBO::clear()
 
 QImage FBO::diffuseToImage()
 {
-    QImage dst(_width, _height, QImage::Format_RGB32);
+    QImage image(_width, _height, QImage::Format_RGB32);
 
     bind(GL_READ_FRAMEBUFFER);
     glReadBuffer(GL_COLOR_ATTACHMENT0);
+    // Channels are reversed to correct endianness
     glReadPixels(0,0, _width,_height, GL_BGRA, GL_UNSIGNED_BYTE,
-                 static_cast<GLvoid*>(dst.bits()));
+                 static_cast<GLvoid*>(image.bits()));
     unbind(GL_READ_FRAMEBUFFER);
 
-    QTransform transform;
-    transform.rotate(180);
-    return dst.transformed(transform);
+    // Return the image vertically-mirrored to correct scanline order
+    return image.mirrored();
 }
 
 QImage FBO::depthToImage()
 {
-    QImage dst(_width, _height, QImage::Format_RGB32);
+    QImage image(_width, _height, QImage::Format_RGB32);
 
     bind(GL_READ_FRAMEBUFFER);
     glReadBuffer(GL_DEPTH_ATTACHMENT);
     // Read float data to the image buffer (sizeof float == sizeof RGB32)
     glReadPixels(0,0, _width,_height, GL_DEPTH_COMPONENT, GL_FLOAT,
-                 static_cast<GLvoid*>(dst.bits()));
+                 static_cast<GLvoid*>(image.bits()));
     unbind(GL_READ_FRAMEBUFFER);
 
     // Convert float values to colors
     for(int y=0; y<_height; y++) {
         for(int x=0; x<_width; x++) {
             const int index= x + y * _width;
-            const float df= ((float*)dst.bits())[index];
+            const float df= ((float*)image.bits())[index];
             const uchar d= df * 255.0f;
-            ((QRgb*)dst.bits())[index]= (df == 1.0f) ? qRgb(128,128,255) : qRgb(d,d,d);
+            ((QRgb*)image.bits())[index]= (df == 1.0f) ? qRgb(128,128,255) : qRgb(d,d,d);
         }
     }
-
-    QTransform transform;
-    transform.rotate(180);
-    return dst.transformed(transform);
+    // Return the image vertically-mirrored to correct scanline order
+    return image.mirrored();
 }

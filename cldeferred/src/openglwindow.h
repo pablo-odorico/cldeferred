@@ -55,8 +55,9 @@ public:
     explicit OpenGLWindow(QWindow *parent = 0);
     ~OpenGLWindow();
 
-    virtual void render() = 0;
-    virtual void initialize() = 0;
+    virtual void renderGL() = 0;
+    virtual void initializeGL() = 0;
+    virtual void resizeGL(QSize size) = 0;
 
 public slots:
     void renderLater();

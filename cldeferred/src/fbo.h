@@ -8,9 +8,10 @@
 class FBO : protected QOpenGLFunctions
 {
 public:
-    FBO() : QOpenGLFunctions() { }
+    FBO() : QOpenGLFunctions(), _initialized(false) { }
+
     bool init(QSize size);
-    bool cleanup();
+    void cleanup();
 
     void bind(GLenum target= GL_DRAW_FRAMEBUFFER);
     void unbind(GLenum target= GL_DRAW_FRAMEBUFFER);
@@ -25,6 +26,7 @@ private:
 
     int _width;
     int _height;
+    bool _initialized;
 
     GLuint _id;
 

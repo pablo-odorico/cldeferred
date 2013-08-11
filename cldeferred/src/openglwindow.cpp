@@ -41,6 +41,7 @@
 #include "openglwindow.h"
 
 #include <QtCore/QCoreApplication>
+#include <QtGui/QResizeEvent>
 
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLPaintDevice>
@@ -84,23 +85,20 @@ void OpenGLWindow::exposeEvent(QExposeEvent *event)
 {
     Q_UNUSED(event);
 
-    if (isExposed())
-        renderNow();
+    renderNow();
 }
 
 void OpenGLWindow::resizeEvent(QResizeEvent *event)
 {
-    Q_UNUSED(event);
-
-    if (isExposed())
-        renderNow();
+    // First call renderNow() to create the context if needed
+    renderNow();
+    resizeGL(event->size());
+    // Now call renderNow to actually render the scene
+    renderNow();
 }
 
 void OpenGLWindow::renderNow()
 {
-    if (!isExposed())
-        return;
-
     m_update_pending = false;
 
     bool needsInitialize = false;
@@ -117,10 +115,11 @@ void OpenGLWindow::renderNow()
 
     if (needsInitialize) {
         initializeOpenGLFunctions();
-        initialize();
+        initializeGL();
     }
 
-    render();
-
-    m_context->swapBuffers(this);
+    if(isExposed()) {
+        renderGL();
+        m_context->swapBuffers(this);
+    }
 }

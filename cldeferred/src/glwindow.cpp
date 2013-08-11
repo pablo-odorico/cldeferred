@@ -1,14 +1,16 @@
 #include "glwindow.h"
 
-#include <GL/glut.h>
-
 GLWindow::GLWindow()
     : program(0), painter(0)
 {
 }
 
-void GLWindow::initialize()
+void GLWindow::initializeGL()
 {
+    qDebug() << "Initialize GL";
+
+    painter= new QGLPainter(this);
+
     program = new QOpenGLShaderProgram(this);
     program->addShaderFromSourceFile(QOpenGLShader::Vertex, "shader.vert");
     program->addShaderFromSourceFile(QOpenGLShader::Fragment, "shader.frag");
@@ -20,27 +22,26 @@ void GLWindow::initialize()
     mvpMatrixUniform = program->uniformLocation("mvpMatrix");
 
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
 
-    connect(&timer, SIGNAL(timeout()), this, SLOT(renderNow()));
+    connect(&timer, SIGNAL(timeout()), this, SLOT(renderLater()));
     timer.start(1000/30);
 
-    //scene = QGLAbstractScene::loadScene("models/m24/3ds file.3DS");
-    //scene = QGLAbstractScene::loadScene("models/lighthouse/3ds file.3DS");
     scene = QGLAbstractScene::loadScene("models/untitled/untitled.obj");
-    //scene = QGLAbstractScene::loadScene("models/internal_skeleton/internal_skelout.obj");
-    node= scene->mainNode();
-
-    qDebug() << fbo.init(size());
 }
 
-void GLWindow::render()
+void GLWindow::resizeGL(QSize size)
 {
-    qDebug() << width() << height();
+    qDebug() << "Resize GL" << size;
 
+    // Create/resize FBO
+    fbo.init(size);
+    // Set viewport
+    glViewport(0, 0, size.width(), size.height());
+}
+
+void GLWindow::renderGL()
+{
     fbo.bind();
-
-    glViewport(0, 0, width(), height());
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -63,11 +64,7 @@ void GLWindow::render()
     program->setUniformValue(modelMatrixUniform, modelMatrix);
     program->setUniformValue(mvpMatrixUniform, projMatrix * viewMatrix * modelMatrix);
 
-
-    if(!painter)
-        painter= new QGLPainter(this);
-
-    node->draw(painter);
+    scene->mainNode()->draw(painter);
 
     program->release();
 

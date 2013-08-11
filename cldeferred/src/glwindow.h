@@ -16,15 +16,15 @@ class GLWindow : public OpenGLWindow
 public:
     GLWindow();
 
-    void initialize();
-    void render();
+    void initializeGL();
+    void renderGL();
+    void resizeGL(QSize size);
 
 private:
 
     QOpenGLShaderProgram* program;
 
     QGLAbstractScene* scene;
-    QGLSceneNode* node;
     QGLPainter* painter;
 
     GLuint modelMatrixUniform;
