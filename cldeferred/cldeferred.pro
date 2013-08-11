@@ -10,7 +10,7 @@ DESTDIR = bin
 OBJECTS_DIR = obj
 MOC_DIR = obj
 
-LIBS += -lQt53D
+LIBS += -lQt53D -lGLEW
 
 INCLUDEPATH += src/
 

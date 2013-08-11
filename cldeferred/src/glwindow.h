@@ -29,6 +29,7 @@ private:
 
     GLuint modelMatrixUniform;
     QMatrix4x4 modelMatrix;
+    GLuint modelITMatrixUniform; // Inverse transpose model-view
 
     GLuint viewMatrixUniform;
     QMatrix4x4 viewMatrix;

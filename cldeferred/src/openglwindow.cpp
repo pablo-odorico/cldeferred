@@ -48,29 +48,29 @@
 #include <QtGui/QPainter>
 #include <QDebug>
 
-OpenGLWindow::OpenGLWindow(QWindow *parent)
+OpenGLWindow::OpenGLWindow(QWindow* parent)
     : QWindow(parent)
-    , m_update_pending(false)
-    , m_context(0)
-    , m_device(0)
+    , _updatePending(false)
+    , _context(0)
+    , _device(0)
 {
     setSurfaceType(QWindow::OpenGLSurface);
 }
 
 OpenGLWindow::~OpenGLWindow()
 {
-    delete m_device;
+    delete _device;
 }
 
 void OpenGLWindow::renderLater()
 {
-    if (!m_update_pending) {
-        m_update_pending = true;
+    if (!_updatePending) {
+        _updatePending = true;
         QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest));
     }
 }
 
-bool OpenGLWindow::event(QEvent *event)
+bool OpenGLWindow::event(QEvent* event)
 {
     switch (event->type()) {
     case QEvent::UpdateRequest:
@@ -81,14 +81,14 @@ bool OpenGLWindow::event(QEvent *event)
     }
 }
 
-void OpenGLWindow::exposeEvent(QExposeEvent *event)
+void OpenGLWindow::exposeEvent(QExposeEvent* event)
 {
     Q_UNUSED(event);
 
     renderNow();
 }
 
-void OpenGLWindow::resizeEvent(QResizeEvent *event)
+void OpenGLWindow::resizeEvent(QResizeEvent* event)
 {
     // First call renderNow() to create the context if needed
     renderNow();
@@ -99,27 +99,33 @@ void OpenGLWindow::resizeEvent(QResizeEvent *event)
 
 void OpenGLWindow::renderNow()
 {
-    m_update_pending = false;
+    _updatePending = false;
 
     bool needsInitialize = false;
-
-    if (!m_context) {
-        m_context = new QOpenGLContext(this);
-        m_context->setFormat(requestedFormat());
-        m_context->create();
-
+    if (!_context) {
+        _context = new QOpenGLContext(this);
+        _context->setFormat(requestedFormat());
+        _context->create();
         needsInitialize = true;
     }
 
-    m_context->makeCurrent(this);
+    _context->makeCurrent(this);
 
     if (needsInitialize) {
-        initializeOpenGLFunctions();
+        //initializeOpenGLFunctions();
+        glewInit();
+
         initializeGL();
+
+        qDebug() << "OpenGL Info";
+        qDebug() << "   Version :" << (char *)glGetString(GL_VERSION);
+        qDebug() << "   GLSL    :" << (char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
+        qDebug() << "   Vendor  :" << (char *)glGetString(GL_VENDOR);
+        qDebug() << "   Renderer:" << (char *)glGetString(GL_RENDERER);
     }
 
     if(isExposed()) {
         renderGL();
-        m_context->swapBuffers(this);
+        _context->swapBuffers(this);
     }
 }

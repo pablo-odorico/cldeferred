@@ -41,18 +41,18 @@
 #ifndef OPENGLWINDOW_H
 #define OPENGLWINDOW_H
 
+#include <GL/glew.h>
 #include <QtGui/QWindow>
-#include <QtGui/QOpenGLFunctions>
 
 class QPainter;
 class QOpenGLContext;
 class QOpenGLPaintDevice;
 
-class OpenGLWindow : public QWindow, protected QOpenGLFunctions
+class OpenGLWindow : public QWindow
 {
     Q_OBJECT
 public:
-    explicit OpenGLWindow(QWindow *parent = 0);
+    explicit OpenGLWindow(QWindow* parent = 0);
     ~OpenGLWindow();
 
     virtual void renderGL() = 0;
@@ -64,16 +64,16 @@ public slots:
     void renderNow();
 
 protected:
-    bool event(QEvent *event);
+    bool event(QEvent* event);
 
-    void exposeEvent(QExposeEvent *event);
-    void resizeEvent(QResizeEvent *event);
+    void exposeEvent(QExposeEvent* event);
+    void resizeEvent(QResizeEvent* event);
 
 private:
-    bool m_update_pending;
+    bool _updatePending;
 
-    QOpenGLContext *m_context;
-    QOpenGLPaintDevice *m_device;
+    QOpenGLContext* _context;
+    QOpenGLPaintDevice* _device;
 };
 
 #endif // OPENGLWINDOW_H

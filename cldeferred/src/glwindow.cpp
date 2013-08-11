@@ -3,6 +3,7 @@
 GLWindow::GLWindow()
     : program(0), painter(0)
 {
+
 }
 
 void GLWindow::initializeGL()
@@ -17,6 +18,7 @@ void GLWindow::initializeGL()
     program->link();
 
     modelMatrixUniform = program->uniformLocation("modelMatrix");
+    modelITMatrixUniform = program->uniformLocation("modelITMatrix");
     viewMatrixUniform = program->uniformLocation("viewMatrix");
     projMatrixUniform = program->uniformLocation("projMatrix");
     mvpMatrixUniform = program->uniformLocation("mvpMatrix");
@@ -59,9 +61,10 @@ void GLWindow::renderGL()
 
     program->bind();
 
-    program->setUniformValue(viewMatrixUniform, viewMatrix);
-    program->setUniformValue(projMatrixUniform, projMatrix);
     program->setUniformValue(modelMatrixUniform, modelMatrix);
+    program->setUniformValue(modelITMatrixUniform, modelMatrix.inverted().transposed());
+    program->setUniformValue(viewMatrixUniform, viewMatrix);    
+    program->setUniformValue(projMatrixUniform, projMatrix);
     program->setUniformValue(mvpMatrixUniform, projMatrix * viewMatrix * modelMatrix);
 
     scene->mainNode()->draw(painter);
@@ -73,5 +76,6 @@ void GLWindow::renderGL()
     if(frameId==10) {
         fbo.diffuseToImage().save("diffuse.png");
         fbo.depthToImage().save("depth.png");
+        fbo.normalsToImage().save("normals.png");
     }
 }

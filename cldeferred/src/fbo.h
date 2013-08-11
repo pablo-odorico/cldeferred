@@ -1,14 +1,14 @@
 #ifndef FBO_H
 #define FBO_H
 
+#include <GL/glew.h>
 #include <QtCore>
-#include <QtGui/QOpenGLFunctions>
 #include <QImage>
 
-class FBO : protected QOpenGLFunctions
+class FBO
 {
 public:
-    FBO() : QOpenGLFunctions(), _initialized(false) { }
+    FBO() : _initialized(false) { }
 
     bool init(QSize size);
     void cleanup();
@@ -18,6 +18,7 @@ public:
     void clear();
 
     QImage diffuseToImage();
+    QImage normalsToImage();
     QImage depthToImage();
 
 private:
@@ -29,6 +30,8 @@ private:
     bool _initialized;
 
     GLuint _id;
+
+    QVector<GLenum> colorAttachments;
 
     // NOTICE: if any buffer format changes, update diffuseToImage and depthToImage
     // COLOR0: Diffuse texture sample + Specular power
