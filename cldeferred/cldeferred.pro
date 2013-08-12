@@ -10,20 +10,22 @@ DESTDIR = bin
 OBJECTS_DIR = obj
 MOC_DIR = obj
 
-LIBS += -lQt53D -lGLEW
+LIBS += -lGLEW -lOpenCL -lQt53D
 
 INCLUDEPATH += src/
 
 SOURCES += \
     src/main.cpp \
     src/fbo.cpp \
-    src/openglwindow.cpp \
-    src/glwindow.cpp
+    src/glwindow.cpp \
+    src/clglwindow.cpp \
+    src/clutils.cpp
 
 HEADERS += \
     src/fbo.h \
-    src/openglwindow.h \
-    src/glwindow.h
+    src/glwindow.h \
+    src/clglwindow.h \
+    src/clutils.h
 
 OTHER_FILES += \
     bin/shader.frag \

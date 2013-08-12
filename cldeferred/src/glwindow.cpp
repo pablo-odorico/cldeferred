@@ -48,14 +48,13 @@ void GLWindow::renderGL()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     projMatrix.setToIdentity();
-    projMatrix.perspective(60.0f, (float)width()/height(), 1.0f, 50.0f);
+    projMatrix.perspective(60.0f, (float)width()/height(), 0.5f, 50.0f);
 
     viewMatrix.setToIdentity();
     viewMatrix.lookAt(QVector3D(5,5,5), QVector3D(0,0,0), QVector3D(0,1,0));
 
     static float rot= 1.0f;
     modelMatrix.setToIdentity();
-    modelMatrix.scale(10);
     modelMatrix.rotate(rot, 0,1,0);
     rot++;
 
@@ -63,7 +62,7 @@ void GLWindow::renderGL()
 
     program->setUniformValue(modelMatrixUniform, modelMatrix);
     program->setUniformValue(modelITMatrixUniform, modelMatrix.inverted().transposed());
-    program->setUniformValue(viewMatrixUniform, viewMatrix);    
+    program->setUniformValue(viewMatrixUniform, viewMatrix);
     program->setUniformValue(projMatrixUniform, projMatrix);
     program->setUniformValue(mvpMatrixUniform, projMatrix * viewMatrix * modelMatrix);
 

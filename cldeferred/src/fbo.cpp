@@ -46,11 +46,11 @@ bool FBO::init(QSize size)
 
 void FBO::cleanup()
 {
+    unbind();
+
     glDeleteRenderbuffers(1, &_diffuseSpecBufferId);
     glDeleteRenderbuffers(1, &_normalsBufferId);
     glDeleteRenderbuffers(1, &_depthBufferId);
-
-    unbind();
     glDeleteFramebuffers(1, &_id);
 }
 

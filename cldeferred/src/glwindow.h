@@ -1,7 +1,7 @@
 #ifndef GLWIDGET_H
 #define GLWIDGET_H
 
-#include "openglwindow.h"
+#include "clglwindow.h"
 #include "fbo.h"
 
 #include <QtGui>
@@ -11,12 +11,13 @@
 #include <Qt3D/QGLBuilder>
 #include <Qt3D/QGLAbstractScene>
 
-class GLWindow : public OpenGLWindow
+class GLWindow : public CLGLWindow
 {
 public:
     GLWindow();
 
     void initializeGL();
+    void initializeCL() { }
     void renderGL();
     void resizeGL(QSize size);
 

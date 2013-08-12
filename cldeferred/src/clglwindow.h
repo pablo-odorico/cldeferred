@@ -42,21 +42,24 @@
 #define OPENGLWINDOW_H
 
 #include <GL/glew.h>
+#include <CL/cl.h>
+
 #include <QtGui/QWindow>
 
 class QPainter;
 class QOpenGLContext;
 class QOpenGLPaintDevice;
 
-class OpenGLWindow : public QWindow
+class CLGLWindow : public QWindow
 {
     Q_OBJECT
 public:
-    explicit OpenGLWindow(QWindow* parent = 0);
-    ~OpenGLWindow();
+    explicit CLGLWindow(QWindow* parent = 0);
+    ~CLGLWindow();
 
     virtual void renderGL() = 0;
     virtual void initializeGL() = 0;
+    virtual void initializeCL() = 0;
     virtual void resizeGL(QSize size) = 0;
 
 public slots:
@@ -70,10 +73,16 @@ protected:
     void resizeEvent(QResizeEvent* event);
 
 private:
+    void initialize();
+
     bool _updatePending;
 
     QOpenGLContext* _context;
     QOpenGLPaintDevice* _device;
+
+    cl_context _clContext;
+    cl_command_queue _clQueue;
+    cl_device_id _clDevice;
 };
 
 #endif // OPENGLWINDOW_H

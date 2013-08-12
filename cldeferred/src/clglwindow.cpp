@@ -38,7 +38,10 @@
 **
 ****************************************************************************/
 
-#include "openglwindow.h"
+#include "clglwindow.h"
+
+// OpenCL utilities
+#include "clutils.h"
 
 #include <QtCore/QCoreApplication>
 #include <QtGui/QResizeEvent>
@@ -48,7 +51,7 @@
 #include <QtGui/QPainter>
 #include <QDebug>
 
-OpenGLWindow::OpenGLWindow(QWindow* parent)
+CLGLWindow::CLGLWindow(QWindow* parent)
     : QWindow(parent)
     , _updatePending(false)
     , _context(0)
@@ -57,12 +60,35 @@ OpenGLWindow::OpenGLWindow(QWindow* parent)
     setSurfaceType(QWindow::OpenGLSurface);
 }
 
-OpenGLWindow::~OpenGLWindow()
+CLGLWindow::~CLGLWindow()
 {
     delete _device;
 }
 
-void OpenGLWindow::renderLater()
+void CLGLWindow::initialize()
+{
+    // OpenGL init
+    glewInit();
+    // OpenGL user init
+    initializeGL();
+
+    // OpenCL init
+    bool ok= CLUtils::setupOpenCLGL(_clContext, _clQueue, _clDevice);
+    if(!ok) {
+        qWarning() << "Could not initialize OpenCL";
+        return;
+    }
+    // OpenCL user init
+    initializeCL();
+
+    qDebug() << "OpenGL Info";
+    qDebug() << "   Version :" << (char *)glGetString(GL_VERSION);
+    qDebug() << "   GLSL    :" << (char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
+    qDebug() << "   Vendor  :" << (char *)glGetString(GL_VENDOR);
+    qDebug() << "   Renderer:" << (char *)glGetString(GL_RENDERER);
+}
+
+void CLGLWindow::renderLater()
 {
     if (!_updatePending) {
         _updatePending = true;
@@ -70,7 +96,7 @@ void OpenGLWindow::renderLater()
     }
 }
 
-bool OpenGLWindow::event(QEvent* event)
+bool CLGLWindow::event(QEvent* event)
 {
     switch (event->type()) {
     case QEvent::UpdateRequest:
@@ -81,14 +107,14 @@ bool OpenGLWindow::event(QEvent* event)
     }
 }
 
-void OpenGLWindow::exposeEvent(QExposeEvent* event)
+void CLGLWindow::exposeEvent(QExposeEvent* event)
 {
     Q_UNUSED(event);
 
     renderNow();
 }
 
-void OpenGLWindow::resizeEvent(QResizeEvent* event)
+void CLGLWindow::resizeEvent(QResizeEvent* event)
 {
     // First call renderNow() to create the context if needed
     renderNow();
@@ -97,7 +123,7 @@ void OpenGLWindow::resizeEvent(QResizeEvent* event)
     renderNow();
 }
 
-void OpenGLWindow::renderNow()
+void CLGLWindow::renderNow()
 {
     _updatePending = false;
 
@@ -111,18 +137,8 @@ void OpenGLWindow::renderNow()
 
     _context->makeCurrent(this);
 
-    if (needsInitialize) {
-        //initializeOpenGLFunctions();
-        glewInit();
-
-        initializeGL();
-
-        qDebug() << "OpenGL Info";
-        qDebug() << "   Version :" << (char *)glGetString(GL_VERSION);
-        qDebug() << "   GLSL    :" << (char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
-        qDebug() << "   Vendor  :" << (char *)glGetString(GL_VENDOR);
-        qDebug() << "   Renderer:" << (char *)glGetString(GL_RENDERER);
-    }
+    if (needsInitialize)
+        initialize();
 
     if(isExposed()) {
         renderGL();
