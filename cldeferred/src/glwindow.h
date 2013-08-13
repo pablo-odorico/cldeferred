@@ -14,35 +14,41 @@
 class GLWindow : public CLGLWindow
 {
 public:
-    GLWindow();
+    GLWindow(QSize maxSize=QSize(1920, 1080));
 
     void initializeGL();
-    void initializeCL() { }
+    void initializeCL();
     void renderGL();
     void resizeGL(QSize size);
 
 private:
+    void renderGeometryBuffer();
+    void updateOutputTex();
+    void drawOutputTex();
 
-    QOpenGLShaderProgram* program;
+    QSize maxSize;
+
+    // Program used to fill the gbuffer
+    QOpenGLShaderProgram* firstPassProgram;
+    // Program used to render outputTex
+    QOpenGLShaderProgram* outputProgram;
 
     QGLAbstractScene* scene;
     QGLPainter* painter;
 
-    GLuint modelMatrixUniform;
     QMatrix4x4 modelMatrix;
-    GLuint modelITMatrixUniform; // Inverse transpose model-view
-
-    GLuint viewMatrixUniform;
     QMatrix4x4 viewMatrix;
-
-    GLuint projMatrixUniform;
     QMatrix4x4 projMatrix;
 
-    GLuint mvpMatrixUniform;
+    QTimer renderTimer;
 
-    QTimer timer;
+    FBO gBuffer;
 
-    FBO fbo;
+    GLuint outputTex;
+    cl_mem outputBuffer;
+    cl_kernel outputKernel;
+
+    uint frameId; // TODO sacar
 };
 
 #endif // GLWIDGET_H

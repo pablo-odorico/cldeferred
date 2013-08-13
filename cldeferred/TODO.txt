@@ -1,0 +1,2 @@
+- Check clGetGLContextInfoKHR to make clutils portable
+- Move clutils functions to CLGLWindow

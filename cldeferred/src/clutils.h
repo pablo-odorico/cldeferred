@@ -37,13 +37,9 @@ float eventElapsed(cl_event event);
 // Devuelve false en caso de error
 bool loadKernel(cl_context context, cl_kernel* kernel, cl_device_id device, const char* path, const char* kernelName);
 
-// Carga el codigo del programa OpenCL del archivo .cl path a text.
-// Se reserva la cantidad necesaria de memoria en text y se escribe en
-// length el largo del archivo.
-// Devuelve false en caso de error.
 bool loadProgramText(const char* path, char** text, size_t* length);
 
-// Si hubo un error al compilar el programa, muestra el mensaje de error
+// If program failed to compile, checkProgramBuild shows the compiler output
 void checkProgramBuild(cl_program program, cl_device_id device);
 
 }

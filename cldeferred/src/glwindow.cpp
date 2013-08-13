@@ -1,9 +1,14 @@
 #include "glwindow.h"
 
-GLWindow::GLWindow()
-    : program(0), painter(0)
-{
+#include "clutils.h"
 
+using namespace CLUtils;
+
+GLWindow::GLWindow(QSize maxSize)
+    : firstPassProgram(0), painter(0)
+{
+    this->maxSize= maxSize;
+    frameId= 0;
 }
 
 void GLWindow::initializeGL()
@@ -12,23 +17,49 @@ void GLWindow::initializeGL()
 
     painter= new QGLPainter(this);
 
-    program = new QOpenGLShaderProgram(this);
-    program->addShaderFromSourceFile(QOpenGLShader::Vertex, "shader.vert");
-    program->addShaderFromSourceFile(QOpenGLShader::Fragment, "shader.frag");
-    program->link();
+    connect(&renderTimer, SIGNAL(timeout()), this, SLOT(renderLater()));
+    renderTimer.start(1000/30);
 
-    modelMatrixUniform = program->uniformLocation("modelMatrix");
-    modelITMatrixUniform = program->uniformLocation("modelITMatrix");
-    viewMatrixUniform = program->uniformLocation("viewMatrix");
-    projMatrixUniform = program->uniformLocation("projMatrix");
-    mvpMatrixUniform = program->uniformLocation("mvpMatrix");
-
+    // General OpenGL config
     glEnable(GL_DEPTH_TEST);
 
-    connect(&timer, SIGNAL(timeout()), this, SLOT(renderLater()));
-    timer.start(1000/30);
+    // 1st pass init
+    firstPassProgram= new QOpenGLShaderProgram(this);
+    firstPassProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, "shaders/firstpass.vert");
+    firstPassProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, "shaders/firstpass.frag");
+    firstPassProgram->link();
 
+    outputProgram= new QOpenGLShaderProgram(this);
+    outputProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, "shaders/outputTex.vert");
+    outputProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, "shaders/outputTex.frag");
+    outputProgram->link();
+
+    // 2nd pass init
+    // Create output texture
+    QImage tempImg(maxSize.width(), maxSize.height(), QImage::Format_RGB32);
+    tempImg.fill(Qt::darkGray);
+    glGenTextures(1, &outputTex);
+    glBindTexture(GL_TEXTURE_2D, outputTex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tempImg.width(), tempImg.height(), 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, static_cast<GLvoid*>(tempImg.bits()));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    // Load scene
     scene = QGLAbstractScene::loadScene("models/untitled/untitled.obj");
+}
+
+void GLWindow::initializeCL()
+{
+    cl_int error;
+    outputBuffer= clCreateFromGLTexture2D(clCtx(), CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, outputTex, &error);
+    if(checkError(error, "clCreateFromGLTexture2D"))
+        return;
+
+    if(!loadKernel(clCtx(), &outputKernel, clDevice(), "kernels/output.cl", "outputKernel")) {
+        qDebug() << "Error loading kernel.";
+        return;
+    }
 }
 
 void GLWindow::resizeGL(QSize size)
@@ -36,14 +67,32 @@ void GLWindow::resizeGL(QSize size)
     qDebug() << "Resize GL" << size;
 
     // Create/resize FBO
-    fbo.init(size);
+    gBuffer.init(size);
     // Set viewport
+    glViewport(0, 0, size.width(), size.height());
+
+    gBuffer.unbind();
     glViewport(0, 0, size.width(), size.height());
 }
 
 void GLWindow::renderGL()
 {
-    fbo.bind();
+    // 1st pass
+    renderGeometryBuffer();
+
+    // 2nd pass
+
+    // Final stage: render output texture
+    updateOutputTex();
+
+    drawOutputTex();
+
+    frameId++;
+}
+
+void GLWindow::renderGeometryBuffer()
+{
+    gBuffer.bind();
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -58,23 +107,68 @@ void GLWindow::renderGL()
     modelMatrix.rotate(rot, 0,1,0);
     rot++;
 
-    program->bind();
-
-    program->setUniformValue(modelMatrixUniform, modelMatrix);
-    program->setUniformValue(modelITMatrixUniform, modelMatrix.inverted().transposed());
-    program->setUniformValue(viewMatrixUniform, viewMatrix);
-    program->setUniformValue(projMatrixUniform, projMatrix);
-    program->setUniformValue(mvpMatrixUniform, projMatrix * viewMatrix * modelMatrix);
+    firstPassProgram->bind();
+    firstPassProgram->setUniformValue("modelMatrix", modelMatrix);
+    firstPassProgram->setUniformValue("modelITMatrix", modelMatrix.inverted().transposed());
+    firstPassProgram->setUniformValue("viewMatrix", viewMatrix);
+    firstPassProgram->setUniformValue("projMatrix", projMatrix);
+    firstPassProgram->setUniformValue("mvpMatrix", projMatrix * viewMatrix * modelMatrix);
 
     scene->mainNode()->draw(painter);
 
-    program->release();
+    firstPassProgram->release();
 
-    static int frameId= 0;
-    frameId++;
-    if(frameId==10) {
-        fbo.diffuseToImage().save("diffuse.png");
-        fbo.depthToImage().save("depth.png");
-        fbo.normalsToImage().save("normals.png");
-    }
+    gBuffer.unbind();
+}
+
+void GLWindow::updateOutputTex()
+{
+    cl_int error;
+
+    error= clEnqueueAcquireGLObjects(clQueue(), 1, &outputBuffer, 0, 0, 0);
+    if(checkError(error, "clEnqueueAcquireGLObjects"))
+        return;
+
+    // Work group and NDRange
+    int outputWidth= width();
+    int outputHeight= height();
+    size_t workGroupSize[2] = { 16, 16 };
+    size_t ndRangeSize[2];
+    ndRangeSize[0]= roundUp(outputWidth, workGroupSize[0]);
+    ndRangeSize[1]= roundUp(outputHeight, workGroupSize[1]);
+
+    // Launch kernel
+    error  = clSetKernelArg(outputKernel, 0, sizeof(int), (void*)&outputWidth);
+    error |= clSetKernelArg(outputKernel, 1, sizeof(int), (void*)&outputHeight);
+    error |= clSetKernelArg(outputKernel, 2, sizeof(int), (void*)&frameId);
+    error |= clSetKernelArg(outputKernel, 3, sizeof(cl_mem), (void*)&outputBuffer);
+    error |= clEnqueueNDRangeKernel(clQueue(), outputKernel, 2, NULL, ndRangeSize, workGroupSize, 0, NULL, NULL);
+    checkError(error, "outputKernel");
+
+    error= clEnqueueReleaseGLObjects(clQueue(), 1, &outputBuffer, 0, 0, 0);
+    if(checkError(error, "clEnqueueReleaseGLObjects"))
+        return;
+
+    // Sync
+    clFinish(clQueue());
+    checkError(error, "clFinish");
+}
+
+void GLWindow::drawOutputTex()
+{
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    outputProgram->bind();
+
+    glBindTexture(GL_TEXTURE_2D, outputTex);
+    const float uMax= (float)width() / maxSize.width();
+    const float vMax= (float)height() / maxSize.height();
+    glBegin(GL_QUADS);
+        glVertex4f(-1,-1,    0, vMax);
+        glVertex4f( 1,-1, uMax, vMax);
+        glVertex4f( 1, 1, uMax,    0);
+        glVertex4f(-1, 1,    0,    0);
+    glEnd();
+
+    outputProgram->release();
 }

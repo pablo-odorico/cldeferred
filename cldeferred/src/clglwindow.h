@@ -43,6 +43,8 @@
 
 #include <GL/glew.h>
 #include <CL/cl.h>
+#include <CL/cl_gl.h>
+#include <QtOpenGL>
 
 #include <QtGui/QWindow>
 
@@ -62,6 +64,13 @@ public:
     virtual void initializeCL() = 0;
     virtual void resizeGL(QSize size) = 0;
 
+    QOpenGLContext* glCtx() { return _glContext; }
+
+    cl_context clCtx() { return _clContext; }
+    cl_device_id clDevice() { return _clDevice; }
+    cl_command_queue clQueue() { return _clQueue; }
+
+
 public slots:
     void renderLater();
     void renderNow();
@@ -77,12 +86,12 @@ private:
 
     bool _updatePending;
 
-    QOpenGLContext* _context;
-    QOpenGLPaintDevice* _device;
+    QOpenGLContext* _glContext;
+    QOpenGLPaintDevice* _glDevice;
 
     cl_context _clContext;
-    cl_command_queue _clQueue;
     cl_device_id _clDevice;
+    cl_command_queue _clQueue;
 };
 
 #endif // OPENGLWINDOW_H

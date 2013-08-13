@@ -54,15 +54,15 @@
 CLGLWindow::CLGLWindow(QWindow* parent)
     : QWindow(parent)
     , _updatePending(false)
-    , _context(0)
-    , _device(0)
+    , _glContext(0)
+    , _glDevice(0)
 {
     setSurfaceType(QWindow::OpenGLSurface);
 }
 
 CLGLWindow::~CLGLWindow()
 {
-    delete _device;
+    delete _glDevice;
 }
 
 void CLGLWindow::initialize()
@@ -84,8 +84,7 @@ void CLGLWindow::initialize()
     qDebug() << "OpenGL Info";
     qDebug() << "   Version :" << (char *)glGetString(GL_VERSION);
     qDebug() << "   GLSL    :" << (char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
-    qDebug() << "   Vendor  :" << (char *)glGetString(GL_VENDOR);
-    qDebug() << "   Renderer:" << (char *)glGetString(GL_RENDERER);
+    qDebug() << "   GPU     :" << (char *)glGetString(GL_RENDERER);
 }
 
 void CLGLWindow::renderLater()
@@ -128,20 +127,20 @@ void CLGLWindow::renderNow()
     _updatePending = false;
 
     bool needsInitialize = false;
-    if (!_context) {
-        _context = new QOpenGLContext(this);
-        _context->setFormat(requestedFormat());
-        _context->create();
+    if (!_glContext) {
+        _glContext = new QOpenGLContext(this);
+        _glContext->setFormat(requestedFormat());
+        _glContext->create();
         needsInitialize = true;
     }
 
-    _context->makeCurrent(this);
+    _glContext->makeCurrent(this);
 
     if (needsInitialize)
         initialize();
 
     if(isExposed()) {
         renderGL();
-        _context->swapBuffers(this);
+        _glContext->swapBuffers(this);
     }
 }

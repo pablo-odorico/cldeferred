@@ -28,6 +28,10 @@ HEADERS += \
     src/clutils.h
 
 OTHER_FILES += \
-    bin/shader.frag \
-    bin/shader.vert
+    TODO.txt \
+    bin/shaders/firstpass.frag \
+    bin/shaders/firstpass.vert \
+    bin/shaders/outputTex.frag \
+    bin/shaders/outputTex.vert \
+    bin/kernels/output.cl
 
