@@ -3,7 +3,8 @@
 #include <iostream>
 #include <fstream>
 
-// Header de funciones de OpenGL especificas para X11
+#include <CL/cl_gl.h>
+// X11 OpenGL functions
 #include <GL/glx.h>
 
 namespace CLUtils
@@ -15,18 +16,18 @@ bool setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_device_id &d
 {
     cl_int clError;
 
-    // Obtener informacion de la plataforma
+    // Get platform info
     cl_platform_id platform;
     clError= clGetPlatformIDs(1, &platform, NULL);
     if(checkError(clError, "clGetPlatformIDs"))
         return false;
 
-    // Seleccionar la GPU por defecto
+    // Select default GPU
     clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
     if(checkError(clError, "clGetDeviceIDs"))
         return false;
 
-    // Crear contexto global para la GPU seleccionada
+    // Create context with OpenGL support
     cl_context_properties props[] =  {
         CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
         CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
@@ -38,14 +39,13 @@ bool setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_device_id &d
     if(checkError(clError, "clCreateContext"))
         return false;
 
-    // Crear una cola de comandos la GPU seleccionada
+    // Create command queue for the selected GPU
     queue= clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &clError);
     if(checkError(clError, "clCreateCommandQueue"))
         return false;
 
     return true;
 }
-
 
 string clErrorToString(cl_int err)
 {
@@ -148,45 +148,11 @@ float eventElapsed(cl_event event)
     return float(end_time - start_time) * 1.0e-6f; // in ms.
 }
 
-bool loadKernel(cl_context context, cl_kernel* kernel, cl_device_id device, const char* path, const char* kernelName)
-{
-    // Cargar texto de programa a un string
-    char* programText;
-    size_t programLength;
-    if(!loadProgramText(path, &programText, &programLength)) {
-        cerr << "Error al cargar archivo de programa." << endl;
-        return false;
-    }
-    // Crear programa
-    cl_int error;
-    cl_program program;
-    program= clCreateProgramWithSource(context, 1, (const char **)&programText, (const size_t *)&programLength, &error);
-    free(programText);
-    if(checkError(error, "loadKernel: clCreateProgramWithSource"))
-        return false;
-    // Compilar programa para todos los dispositivos del contexto
-    error= clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
-    if(checkError(error, "loadKernel: clBuildProgram")) {
-        checkProgramBuild(program, device);
-        return false;
-    }
-
-    // Crear kernel a partir del programa (un programa puede tener varios kernels)
-    *kernel= clCreateKernel(program, kernelName, &error);
-    if(checkError(error, "loadKernel: clCreateKernel"))
-        return false;
-
-    clReleaseProgram(program);
-
-    return true;
-}
-
-
 bool loadProgramText(const char* path, char** text, size_t* length)
 {
     ifstream is(path);
     if(!is.is_open()) {
-        cerr << "Error al cargar archivo '" << path << "'." << endl;
+        cerr << "Error loading file '" << path << "'." << endl;
         return false;
     }
 
@@ -234,5 +200,39 @@ void checkProgramBuild(cl_program program, cl_device_id device)
     }
 
 }
+
+bool loadKernel(cl_context context, cl_kernel* kernel, cl_device_id device, const char* path, const char* kernelName)
+{
+    // Load program text into a string
+    char* programText;
+    size_t programLength;
+    if(!loadProgramText(path, &programText, &programLength)) {
+        cerr << "Error loading program text." << endl;
+        return false;
+    }
+    // Create program
+    cl_int error;
+    cl_program program;
+    program= clCreateProgramWithSource(context, 1, (const char **)&programText, (const size_t *)&programLength, &error);
+    free(programText);
+    if(checkError(error, "loadKernel: clCreateProgramWithSource"))
+        return false;
+    // Compile program for all the GPUs in the context
+    error= clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+    if(checkError(error, "loadKernel: clBuildProgram")) {
+        checkProgramBuild(program, device);
+        return false;
+    }
+
+    // Create a kernel from the program (a program may contain many kernels)
+    *kernel= clCreateKernel(program, kernelName, &error);
+    if(checkError(error, "loadKernel: clCreateKernel"))
+        return false;
+
+    clReleaseProgram(program);
+
+    return true;
+}
+
 
 }

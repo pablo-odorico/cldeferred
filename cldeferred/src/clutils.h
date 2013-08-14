@@ -1,46 +1,29 @@
-/*
- * clutils.h
- *
- * Utilidades generales para la programacion con OpenCL
- *
- */
-
 #ifndef CLUTILS_H
 #define CLUTILS_H
 
 #include <CL/cl.h>
-#include <CL/cl_gl.h>
 
 namespace CLUtils
 {
 
-// Funcion similar a setupOpenCL de clutils, pero que crea un contexto
-// OpenCL con interoperabilidad OpenGL
+// Creates an OpenCL context and queue with support for OpenGL interop
+// The OpenGL context must be created and made current before calling setupOpenCLGL
 //
-// El contexto OpenGL ya debe estar creado cuando se llama a esta funcion
-//
-// Esta funcion esta implementada solo para Linux/X11
+// Currently implemented only for Linux/X11
 bool setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_device_id& device);
 
-// Si error es diferente a CL_SUCCESS muestra el error y devuelve true
-// Si se pasa el parametro msg, se muestra adicionalmente ese mensaje de error
+// If error != CL_SUCCESS, checkError shows the error string and returns true
+// If msg != 0, the message is shown in the error report
 bool checkError(cl_int error, const char* msg= 0);
 
-// Devuelve n, tal que n es el minimo numero >= count que cumple mod(n, multiple)=0
-// Se utiliza para redondear para arriba la cantidad de thread dado un tamanio de work group
 int roundUp(int count, int multiple);
 
-// Devuelve el tiempo en milisegundos desde desde el inicio al fin de event
+// Return the msecs of elapsed time in event
 float eventElapsed(cl_event event);
 
-// Carga un kernel llamado kernelName en el archivo .cl indicado en path
-// Devuelve false en caso de error
+// Loads a kernel named kernelName from the .cl file in path
+// On compilation errors the compiler message is shown and loadKernel returns false
 bool loadKernel(cl_context context, cl_kernel* kernel, cl_device_id device, const char* path, const char* kernelName);
-
-bool loadProgramText(const char* path, char** text, size_t* length);
-
-// If program failed to compile, checkProgramBuild shows the compiler output
-void checkProgramBuild(cl_program program, cl_device_id device);
 
 }
 
