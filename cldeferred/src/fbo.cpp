@@ -7,7 +7,6 @@ GLuint FBO::attachBuffer(GLenum format, GLenum target)
     glGenRenderbuffers(1, &id);
     glBindRenderbuffer(GL_RENDERBUFFER, id);
     glRenderbufferStorage(GL_RENDERBUFFER, format, _width, _height);
-    // Attach DEPTH buffer
     glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, target, GL_RENDERBUFFER, id);
 
     return id;
