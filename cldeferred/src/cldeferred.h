@@ -11,10 +11,10 @@
 #include <Qt3D/QGLBuilder>
 #include <Qt3D/QGLAbstractScene>
 
-class GLWindow : public CLGLWindow
+class CLDeferred : public CLGLWindow
 {
 public:
-    GLWindow(QSize maxSize=QSize(1920, 1080));
+    CLDeferred(QSize maxSize=QSize(1920, 1080));
 
     void initializeGL();
     void initializeCL();

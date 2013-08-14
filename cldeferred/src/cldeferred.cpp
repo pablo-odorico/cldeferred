@@ -1,17 +1,17 @@
-#include "glwindow.h"
+#include "cldeferred.h"
 
 #include "clutils.h"
 
 using namespace CLUtils;
 
-GLWindow::GLWindow(QSize maxSize)
+CLDeferred::CLDeferred(QSize maxSize)
     : firstPassProgram(0), painter(0)
 {
     this->maxSize= maxSize;
     frameId= 0;
 }
 
-void GLWindow::initializeGL()
+void CLDeferred::initializeGL()
 {
     qDebug() << "Initialize GL";
 
@@ -49,7 +49,7 @@ void GLWindow::initializeGL()
     scene = QGLAbstractScene::loadScene("models/untitled/untitled.obj");
 }
 
-void GLWindow::initializeCL()
+void CLDeferred::initializeCL()
 {
     cl_int error;
     outputBuffer= clCreateFromGLTexture2D(clCtx(), CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, outputTex, &error);
@@ -62,7 +62,7 @@ void GLWindow::initializeCL()
     }
 }
 
-void GLWindow::resizeGL(QSize size)
+void CLDeferred::resizeGL(QSize size)
 {
     qDebug() << "Resize GL" << size;
 
@@ -75,7 +75,7 @@ void GLWindow::resizeGL(QSize size)
     glViewport(0, 0, size.width(), size.height());
 }
 
-void GLWindow::renderGL()
+void CLDeferred::renderGL()
 {
     // 1st pass
     renderGeometryBuffer();
@@ -90,7 +90,7 @@ void GLWindow::renderGL()
     frameId++;
 }
 
-void GLWindow::renderGeometryBuffer()
+void CLDeferred::renderGeometryBuffer()
 {
     gBuffer.bind();
 
@@ -121,7 +121,7 @@ void GLWindow::renderGeometryBuffer()
     gBuffer.unbind();
 }
 
-void GLWindow::updateOutputTex()
+void CLDeferred::updateOutputTex()
 {
     cl_int error;
 
@@ -154,7 +154,7 @@ void GLWindow::updateOutputTex()
     checkError(error, "clFinish");
 }
 
-void GLWindow::drawOutputTex()
+void CLDeferred::drawOutputTex()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

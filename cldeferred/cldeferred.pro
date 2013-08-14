@@ -17,15 +17,15 @@ INCLUDEPATH += src/
 SOURCES += \
     src/main.cpp \
     src/fbo.cpp \
-    src/glwindow.cpp \
     src/clglwindow.cpp \
-    src/clutils.cpp
+    src/clutils.cpp \
+    src/cldeferred.cpp
 
 HEADERS += \
     src/fbo.h \
-    src/glwindow.h \
     src/clglwindow.h \
-    src/clutils.h
+    src/clutils.h \
+    src/cldeferred.h
 
 OTHER_FILES += \
     TODO.txt \
