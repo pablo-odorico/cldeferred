@@ -1,4 +1,4 @@
-#include "clutils.h"
+#include "clutilfunctions.h"
 
 #include <iostream>
 #include <fstream>
@@ -7,12 +7,9 @@
 // X11 OpenGL functions
 #include <GL/glx.h>
 
-namespace CLUtils
-{
-
 using namespace std;
 
-bool setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_device_id &device)
+bool CLUtilFunctions::setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_device_id &device)
 {
     cl_int clError;
 
@@ -47,7 +44,7 @@ bool setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_device_id &d
     return true;
 }
 
-string clErrorToString(cl_int err)
+string CLUtilFunctions::clErrorToString(cl_int err)
 {
     // OpenCL 1.2 enums
     switch (err) {
@@ -114,7 +111,7 @@ string clErrorToString(cl_int err)
     }
 }
 
-bool checkError(cl_int error, const char* msg)
+bool CLUtilFunctions::checkError(cl_int error, const char* msg)
 {
     if(error == CL_SUCCESS)
         return false;
@@ -127,7 +124,7 @@ bool checkError(cl_int error, const char* msg)
     return true;
 }
 
-int roundUp(int count, int multiple)
+int CLUtilFunctions::roundUp(int count, int multiple)
 {
     int r = count % multiple;
     if(!r)
@@ -136,7 +133,7 @@ int roundUp(int count, int multiple)
         return count + multiple - r;
 }
 
-float eventElapsed(cl_event event)
+float CLUtilFunctions::eventElapsed(cl_event event)
 {
     cl_int error;
 
@@ -148,7 +145,7 @@ float eventElapsed(cl_event event)
     return float(end_time - start_time) * 1.0e-6f; // in ms.
 }
 
-bool loadProgramText(const char* path, char** text, size_t* length)
+bool CLUtilFunctions::loadProgramText(const char* path, char** text, size_t* length)
 {
     ifstream is(path);
     if(!is.is_open()) {
@@ -171,7 +168,7 @@ bool loadProgramText(const char* path, char** text, size_t* length)
     return true;
 }
 
-void checkProgramBuild(cl_program program, cl_device_id device)
+void CLUtilFunctions::checkProgramBuild(cl_program program, cl_device_id device)
 {
     cl_int clError;
     cl_build_status build_status;
@@ -201,7 +198,8 @@ void checkProgramBuild(cl_program program, cl_device_id device)
 
 }
 
-bool loadKernel(cl_context context, cl_kernel* kernel, cl_device_id device, const char* path, const char* kernelName)
+bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
+                                cl_device_id device, const char* path, const char* kernelName)
 {
     // Load program text into a string
     char* programText;
@@ -232,7 +230,4 @@ bool loadKernel(cl_context context, cl_kernel* kernel, cl_device_id device, cons
     clReleaseProgram(program);
 
     return true;
-}
-
-
 }

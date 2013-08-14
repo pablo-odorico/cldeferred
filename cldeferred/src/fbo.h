@@ -8,13 +8,22 @@
 class FBO
 {
 public:
-    FBO() : _initialized(false) { }
+    struct Attachment {
+        GLenum format;   // eg GL_RGBA
+        GLenum target;   // eg GL_COLOR_ATTACHMENT0
+        GLenum bufferId; // returned by glGenRenderbuffers
+    };
 
-    bool init(QSize size);
+    FBO() : _initialized(false), _width(0), _height(0),
+        _bindedTarget(GL_NONE) { }
+
+    bool init(QSize size,
+              QList<GLenum> _colorFormats= QList<GLenum>() << GL_RGBA,
+              GLenum _depthFormat= GL_DEPTH_COMPONENT16);
     void cleanup();
 
     void bind(GLenum target= GL_DRAW_FRAMEBUFFER);
-    void unbind(GLenum target= GL_DRAW_FRAMEBUFFER);
+    void unbind();
     void clear();
 
     QImage diffuseToImage();
@@ -22,17 +31,20 @@ public:
     QImage depthToImage();
 
 private:
-    // Create and attach a buffer object to the FBO, returns the buffer id
-    GLuint attachBuffer(GLenum format, GLenum target);
+    // Create and attach a buffer object to the FBO
+    Attachment createAttach(GLenum format, GLenum target);
 
     int _width;
     int _height;
     bool _initialized;
+    GLenum _bindedTarget;
 
     GLuint _id;
 
-    QVector<GLenum> colorAttachments;
+    Attachment _depthAttach;
+    QVector<Attachment> _colorAttachs;
 
+/*
     // NOTICE: if any buffer format changes, update diffuseToImage and depthToImage
     // COLOR0: Diffuse texture sample + Specular power
     GLuint _diffuseSpecBufferId;
@@ -43,6 +55,7 @@ private:
     // DEPTH buffer
     GLuint _depthBufferId;
     static const GLenum _depthFormat= GL_DEPTH_COMPONENT32F;
+*/
 };
 
 

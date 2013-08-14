@@ -1,9 +1,5 @@
 #include "cldeferred.h"
 
-#include "clutils.h"
-
-using namespace CLUtils;
-
 CLDeferred::CLDeferred(QSize maxSize)
     : firstPassProgram(0), painter(0)
 {

@@ -40,9 +40,6 @@
 
 #include "clglwindow.h"
 
-// OpenCL utilities
-#include "clutils.h"
-
 #include <QtCore/QCoreApplication>
 #include <QtGui/QResizeEvent>
 
@@ -73,7 +70,7 @@ void CLGLWindow::initialize()
     initializeGL();
 
     // OpenCL init
-    bool ok= CLUtils::setupOpenCLGL(_clContext, _clQueue, _clDevice);
+    bool ok= setupOpenCLGL(_clContext, _clQueue, _clDevice);
     if(!ok) {
         qWarning() << "Could not initialize OpenCL";
         return;

@@ -1,26 +1,28 @@
 #include "fbo.h"
 
-GLuint FBO::attachBuffer(GLenum format, GLenum target)
+FBO::Attachment FBO::createAttach(GLenum format, GLenum target)
 {
-    GLuint id;
+    Attachment attach;
+    attach.format= format;
+    attach.target= target;
 
-    glGenRenderbuffers(1, &id);
-    glBindRenderbuffer(GL_RENDERBUFFER, id);
-    glRenderbufferStorage(GL_RENDERBUFFER, format, _width, _height);
-    glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, target, GL_RENDERBUFFER, id);
+    glGenRenderbuffers(1, &attach.bufferId);
+    glBindRenderbuffer(GL_RENDERBUFFER, attach.bufferId);
+    glRenderbufferStorage(GL_RENDERBUFFER, attach.format, _width, _height);
+    glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, attach.target,
+                              GL_RENDERBUFFER, attach.bufferId);
 
-    return id;
+    return attach;
 }
 
-bool FBO::init(QSize size)
+bool FBO::init(QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
 {
+    assert(colorFormats.count());
+
     _width= size.width();
     _height= size.height();
 
-    if(!_initialized) {
-        //initializeOpenGLFunctions();
-        _initialized= true;
-    } else {
+    if(_initialized) {
         unbind();
         cleanup();
     }
@@ -29,39 +31,65 @@ bool FBO::init(QSize size)
     glGenFramebuffers(1, &_id);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _id);
 
-    // Create COLOR0 buffer
-    _diffuseSpecBufferId= attachBuffer(_diffuseSpecFormat, GL_COLOR_ATTACHMENT0);
-    // Create COLOR1 buffer
-    _normalsBufferId= attachBuffer(_normalsFormat, GL_COLOR_ATTACHMENT1);
-    // Create DEPTH buffer
-    _depthBufferId= attachBuffer(_depthFormat, GL_DEPTH_ATTACHMENT);
+    // Create depth attachment
+    _depthAttach= createAttach(depthFormat, GL_DEPTH_ATTACHMENT);
 
-    // Store which color attachments the fragment shader will write to
-    colorAttachments= QVector<GLenum>() << GL_COLOR_ATTACHMENT0 << GL_COLOR_ATTACHMENT1;
+    // Create color attachments
+    _colorAttachs.resize(colorFormats.count());
+    for(int i=0; i<colorFormats.count(); i++) {
+        const GLenum format= colorFormats[i];
+        const GLenum target= GL_COLOR_ATTACHMENT0 + i;
+        _colorAttachs[i]= createAttach(format, target);
+    }
 
     // Only return true if the framebuffer is fully supported
-    return glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+    const bool error= glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE;
+    _initialized= !error;
+    return !error;
 }
 
 void FBO::cleanup()
 {
+    if(!_initialized) {
+        qDebug() << "FBO::cleanup: Uninitialized!";
+        return;
+    }
+
     unbind();
 
-    glDeleteRenderbuffers(1, &_diffuseSpecBufferId);
-    glDeleteRenderbuffers(1, &_normalsBufferId);
-    glDeleteRenderbuffers(1, &_depthBufferId);
+    glDeleteRenderbuffers(1, &_depthAttach.bufferId);
+
+    foreach(Attachment& attach, _colorAttachs)
+        glDeleteRenderbuffers(1, &attach.bufferId);
+    _colorAttachs.clear();
+
     glDeleteFramebuffers(1, &_id);
 }
 
 void FBO::bind(GLenum target)
 {
+    if(!_initialized) {
+        qDebug() << "FBO::bind: Uninitialized!";
+        return;
+    }
+    _bindedTarget= target;
     glBindFramebuffer(target, _id);
-    glDrawBuffers(colorAttachments.count(), colorAttachments.data());
+
+    QVector<GLenum> colorTargets(_colorAttachs.count());
+    foreach(Attachment& attach, _colorAttachs)
+        colorTargets[i]= attach.target;
+
+    glDrawBuffers(colorTargets.count(), colorTargets.data());
 }
 
-void FBO::unbind(GLenum target)
+void FBO::unbind()
 {
+    if(_bindedTarget == GL_NONE) {
+        qDebug() << "FBO::unbind: Not binded!";
+        return;
+    }
     glBindFramebuffer(target, 0);
+    _bindedTarget= GL_NONE;
 }
 
 void FBO::clear()
@@ -69,6 +97,7 @@ void FBO::clear()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
+/*
 QImage FBO::diffuseToImage()
 {
     QImage image(_width, _height, QImage::Format_RGB32);
@@ -143,3 +172,4 @@ QImage FBO::depthToImage()
     return image.mirrored();
 }
 
+*/

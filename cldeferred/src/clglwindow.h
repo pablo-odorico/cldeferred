@@ -44,6 +44,7 @@
 #include <GL/glew.h>
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
+#include "clutilfunctions.h"
 #include <QtOpenGL>
 
 #include <QtGui/QWindow>
@@ -52,7 +53,7 @@ class QPainter;
 class QOpenGLContext;
 class QOpenGLPaintDevice;
 
-class CLGLWindow : public QWindow
+class CLGLWindow : public QWindow, protected CLUtilFunctions
 {
     Q_OBJECT
 public:
