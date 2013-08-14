@@ -79,9 +79,9 @@ void CLGLWindow::initialize()
     initializeCL();
 
     qDebug() << "OpenGL Info";
-    qDebug() << "   Version :" << (char *)glGetString(GL_VERSION);
-    qDebug() << "   GLSL    :" << (char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
-    qDebug() << "   GPU     :" << (char *)glGetString(GL_RENDERER);
+    qDebug() << "   Version :" << (char*)glGetString(GL_VERSION);
+    qDebug() << "   GLSL    :" << (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+    qDebug() << "   GPU     :" << (char*)glGetString(GL_RENDERER);
 }
 
 void CLGLWindow::renderLater()

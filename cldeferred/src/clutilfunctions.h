@@ -1,7 +1,9 @@
 #ifndef CLUTILS_H
 #define CLUTILS_H
 
+#include <GL/glew.h>
 #include <CL/cl.h>
+#include <CL/cl_gl.h>
 #include <iostream>
 
 class CLUtilFunctions
@@ -18,7 +20,7 @@ protected:
     // If error != CL_SUCCESS, checkError shows the error string and returns true
     // If msg != 0, the message is shown in the error report
     static
-    bool checkError(cl_int error, const char* msg= 0);
+    bool checkCLError(cl_int error, const char* msg= 0);
 
     static
     int roundUp(int count, int multiple);
@@ -41,6 +43,12 @@ protected:
 
     static
     bool loadProgramText(const char* path, char** text, size_t* length);
+
+    // Converts from an OpenGL format (eg GL_RGBA8) to an OpenCL
+    // channel order/channel type pair (eg CL_RGBA, CL_UNORM_INT8)
+    // returns false on error
+    static
+    bool gl2clFormat(GLenum glFormat, cl_channel_order& clOrder, cl_channel_type& clType);
 };
 
 #endif // CLUTILS_H

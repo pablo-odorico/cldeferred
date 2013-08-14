@@ -3,7 +3,6 @@
 #include <iostream>
 #include <fstream>
 
-#include <CL/cl_gl.h>
 // X11 OpenGL functions
 #include <GL/glx.h>
 
@@ -16,12 +15,12 @@ bool CLUtilFunctions::setupOpenCLGL(cl_context& context, cl_command_queue& queue
     // Get platform info
     cl_platform_id platform;
     clError= clGetPlatformIDs(1, &platform, NULL);
-    if(checkError(clError, "clGetPlatformIDs"))
+    if(checkCLError(clError, "clGetPlatformIDs"))
         return false;
 
     // Select default GPU
     clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-    if(checkError(clError, "clGetDeviceIDs"))
+    if(checkCLError(clError, "clGetDeviceIDs"))
         return false;
 
     // Create context with OpenGL support
@@ -33,12 +32,12 @@ bool CLUtilFunctions::setupOpenCLGL(cl_context& context, cl_command_queue& queue
     };
     context= clCreateContext(props, 1, &device, NULL, NULL, &clError);
 
-    if(checkError(clError, "clCreateContext"))
+    if(checkCLError(clError, "clCreateContext"))
         return false;
 
     // Create command queue for the selected GPU
     queue= clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &clError);
-    if(checkError(clError, "clCreateCommandQueue"))
+    if(checkCLError(clError, "clCreateCommandQueue"))
         return false;
 
     return true;
@@ -111,7 +110,7 @@ string CLUtilFunctions::clErrorToString(cl_int err)
     }
 }
 
-bool CLUtilFunctions::checkError(cl_int error, const char* msg)
+bool CLUtilFunctions::checkCLError(cl_int error, const char* msg)
 {
     if(error == CL_SUCCESS)
         return false;
@@ -140,7 +139,7 @@ float CLUtilFunctions::eventElapsed(cl_event event)
     cl_ulong start_time, end_time;
     error = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL);
     error |= clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL);
-    checkError(error, "eventElapsed: clGetEventProfilingInfo");
+    checkCLError(error, "eventElapsed: clGetEventProfilingInfo");
 
     return float(end_time - start_time) * 1.0e-6f; // in ms.
 }
@@ -174,19 +173,19 @@ void CLUtilFunctions::checkProgramBuild(cl_program program, cl_device_id device)
     cl_build_status build_status;
     clError = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_STATUS,
                     sizeof(cl_build_status), &build_status, NULL);
-    checkError(clError, "checkProgramBuild: clGetProgramBuildInfo");
+    checkCLError(clError, "checkProgramBuild: clGetProgramBuildInfo");
 
 
     char *build_log;
     size_t ret_val_size;
     clError = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG,
                     0, NULL, &ret_val_size);
-    checkError(clError, "checkProgramBuild: clGetProgramBuildInfo");
+    checkCLError(clError, "checkProgramBuild: clGetProgramBuildInfo");
 
     build_log = new char[ret_val_size+1];
     clError = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG,
                     ret_val_size, build_log, NULL);
-    checkError(clError, "checkProgramBuild: clGetProgramBuildInfo");
+    checkCLError(clError, "checkProgramBuild: clGetProgramBuildInfo");
 
     // end of string character
     build_log[ret_val_size] = '\0';
@@ -213,21 +212,57 @@ bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
     cl_program program;
     program= clCreateProgramWithSource(context, 1, (const char **)&programText, (const size_t *)&programLength, &error);
     free(programText);
-    if(checkError(error, "loadKernel: clCreateProgramWithSource"))
+    if(checkCLError(error, "loadKernel: clCreateProgramWithSource"))
         return false;
     // Compile program for all the GPUs in the context
     error= clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
-    if(checkError(error, "loadKernel: clBuildProgram")) {
+    if(checkCLError(error, "loadKernel: clBuildProgram")) {
         checkProgramBuild(program, device);
         return false;
     }
 
     // Create a kernel from the program (a program may contain many kernels)
     *kernel= clCreateKernel(program, kernelName, &error);
-    if(checkError(error, "loadKernel: clCreateKernel"))
+    if(checkCLError(error, "loadKernel: clCreateKernel"))
         return false;
 
     clReleaseProgram(program);
 
+    return true;
+}
+
+bool CLUtilFunctions::gl2clFormat(GLenum glFormat, cl_channel_order& clOrder, cl_channel_type& clType)
+{
+    switch(glFormat) {
+    // Some of the format mappings listed in the standard
+    case GL_RGBA:
+    case GL_RGBA8:
+        clOrder= CL_RGBA; clType= CL_UNORM_INT8;
+        break;
+    case GL_BGRA:
+        clOrder= CL_BGRA; clType= CL_UNORM_INT8;
+        break;
+    case GL_RGBA16:
+        clOrder= CL_RGBA; clType= CL_UNORM_INT16;
+        break;
+    case GL_RGBA16F:
+        clOrder= CL_RGBA; clType= CL_HALF_FLOAT;
+        break;
+    case GL_DEPTH_COMPONENT16:
+        clOrder= CL_DEPTH; clType= CL_UNORM_INT16;
+        break;
+    case GL_DEPTH_COMPONENT32F:
+        clOrder= CL_DEPTH; clType= CL_FLOAT;
+        break;
+
+    // Format mappings not listed in the standard
+    case GL_RG16F:
+        clOrder= CL_RG; clType= CL_HALF_FLOAT;
+        break;
+    // Unknown format
+    default:
+        cerr << "CLUtilFunctions::gl2clFormat: Could not convert format " << glFormat << endl;
+        return false;
+    }
     return true;
 }

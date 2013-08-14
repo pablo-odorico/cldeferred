@@ -19,13 +19,15 @@ SOURCES += \
     src/fbo.cpp \
     src/clglwindow.cpp \
     src/cldeferred.cpp \
-    src/clutilfunctions.cpp
+    src/clutilfunctions.cpp \
+    src/fbocl.cpp
 
 HEADERS += \
     src/fbo.h \
     src/clglwindow.h \
     src/cldeferred.h \
-    src/clutilfunctions.h
+    src/clutilfunctions.h \
+    src/fbocl.h
 
 OTHER_FILES += \
     TODO.txt \

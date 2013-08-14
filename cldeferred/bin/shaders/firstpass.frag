@@ -17,7 +17,7 @@ layout (location = 1) out vec2 outNormal;
 void main()
 {
     vec3 diffuse = texture(qt_Texture1, texCoord).rgb;
-    float spec = 0.0f;
+    float spec = 1.0f;
 
     outDiffuseSpec = vec4(diffuse, spec);
     outNormal = normal.xy;

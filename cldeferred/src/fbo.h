@@ -3,7 +3,6 @@
 
 #include <GL/glew.h>
 #include <QtCore>
-#include <QImage>
 
 class FBO
 {
@@ -11,51 +10,36 @@ public:
     struct Attachment {
         GLenum format;   // eg GL_RGBA
         GLenum target;   // eg GL_COLOR_ATTACHMENT0
-        GLenum bufferId; // returned by glGenRenderbuffers
+        GLenum bufferId; // Returned by glGenRenderbuffers
     };
 
-    FBO() : _initialized(false), _width(0), _height(0),
-        _bindedTarget(GL_NONE) { }
+    FBO() : _width(0), _height(0), _initialized(false),
+        _bindedTarget(GL_NONE), _id(0) { }
+    virtual ~FBO() { cleanup(); }
 
-    bool init(QSize size,
-              QList<GLenum> _colorFormats= QList<GLenum>() << GL_RGBA,
-              GLenum _depthFormat= GL_DEPTH_COMPONENT16);
-    void cleanup();
+    virtual bool init(QSize size,
+        QList<GLenum> colorFormats= QList<GLenum>() << GL_RGBA,
+        GLenum depthFormat= GL_DEPTH_COMPONENT16);
 
     void bind(GLenum target= GL_DRAW_FRAMEBUFFER);
-    void unbind();
+    virtual void unbind();
     void clear();
 
-    QImage diffuseToImage();
-    QImage normalsToImage();
-    QImage depthToImage();
-
-private:
+protected:
+    virtual void cleanup();
     // Create and attach a buffer object to the FBO
     Attachment createAttach(GLenum format, GLenum target);
 
     int _width;
     int _height;
+
     bool _initialized;
     GLenum _bindedTarget;
 
     GLuint _id;
 
-    Attachment _depthAttach;
     QVector<Attachment> _colorAttachs;
-
-/*
-    // NOTICE: if any buffer format changes, update diffuseToImage and depthToImage
-    // COLOR0: Diffuse texture sample + Specular power
-    GLuint _diffuseSpecBufferId;
-    static const GLenum _diffuseSpecFormat= GL_RGBA;
-    // COLOR1: Normals in world coords
-    GLuint _normalsBufferId;
-    static const GLenum _normalsFormat= GL_RG16F;
-    // DEPTH buffer
-    GLuint _depthBufferId;
-    static const GLenum _depthFormat= GL_DEPTH_COMPONENT32F;
-*/
+    Attachment _depthAttach;
 };
 
 

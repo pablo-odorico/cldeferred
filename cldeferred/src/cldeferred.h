@@ -2,7 +2,7 @@
 #define GLWIDGET_H
 
 #include "clglwindow.h"
-#include "fbo.h"
+#include "fbocl.h"
 
 #include <QtGui>
 #include <QDebug>
@@ -22,10 +22,11 @@ public:
     void resizeGL(QSize size);
 
 private:
-    void renderGeometryBuffer();
+    void renderToGBuffer();
     void updateOutputTex();
     void drawOutputTex();
 
+    // Max windows size
     QSize maxSize;
 
     // Program used to fill the gbuffer
@@ -33,22 +34,33 @@ private:
     // Program used to render outputTex
     QOpenGLShaderProgram* outputProgram;
 
+    // Scene, camera, etc.
     QGLAbstractScene* scene;
-    QGLPainter* painter;
 
     QMatrix4x4 modelMatrix;
     QMatrix4x4 viewMatrix;
     QMatrix4x4 projMatrix;
 
-    QTimer renderTimer;
+    // Geometry buffer
+    FBOCL gBuffer;
+    // COLOR0: Diffuse texture sample + Specular power
+    static const GLenum diffuseSpecFormat= GL_RGBA;
+    // COLOR1: Normals in world coords
+    static const GLenum normalsFormat= GL_RG16F;
+    // DEPTH buffer
+    static const GLenum depthFormat= GL_DEPTH_COMPONENT32F;
 
-    FBO gBuffer;
-
+    // Output texture
     GLuint outputTex;
     cl_mem outputBuffer;
     cl_kernel outputKernel;
 
+    // Misc
+    QGLPainter* painter;
+    QTimer renderTimer;
+
     uint frameId; // TODO sacar
 };
+
 
 #endif // GLWIDGET_H

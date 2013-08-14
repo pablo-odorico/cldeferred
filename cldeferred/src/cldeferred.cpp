@@ -1,5 +1,9 @@
 #include "cldeferred.h"
 
+const GLenum CLDeferred::diffuseSpecFormat;
+const GLenum CLDeferred::normalsFormat;
+const GLenum CLDeferred::depthFormat;
+
 CLDeferred::CLDeferred(QSize maxSize)
     : firstPassProgram(0), painter(0)
 {
@@ -48,45 +52,53 @@ void CLDeferred::initializeGL()
 void CLDeferred::initializeCL()
 {
     cl_int error;
-    outputBuffer= clCreateFromGLTexture2D(clCtx(), CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, outputTex, &error);
-    if(checkError(error, "clCreateFromGLTexture2D"))
+
+    outputBuffer= clCreateFromGLTexture2D(clCtx(), CL_MEM_WRITE_ONLY,
+                                          GL_TEXTURE_2D, 0, outputTex, &error);
+    if(checkCLError(error, "clCreateFromGLTexture2D"))
         return;
 
     if(!loadKernel(clCtx(), &outputKernel, clDevice(), "kernels/output.cl", "outputKernel")) {
         qDebug() << "Error loading kernel.";
         return;
     }
+
+    gBuffer.setupCL(clCtx(), clQueue());
 }
 
 void CLDeferred::resizeGL(QSize size)
 {
     qDebug() << "Resize GL" << size;
 
-    // Create/resize FBO
-    gBuffer.init(size);
-    // Set viewport
+    QList<GLenum> colorFormats;
+    colorFormats.append(diffuseSpecFormat);
+    colorFormats.append(normalsFormat);
+    gBuffer.init(size, colorFormats, depthFormat);
+    // Set G-Buffer viewport
     glViewport(0, 0, size.width(), size.height());
 
     gBuffer.unbind();
+    // Set default FBO viewport
     glViewport(0, 0, size.width(), size.height());
 }
 
 void CLDeferred::renderGL()
 {
-    // 1st pass
-    renderGeometryBuffer();
+    // 1st pass, fill the geometry buffer
+    renderToGBuffer();
 
     // 2nd pass
 
-    // Final stage: render output texture
+    // Update output texture from the CL output buffer
     updateOutputTex();
 
+    // Draw output texture
     drawOutputTex();
 
     frameId++;
 }
 
-void CLDeferred::renderGeometryBuffer()
+void CLDeferred::renderToGBuffer()
 {
     gBuffer.bind();
 
@@ -122,8 +134,9 @@ void CLDeferred::updateOutputTex()
     cl_int error;
 
     error= clEnqueueAcquireGLObjects(clQueue(), 1, &outputBuffer, 0, 0, 0);
-    if(checkError(error, "clEnqueueAcquireGLObjects"))
+    if(checkCLError(error, "clEnqueueAcquireGLObjects"))
         return;
+    gBuffer.enqueueAquireBuffers();
 
     // Work group and NDRange
     int outputWidth= width();
@@ -133,21 +146,28 @@ void CLDeferred::updateOutputTex()
     ndRangeSize[0]= roundUp(outputWidth, workGroupSize[0]);
     ndRangeSize[1]= roundUp(outputHeight, workGroupSize[1]);
 
+    cl_mem gbDiffuseSpec= gBuffer.getColorBuffer(0);
+    cl_mem gbNormals= gBuffer.getColorBuffer(1);
+    cl_mem gbDepth= gBuffer.getDepthBuffer();
+
     // Launch kernel
     error  = clSetKernelArg(outputKernel, 0, sizeof(int), (void*)&outputWidth);
     error |= clSetKernelArg(outputKernel, 1, sizeof(int), (void*)&outputHeight);
-    error |= clSetKernelArg(outputKernel, 2, sizeof(int), (void*)&frameId);
-    error |= clSetKernelArg(outputKernel, 3, sizeof(cl_mem), (void*)&outputBuffer);
+    error |= clSetKernelArg(outputKernel, 2, sizeof(cl_mem), (void*)&gbDiffuseSpec);
+    error |= clSetKernelArg(outputKernel, 3, sizeof(cl_mem), (void*)&gbNormals);
+    error |= clSetKernelArg(outputKernel, 4, sizeof(cl_mem), (void*)&gbDepth);
+    error |= clSetKernelArg(outputKernel, 5, sizeof(cl_mem), (void*)&outputBuffer);
     error |= clEnqueueNDRangeKernel(clQueue(), outputKernel, 2, NULL, ndRangeSize, workGroupSize, 0, NULL, NULL);
-    checkError(error, "outputKernel");
+    checkCLError(error, "outputKernel");
 
     error= clEnqueueReleaseGLObjects(clQueue(), 1, &outputBuffer, 0, 0, 0);
-    if(checkError(error, "clEnqueueReleaseGLObjects"))
+    if(checkCLError(error, "clEnqueueReleaseGLObjects"))
         return;
+    gBuffer.enqueueReleaseBuffers();
 
     // Sync
     clFinish(clQueue());
-    checkError(error, "clFinish");
+    checkCLError(error, "clFinish");
 }
 
 void CLDeferred::drawOutputTex()
@@ -160,10 +180,10 @@ void CLDeferred::drawOutputTex()
     const float uMax= (float)width() / maxSize.width();
     const float vMax= (float)height() / maxSize.height();
     glBegin(GL_QUADS);
-        glVertex4f(-1,-1,    0, vMax);
-        glVertex4f( 1,-1, uMax, vMax);
-        glVertex4f( 1, 1, uMax,    0);
-        glVertex4f(-1, 1,    0,    0);
+        glVertex4f(-1,-1,    0,    0);
+        glVertex4f( 1,-1, uMax,    0);
+        glVertex4f( 1, 1, uMax, vMax);
+        glVertex4f(-1, 1,    0, vMax);
     glEnd();
 
     outputProgram->release();

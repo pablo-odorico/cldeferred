@@ -1,5 +1,7 @@
 #include "fbo.h"
 
+#include <cassert>
+
 FBO::Attachment FBO::createAttach(GLenum format, GLenum target)
 {
     Attachment attach;
@@ -59,8 +61,8 @@ void FBO::cleanup()
 
     glDeleteRenderbuffers(1, &_depthAttach.bufferId);
 
-    foreach(Attachment& attach, _colorAttachs)
-        glDeleteRenderbuffers(1, &attach.bufferId);
+    for(int i=0; i<_colorAttachs.count(); i++)
+        glDeleteRenderbuffers(1, &_colorAttachs[i].bufferId);
     _colorAttachs.clear();
 
     glDeleteFramebuffers(1, &_id);
@@ -76,8 +78,8 @@ void FBO::bind(GLenum target)
     glBindFramebuffer(target, _id);
 
     QVector<GLenum> colorTargets(_colorAttachs.count());
-    foreach(Attachment& attach, _colorAttachs)
-        colorTargets[i]= attach.target;
+    for(int i=0; i<_colorAttachs.count(); i++)
+        colorTargets[i]= _colorAttachs[i].target;
 
     glDrawBuffers(colorTargets.count(), colorTargets.data());
 }
@@ -88,7 +90,7 @@ void FBO::unbind()
         qDebug() << "FBO::unbind: Not binded!";
         return;
     }
-    glBindFramebuffer(target, 0);
+    glBindFramebuffer(_bindedTarget, 0);
     _bindedTarget= GL_NONE;
 }
 
