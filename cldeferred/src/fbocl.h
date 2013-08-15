@@ -14,7 +14,9 @@ public:
     // SetupCL must be called before calling init/cleanup
     void setupCL(cl_context context, cl_command_queue queue);
 
-    bool init(QSize size, QList<GLenum> colorFormats, GLenum depthFormat);
+    bool init(QSize size,
+        QList<GLenum> colorFormats= QList<GLenum>() << GL_RGBA,
+        GLenum depthFormat= GL_DEPTH_COMPONENT24);
 
     void unbind();
 

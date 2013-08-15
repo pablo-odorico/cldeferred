@@ -19,7 +19,7 @@ public:
 
     virtual bool init(QSize size,
         QList<GLenum> colorFormats= QList<GLenum>() << GL_RGBA,
-        GLenum depthFormat= GL_DEPTH_COMPONENT16);
+        GLenum depthFormat= GL_DEPTH_COMPONENT24);
 
     void bind(GLenum target= GL_DRAW_FRAMEBUFFER);
     virtual void unbind();

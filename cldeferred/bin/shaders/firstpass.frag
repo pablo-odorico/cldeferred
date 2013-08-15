@@ -8,11 +8,9 @@ in vec2 texCoord;
 in vec3 normal;
 
 // Output buffers
-// COLOR0: Diffuse texture sample + Specular power
-layout (location = 0) out vec4 outDiffuseSpec;
-// COLOR1: Normals in world coords
-layout (location = 1) out vec2 outNormal;
-// DEPTH: Filled by OpenGL
+layout (location = 0) out vec4 outDiffuseSpec; // COLOR0: Diffuse texture sample + Specular power
+layout (location = 1) out vec2 outNormal;      // COLOR1: Normals in world coords
+layout (location = 2) out float outDepth;      // COLOR2: Depth
 
 void main()
 {
@@ -21,4 +19,5 @@ void main()
 
     outDiffuseSpec = vec4(diffuse, spec);
     outNormal = normal.xy;
+    outDepth= gl_FragCoord.z;
 }

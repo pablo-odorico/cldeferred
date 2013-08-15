@@ -47,8 +47,10 @@ private:
     static const GLenum diffuseSpecFormat= GL_RGBA;
     // COLOR1: Normals in world coords
     static const GLenum normalsFormat= GL_RG16F;
-    // DEPTH buffer
-    static const GLenum depthFormat= GL_DEPTH_COMPONENT32F;
+    // COLOR2: Depth
+    static const GLenum depthFormat= GL_RG32F;
+    // DEPTH: Used only for depth testing
+    static const GLenum depthTestFormat= GL_DEPTH_COMPONENT24;
 
     // Output texture
     GLuint outputTex;

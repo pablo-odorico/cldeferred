@@ -70,10 +70,8 @@ void CLDeferred::resizeGL(QSize size)
 {
     qDebug() << "Resize GL" << size;
 
-    QList<GLenum> colorFormats;
-    colorFormats.append(diffuseSpecFormat);
-    colorFormats.append(normalsFormat);
-    gBuffer.init(size, colorFormats, depthFormat);
+    QList<GLenum> colorFormats= QList<GLenum>() << diffuseSpecFormat << normalsFormat << depthFormat;
+    gBuffer.init(size, colorFormats, depthTestFormat);
     // Set G-Buffer viewport
     glViewport(0, 0, size.width(), size.height());
 
@@ -148,7 +146,7 @@ void CLDeferred::updateOutputTex()
 
     cl_mem gbDiffuseSpec= gBuffer.getColorBuffer(0);
     cl_mem gbNormals= gBuffer.getColorBuffer(1);
-    cl_mem gbDepth= gBuffer.getDepthBuffer();
+    cl_mem gbDepth= gBuffer.getColorBuffer(2);
 
     // Launch kernel
     error  = clSetKernelArg(outputKernel, 0, sizeof(int), (void*)&outputWidth);

@@ -24,7 +24,7 @@ __kernel void outputKernel(
 
     //normal *= (depth==0.0f) ? 0.0f : 1.0f;
 
-    float4 color= (float4)(normal, 1.0f);
+    float4 color= (float4)(depth, depth, depth, 1.0f);
 
     write_imagef(output, (int2)(x,y), color);
 }
