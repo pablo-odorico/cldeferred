@@ -87,7 +87,7 @@ void FBO::bind(GLenum target)
 void FBO::unbind()
 {
     if(_bindedTarget == GL_NONE) {
-        qDebug() << "FBO::unbind: Not binded!";
+        //qDebug() << "FBO::unbind: Not binded!";
         return;
     }
     glBindFramebuffer(_bindedTarget, 0);

@@ -71,10 +71,15 @@ public:
     cl_device_id clDevice() { return _clDevice; }
     cl_command_queue clQueue() { return _clQueue; }
 
-
 public slots:
+    void grabMouse();
+    void releaseMouse();
+
     void renderLater();
     void renderNow();
+
+signals:
+    void grabbedMouseMove(QPoint delta);
 
 protected:
     bool event(QEvent* event);
@@ -82,10 +87,18 @@ protected:
     void exposeEvent(QExposeEvent* event);
     void resizeEvent(QResizeEvent* event);
 
+    void mousePressEvent(QMouseEvent* event);
+    void mouseMoveEvent(QMouseEvent* event);
+    void keyPressEvent(QKeyEvent* event);
+
 private:
     void initialize();
 
     bool _updatePending;
+
+    bool _mouseGrabbed;
+    QPoint _mouseGrabPosition;
+    QPoint _mouseLockPosition;
 
     QOpenGLContext* _glContext;
     QOpenGLPaintDevice* _glDevice;

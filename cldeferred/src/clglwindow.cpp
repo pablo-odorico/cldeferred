@@ -50,9 +50,10 @@
 
 CLGLWindow::CLGLWindow(QWindow* parent)
     : QWindow(parent)
-    , _updatePending(false)
     , _glContext(0)
     , _glDevice(0)
+    , _updatePending(false)
+    , _mouseGrabbed(false)
 {
     setSurfaceType(QWindow::OpenGLSurface);
 }
@@ -139,5 +140,80 @@ void CLGLWindow::renderNow()
     if(isExposed()) {
         renderGL();
         _glContext->swapBuffers(this);
+    }
+}
+
+void CLGLWindow::mousePressEvent(QMouseEvent* event)
+{
+    if(_mouseGrabbed)
+        releaseMouse();
+    else
+        grabMouse();
+}
+
+void CLGLWindow::mouseMoveEvent(QMouseEvent* event)
+{
+    if(!_mouseGrabbed)
+        return;
+
+    QPoint delta= event->globalPos() - _mouseLockPosition;
+    delta.ry()= -delta.ry();
+
+    if(!delta.x() and !delta.y())
+        return;
+
+    qDebug() << delta;
+
+    QCursor::setPos(_mouseLockPosition);
+    emit grabbedMouseMove(delta);
+}
+
+void CLGLWindow::grabMouse()
+{
+    if(_mouseGrabbed)
+        return;
+
+    setCursor(Qt::BlankCursor);
+    setMouseGrabEnabled(true);
+    setKeyboardGrabEnabled(true);
+
+    _mouseGrabPosition= QCursor::pos();
+
+    const QPoint screenSize(screen()->size().width(), screen()->size().height());
+    _mouseLockPosition= screenSize / 2;
+
+    QCursor::setPos(_mouseLockPosition);
+    _mouseGrabbed= true;
+}
+
+void CLGLWindow::releaseMouse()
+{
+    if(!_mouseGrabbed)
+        return;
+
+    setCursor(Qt::ArrowCursor);
+    setMouseGrabEnabled(false);
+    setKeyboardGrabEnabled(false);
+
+    QCursor::setPos(_mouseGrabPosition);
+    _mouseGrabbed= false;
+}
+
+void CLGLWindow::keyPressEvent(QKeyEvent* event)
+{
+    switch(event->key()) {
+    case Qt::Key_Escape:
+        releaseMouse();
+        if(windowState() == Qt::WindowFullScreen)
+            showNormal();
+        break;
+    case Qt::Key_F:
+        if(windowState() == Qt::WindowFullScreen)
+            showNormal();
+        else
+            showFullScreen();
+        break;
+    default:
+        break;
     }
 }
