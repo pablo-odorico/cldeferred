@@ -59,7 +59,6 @@ private:
 
     // Misc
     QGLPainter* painter;
-    QTimer renderTimer;
 
     uint frameId; // TODO sacar
 };

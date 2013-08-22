@@ -78,8 +78,11 @@ public slots:
     void renderLater();
     void renderNow();
 
+    void startRenderTimer(int targetFps=30) { _renderTimer.start(1000/targetFps); }
+    void stopRenderTimer() { _renderTimer.stop(); }
+
 signals:
-    void grabbedMouseMove(QPoint delta);
+    void grabbedMouseMove(QPointF delta);
 
 protected:
     bool event(QEvent* event);
@@ -106,6 +109,8 @@ private:
     cl_context _clContext;
     cl_device_id _clDevice;
     cl_command_queue _clQueue;
+
+    QTimer _renderTimer;
 };
 
 #endif // OPENGLWINDOW_H

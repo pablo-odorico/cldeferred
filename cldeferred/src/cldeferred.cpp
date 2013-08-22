@@ -17,11 +17,10 @@ void CLDeferred::initializeGL()
 
     painter= new QGLPainter(this);
 
-    connect(&renderTimer, SIGNAL(timeout()), this, SLOT(renderLater()));
-    renderTimer.start(1000/30);
-
     // General OpenGL config
     glEnable(GL_DEPTH_TEST);
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
 
     // 1st pass init
     firstPassProgram= new QOpenGLShaderProgram(this);
@@ -46,7 +45,9 @@ void CLDeferred::initializeGL()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // Load scene
-    scene = QGLAbstractScene::loadScene("models/untitled/untitled.obj");
+    scene= QGLAbstractScene::loadScene("models/untitled/untitled.obj");
+
+    startRenderTimer(30);
 }
 
 void CLDeferred::initializeCL()
@@ -149,8 +150,8 @@ void CLDeferred::updateOutputTex()
     cl_mem gbDepth= gBuffer.getColorBuffer(2);
 
     // Launch kernel
-    error  = clSetKernelArg(outputKernel, 0, sizeof(int), (void*)&outputWidth);
-    error |= clSetKernelArg(outputKernel, 1, sizeof(int), (void*)&outputHeight);
+    error  = clSetKernelArg(outputKernel, 0, sizeof(   int), (void*)&outputWidth);
+    error |= clSetKernelArg(outputKernel, 1, sizeof(   int), (void*)&outputHeight);
     error |= clSetKernelArg(outputKernel, 2, sizeof(cl_mem), (void*)&gbDiffuseSpec);
     error |= clSetKernelArg(outputKernel, 3, sizeof(cl_mem), (void*)&gbNormals);
     error |= clSetKernelArg(outputKernel, 4, sizeof(cl_mem), (void*)&gbDepth);

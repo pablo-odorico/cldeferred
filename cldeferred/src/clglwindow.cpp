@@ -56,6 +56,9 @@ CLGLWindow::CLGLWindow(QWindow* parent)
     , _mouseGrabbed(false)
 {
     setSurfaceType(QWindow::OpenGLSurface);
+
+    _renderTimer.setTimerType(Qt::PreciseTimer);
+    connect(&_renderTimer, SIGNAL(timeout()), this, SLOT(renderLater()));
 }
 
 CLGLWindow::~CLGLWindow()
@@ -87,7 +90,7 @@ void CLGLWindow::initialize()
 
 void CLGLWindow::renderLater()
 {
-    if (!_updatePending) {
+    if(!_updatePending) {
         _updatePending = true;
         QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest));
     }
@@ -156,13 +159,12 @@ void CLGLWindow::mouseMoveEvent(QMouseEvent* event)
     if(!_mouseGrabbed)
         return;
 
-    QPoint delta= event->globalPos() - _mouseLockPosition;
-    delta.ry()= -delta.ry();
+    QPointF delta= event->globalPos() - _mouseLockPosition;
+    delta.rx() *=  1.0f/screen()->size().width();
+    delta.ry() *= -1.0f/screen()->size().height();
 
     if(!delta.x() and !delta.y())
         return;
-
-    qDebug() << delta;
 
     QCursor::setPos(_mouseLockPosition);
     emit grabbedMouseMove(delta);
@@ -212,6 +214,12 @@ void CLGLWindow::keyPressEvent(QKeyEvent* event)
             showNormal();
         else
             showFullScreen();
+        break;
+    case Qt::Key_Space:
+        if(_renderTimer.isActive())
+            stopRenderTimer();
+        else
+            startRenderTimer();
         break;
     default:
         break;
