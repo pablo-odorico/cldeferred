@@ -125,11 +125,9 @@ void CLGLWindow::resizeEvent(QResizeEvent* event)
 
 void CLGLWindow::renderNow()
 {
-    _updatePending = false;
-
     bool needsInitialize = false;
     if (!_glContext) {
-        _glContext = new QOpenGLContext(this);
+        _glContext= new QOpenGLContext(this);
         _glContext->setFormat(requestedFormat());
         _glContext->create();
         needsInitialize = true;
@@ -144,9 +142,11 @@ void CLGLWindow::renderNow()
         renderGL();
         _glContext->swapBuffers(this);
     }
+
+    _updatePending = false;
 }
 
-void CLGLWindow::mousePressEvent(QMouseEvent* event)
+void CLGLWindow::mousePressEvent(QMouseEvent*)
 {
     if(_mouseGrabbed)
         releaseMouse();
