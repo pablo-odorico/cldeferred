@@ -100,20 +100,7 @@ void FBO::clear()
 }
 
 /*
-QImage FBO::diffuseToImage()
-{
-    QImage image(_width, _height, QImage::Format_RGB32);
 
-    bind(GL_READ_FRAMEBUFFER);
-    glReadBuffer(GL_COLOR_ATTACHMENT0);
-    // Channels are reversed to correct endianness
-    glReadPixels(0,0, _width,_height, GL_BGRA, GL_UNSIGNED_BYTE,
-                 static_cast<GLvoid*>(image.bits()));
-    unbind(GL_READ_FRAMEBUFFER);
-
-    // Return the image vertically-mirrored to correct the scanline order
-    return image.mirrored();
-}
 
 QImage FBO::normalsToImage()
 {
@@ -149,6 +136,23 @@ QImage FBO::normalsToImage()
     // Return the image vertically-mirrored to correct the scanline order
     return image.mirrored();
 }
+*/
+
+QImage FBO::diffuseToImage()
+{
+    QImage image(_width, _height, QImage::Format_RGB32);
+
+    bind(GL_READ_FRAMEBUFFER);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    // Channels are reversed to correct endianness
+    glReadPixels(0,0, _width,_height, GL_BGRA, GL_UNSIGNED_BYTE,
+                 static_cast<GLvoid*>(image.bits()));
+    unbind();
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+    // Return the image vertically-mirrored to correct the scanline order
+    return image.mirrored();
+}
 
 QImage FBO::depthToImage()
 {
@@ -159,7 +163,14 @@ QImage FBO::depthToImage()
     // Read float data to the image buffer (sizeof float == sizeof RGB32)
     glReadPixels(0,0, _width,_height, GL_DEPTH_COMPONENT, GL_FLOAT,
                  static_cast<GLvoid*>(image.bits()));
-    unbind(GL_READ_FRAMEBUFFER);
+    unbind();
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+
+    QFile file("depth22.txt");
+    file.open(QIODevice::WriteOnly | QIODevice::Text);
+    QTextStream out(&file);
+
 
     // Convert float values to colors
     for(int y=0; y<_height; y++) {
@@ -167,11 +178,15 @@ QImage FBO::depthToImage()
             const int index= x + y * _width;
             const float df= ((float*)image.bits())[index];
             const uchar d= df * 255.0f;
+            out << x << " " << y << " " << df << "\n";
             ((QRgb*)image.bits())[index]= (df == 1.0f) ? qRgb(128,128,255) : qRgb(d,d,d);
         }
     }
+
+    file.close();
+
     // Return the image vertically-mirrored to correct scanline order
     return image.mirrored();
 }
 
-*/
+

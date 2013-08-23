@@ -4,6 +4,8 @@
 #include <GL/glew.h>
 #include <QtCore>
 
+#include <QImage> // TODO scar
+
 class FBO
 {
 public:
@@ -24,6 +26,12 @@ public:
     void bind(GLenum target= GL_DRAW_FRAMEBUFFER);
     virtual void unbind();
     void clear();
+
+    int width() { return _width; }
+    int height() { return _height; }
+
+    QImage depthToImage();
+    QImage diffuseToImage();
 
 protected:
     virtual void cleanup();

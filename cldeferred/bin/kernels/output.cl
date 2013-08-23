@@ -22,9 +22,7 @@ __kernel void outputKernel(
 
     float depth= read_imagef(gbDepth, sampler, (int2)(x,y)).x;
 
-    //normal *= (depth==0.0f) ? 0.0f : 1.0f;
-
-    float4 color= (float4)(depth, depth, depth, 1.0f);
+    float4 color= diffuseSpec;
 
     write_imagef(output, (int2)(x,y), color);
 }

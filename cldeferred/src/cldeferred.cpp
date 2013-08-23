@@ -19,8 +19,8 @@ void CLDeferred::initializeGL()
 
     // General OpenGL config
     glEnable(GL_DEPTH_TEST);
-    glCullFace(GL_BACK);
-    glEnable(GL_CULL_FACE);
+    //glCullFace(GL_BACK);
+    //glEnable(GL_CULL_FACE);
 
     // 1st pass init
     firstPassProgram= new QOpenGLShaderProgram(this);
@@ -46,6 +46,7 @@ void CLDeferred::initializeGL()
 
     // Load scene
     scene= QGLAbstractScene::loadScene("models/untitled/untitled.obj");
+    //scene= QGLAbstractScene::loadScene("models/a10/untitled.obj");
 
     startRenderTimer(30);
 }
@@ -104,7 +105,7 @@ void CLDeferred::renderToGBuffer()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     projMatrix.setToIdentity();
-    projMatrix.perspective(60.0f, (float)width()/height(), 0.5f, 50.0f);
+    projMatrix.perspective(60.0f, (float)width()/height(), 1.0f, 15.0f);
 
     viewMatrix.setToIdentity();
     viewMatrix.lookAt(QVector3D(5,5,5), QVector3D(0,0,0), QVector3D(0,1,0));
@@ -148,6 +149,60 @@ void CLDeferred::updateOutputTex()
     cl_mem gbDiffuseSpec= gBuffer.getColorBuffer(0);
     cl_mem gbNormals= gBuffer.getColorBuffer(1);
     cl_mem gbDepth= gBuffer.getColorBuffer(2);
+
+    static int first= 0;
+    if(first == 10) {
+        float* d= new float[gBuffer.width() * gBuffer.height()];
+        if(!d)
+            qDebug() << "Alloc error";
+        memset(d, 0, sizeof(d));
+
+        size_t origin[3] = {0, 0, 0};
+        size_t region[3] = {gBuffer.width(), gBuffer.height(), 1};
+        error= clEnqueueReadImage(clQueue(), gbDepth, CL_TRUE, origin, region, 0, 0, d, 0, NULL, NULL);
+        if(checkCLError(error, "read image"))
+            return;
+
+        QFile file("depth.txt");
+        file.open(QIODevice::WriteOnly | QIODevice::Text);
+        QTextStream out(&file);
+        for(int y=0; y<gBuffer.height(); y++) {
+            for(int x=0; x<gBuffer.width(); x++) {
+                const float z= d[x + y * gBuffer.width()];
+                if(!z) continue;
+
+                const float ndcX= (2.0f * x)/gBuffer.width() - 1.0f;
+                const float ndcY= (2.0f * y)/gBuffer.height() - 1.0f;
+                const float ndcZ= 2.0f * z - 1.0f;
+
+                const float clipW= projMatrix(3,2) / (ndcZ - projMatrix(2,2)/projMatrix(2,3));
+                const float clipX= ndcX * clipW;
+                const float clipY= ndcY * clipW;
+                const float clipZ= ndcZ * clipW;
+                QVector4D clipPos(clipX, clipY, clipZ, clipW);
+
+                float eyeZ = projMatrix(3,2) / ((projMatrix(2,3) * ndcZ) - projMatrix(2,2));
+                const QVector3D eyeDirection(ndcX, ndcY, -1);
+
+                QVector4D vVector= eyeDirection.toVector4D() * eyeZ;
+                vVector.setW(1);
+
+                /*
+                QVector4D vVector= projMatrix.inverted() * clipPos;
+                vVector /= vVector.w();*/
+
+                QVector4D wVector= (viewMatrix * modelMatrix).inverted() * vVector;
+
+                out << wVector.x() << " " << wVector.y() << " " << wVector.z() << "\n";
+            }
+        }
+
+        /*out << 0 << " " << 0 << " " << 0 << "\n";
+        out << gBuffer.width() << " " << gBuffer.height() << " " << 0 << "\n";*/
+
+        file.close();
+    }
+    first++;
 
     // Launch kernel
     error  = clSetKernelArg(outputKernel, 0, sizeof(   int), (void*)&outputWidth);

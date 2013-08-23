@@ -48,7 +48,7 @@ private:
     // COLOR1: Normals in world coords
     static const GLenum normalsFormat= GL_RG16F;
     // COLOR2: Depth
-    static const GLenum depthFormat= GL_RG32F;
+    static const GLenum depthFormat= GL_R32F;
     // DEPTH: Used only for depth testing
     static const GLenum depthTestFormat= GL_DEPTH_COMPONENT24;
 

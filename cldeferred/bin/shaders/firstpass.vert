@@ -14,11 +14,13 @@ layout (location = 3) in vec2 inTexCoord;
 
 out vec2 texCoord;
 out vec3 normal;
+out float depth;
 
 void main()
 {
     gl_Position = mvpMatrix * inPosition;
     texCoord = inTexCoord;
     normal = normalize((modelITMatrix * inNormal).xyz);
-}
 
+    depth = length(viewMatrix * modelMatrix * inPosition);
+}
