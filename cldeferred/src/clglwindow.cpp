@@ -210,6 +210,7 @@ void CLGLWindow::keyPressEvent(QKeyEvent* event)
             showNormal();
         break;
     case Qt::Key_F:
+    case Qt::Key_F11:
         if(windowState() == Qt::WindowFullScreen)
             showNormal();
         else

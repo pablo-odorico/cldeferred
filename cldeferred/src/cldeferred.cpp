@@ -3,12 +3,13 @@
 const GLenum CLDeferred::diffuseSpecFormat;
 const GLenum CLDeferred::normalsFormat;
 const GLenum CLDeferred::depthFormat;
+const GLenum CLDeferred::depthTestFormat;
 
-CLDeferred::CLDeferred(QSize maxSize)
-    : firstPassProgram(0), painter(0)
+CLDeferred::CLDeferred(QSize maxSize) :
+    firstPassProgram(0), outputProgram(0),
+    scene(0), painter(0)
 {
     this->maxSize= maxSize;
-    frameId= 0;
 }
 
 void CLDeferred::initializeGL()
@@ -19,8 +20,8 @@ void CLDeferred::initializeGL()
 
     // General OpenGL config
     glEnable(GL_DEPTH_TEST);
-    //glCullFace(GL_BACK);
-    //glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
 
     // 1st pass init
     firstPassProgram= new QOpenGLShaderProgram(this);
@@ -84,18 +85,26 @@ void CLDeferred::resizeGL(QSize size)
 
 void CLDeferred::renderGL()
 {
+    static int frameId= 0;
+    frameId++;
+    bool showTime= (frameId % 20) == 0;
+
+    QElapsedTimer time;
+    time.start();
+
     // 1st pass, fill the geometry buffer
     renderToGBuffer();
+    if(showTime) qDebug() << "GBuff" << time.nsecsElapsed()/1e6f;
 
     // 2nd pass
 
     // Update output texture from the CL output buffer
     updateOutputTex();
+    if(showTime) qDebug() << "Update" << time.nsecsElapsed()/1e6f;
 
     // Draw output texture
     drawOutputTex();
-
-    frameId++;
+    if(showTime) qDebug() << "DrawTex" << time.nsecsElapsed()/1e6f;
 }
 
 void CLDeferred::renderToGBuffer()
@@ -139,73 +148,20 @@ void CLDeferred::updateOutputTex()
     gBuffer.enqueueAquireBuffers();
 
     // Work group and NDRange
-    int outputWidth= width();
-    int outputHeight= height();
     size_t workGroupSize[2] = { 16, 16 };
     size_t ndRangeSize[2];
-    ndRangeSize[0]= roundUp(outputWidth, workGroupSize[0]);
-    ndRangeSize[1]= roundUp(outputHeight, workGroupSize[1]);
+    ndRangeSize[0]= roundUp(width(), workGroupSize[0]);
+    ndRangeSize[1]= roundUp(height(), workGroupSize[1]);
 
     cl_mem gbDiffuseSpec= gBuffer.getColorBuffer(0);
     cl_mem gbNormals= gBuffer.getColorBuffer(1);
     cl_mem gbDepth= gBuffer.getColorBuffer(2);
 
-    /*
-    static int first= 0;
-    if(first == 10) {
-        float* d= new float[gBuffer.width() * gBuffer.height()];
-        if(!d)
-            qDebug() << "Alloc error";
-        memset(d, 0, sizeof(d));
-
-        size_t origin[3] = {0, 0, 0};
-        size_t region[3] = {gBuffer.width(), gBuffer.height(), 1};
-        error= clEnqueueReadImage(clQueue(), gbDepth, CL_TRUE, origin, region, 0, 0, d, 0, NULL, NULL);
-        if(checkCLError(error, "read image"))
-            return;
-
-        QFile file("depth.txt");
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
-        QTextStream out(&file);
-        for(int y=0; y<gBuffer.height(); y++) {
-            for(int x=0; x<gBuffer.width(); x++) {
-                const float z= d[x + y * gBuffer.width()];
-                if(!z) continue;
-
-                const float ndcX= (2.0f * x)/gBuffer.width() - 1.0f;
-                const float ndcY= (2.0f * y)/gBuffer.height() - 1.0f;
-                const float ndcZ= 2.0f * z - 1.0f;
-
-                const float clipW= projMatrix(2,3) / (ndcZ - projMatrix(2,2)/projMatrix(3,2));
-                const float clipX= ndcX * clipW;
-                const float clipY= ndcY * clipW;
-                const float clipZ= ndcZ * clipW;
-                QVector4D clipPos(clipX, clipY, clipZ, clipW);
-
-                float eyeZ = projMatrix(2,3) / ((projMatrix(3,2) * ndcZ) - projMatrix(2,2));
-                const QVector3D eyeDirection(ndcX, ndcY, -1);
-                QVector4D vVector= (eyeDirection * eyeZ).toVector4D();
-                vVector.setW(1);
-
-                //QVector4D vVector= projMatrix.inverted() * clipPos;
-
-                QVector4D wVector= (viewMatrix * modelMatrix).inverted() * vVector;
-
-                out << wVector.x() << " " << wVector.y() << " " << wVector.z() << "\n";
-            }
-        }
-        file.close();
-    }
-    first++;
-    */
-
     // Launch kernel
-    error  = clSetKernelArg(outputKernel, 0, sizeof(   int), (void*)&outputWidth);
-    error |= clSetKernelArg(outputKernel, 1, sizeof(   int), (void*)&outputHeight);
-    error |= clSetKernelArg(outputKernel, 2, sizeof(cl_mem), (void*)&gbDiffuseSpec);
-    error |= clSetKernelArg(outputKernel, 3, sizeof(cl_mem), (void*)&gbNormals);
-    error |= clSetKernelArg(outputKernel, 4, sizeof(cl_mem), (void*)&gbDepth);
-    error |= clSetKernelArg(outputKernel, 5, sizeof(cl_mem), (void*)&outputBuffer);
+    error  = clSetKernelArg(outputKernel, 0, sizeof(cl_mem), (void*)&gbDiffuseSpec);
+    error |= clSetKernelArg(outputKernel, 1, sizeof(cl_mem), (void*)&gbNormals);
+    error |= clSetKernelArg(outputKernel, 2, sizeof(cl_mem), (void*)&gbDepth);
+    error |= clSetKernelArg(outputKernel, 3, sizeof(cl_mem), (void*)&outputBuffer);
     error |= clEnqueueNDRangeKernel(clQueue(), outputKernel, 2, NULL, ndRangeSize, workGroupSize, 0, NULL, NULL);
     checkCLError(error, "outputKernel");
 
@@ -215,7 +171,7 @@ void CLDeferred::updateOutputTex()
     gBuffer.enqueueReleaseBuffers();
 
     // Sync
-    clFinish(clQueue());
+    error= clFinish(clQueue());
     checkCLError(error, "clFinish");
 }
 

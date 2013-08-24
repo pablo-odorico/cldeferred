@@ -78,7 +78,8 @@ public slots:
     void renderLater();
     void renderNow();
 
-    void startRenderTimer(int targetFps=30) { _renderTimer.start(1000/targetFps); }
+    void startRenderTimer() { _renderTimer.start(); }
+    void startRenderTimer(int targetFps) { _renderTimer.start(1000/targetFps); }
     void stopRenderTimer() { _renderTimer.stop(); }
 
 signals:

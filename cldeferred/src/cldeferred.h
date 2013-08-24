@@ -14,7 +14,7 @@
 class CLDeferred : public CLGLWindow
 {
 public:
-    CLDeferred(QSize maxSize=QSize(1920, 1080));
+    CLDeferred(QSize maxSize= QSize(1920,1080));
 
     void initializeGL();
     void initializeCL();
@@ -26,7 +26,6 @@ private:
     void updateOutputTex();
     void drawOutputTex();
 
-    // Max windows size
     QSize maxSize;
 
     // Program used to fill the gbuffer
@@ -59,8 +58,6 @@ private:
 
     // Misc
     QGLPainter* painter;
-
-    uint frameId; // TODO sacar
 };
 
 

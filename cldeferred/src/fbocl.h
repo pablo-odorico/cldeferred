@@ -16,28 +16,22 @@ public:
 
     bool init(QSize size,
         QList<GLenum> colorFormats= QList<GLenum>() << GL_RGBA,
-        GLenum depthFormat= GL_DEPTH_COMPONENT24);
-
-    void unbind();
+        GLenum depthFormat= GL_DEPTH_COMPONENT24);   
 
     bool enqueueAquireBuffers();
     bool enqueueReleaseBuffers();
 
     cl_mem getColorBuffer(int i) { return _colorBuffers[i]; }
-    cl_mem getDepthBuffer() { return _depthBuffer; }
+    //cl_mem getDepthBuffer() { return _depthBuffer; }
 
 private:
-    void cleanup();
 
     cl_context _clContext;
     cl_command_queue _clQueue;
 
     // OpenCL-mapped FBO buffers
     QVector<cl_mem> _colorBuffers;
-    cl_mem _depthBuffer;
-
-    // Texture used to copy the FBO's depth buffer
-    GLuint _depthTextureId;
+    //cl_mem _depthBuffer;
 };
 
 #endif // FBOCL_H
