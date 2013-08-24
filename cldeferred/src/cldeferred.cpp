@@ -150,6 +150,7 @@ void CLDeferred::updateOutputTex()
     cl_mem gbNormals= gBuffer.getColorBuffer(1);
     cl_mem gbDepth= gBuffer.getColorBuffer(2);
 
+    /*
     static int first= 0;
     if(first == 10) {
         float* d= new float[gBuffer.width() * gBuffer.height()];
@@ -175,34 +176,28 @@ void CLDeferred::updateOutputTex()
                 const float ndcY= (2.0f * y)/gBuffer.height() - 1.0f;
                 const float ndcZ= 2.0f * z - 1.0f;
 
-                const float clipW= projMatrix(3,2) / (ndcZ - projMatrix(2,2)/projMatrix(2,3));
+                const float clipW= projMatrix(2,3) / (ndcZ - projMatrix(2,2)/projMatrix(3,2));
                 const float clipX= ndcX * clipW;
                 const float clipY= ndcY * clipW;
                 const float clipZ= ndcZ * clipW;
                 QVector4D clipPos(clipX, clipY, clipZ, clipW);
 
-                float eyeZ = projMatrix(3,2) / ((projMatrix(2,3) * ndcZ) - projMatrix(2,2));
+                float eyeZ = projMatrix(2,3) / ((projMatrix(3,2) * ndcZ) - projMatrix(2,2));
                 const QVector3D eyeDirection(ndcX, ndcY, -1);
-
-                QVector4D vVector= eyeDirection.toVector4D() * eyeZ;
+                QVector4D vVector= (eyeDirection * eyeZ).toVector4D();
                 vVector.setW(1);
 
-                /*
-                QVector4D vVector= projMatrix.inverted() * clipPos;
-                vVector /= vVector.w();*/
+                //QVector4D vVector= projMatrix.inverted() * clipPos;
 
                 QVector4D wVector= (viewMatrix * modelMatrix).inverted() * vVector;
 
                 out << wVector.x() << " " << wVector.y() << " " << wVector.z() << "\n";
             }
         }
-
-        /*out << 0 << " " << 0 << " " << 0 << "\n";
-        out << gBuffer.width() << " " << gBuffer.height() << " " << 0 << "\n";*/
-
         file.close();
     }
     first++;
+    */
 
     // Launch kernel
     error  = clSetKernelArg(outputKernel, 0, sizeof(   int), (void*)&outputWidth);

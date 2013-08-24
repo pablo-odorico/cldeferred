@@ -20,14 +20,16 @@ SOURCES += \
     src/clglwindow.cpp \
     src/cldeferred.cpp \
     src/clutilfunctions.cpp \
-    src/fbocl.cpp
+    src/fbocl.cpp \
+    src/camera.cpp
 
 HEADERS += \
     src/fbo.h \
     src/clglwindow.h \
     src/cldeferred.h \
     src/clutilfunctions.h \
-    src/fbocl.h
+    src/fbocl.h \
+    src/camera.h
 
 OTHER_FILES += \
     TODO.txt \
