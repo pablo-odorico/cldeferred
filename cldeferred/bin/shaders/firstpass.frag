@@ -1,11 +1,10 @@
 #version 330 core
 
 uniform mat4 modelMatrix;
-uniform mat4 modelITMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projMatrix;
-// Precomputed projMatrix * viewMatrix * modelMatrix matrix
 uniform mat4 mvpMatrix;
+uniform mat4 modelITMatrix;
 
 // Default Qt3D uniforms
 uniform sampler2D qt_Texture1;

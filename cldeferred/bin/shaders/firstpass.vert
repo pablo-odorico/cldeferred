@@ -1,11 +1,10 @@
 #version 330 core
 
 uniform mat4 modelMatrix;
-uniform mat4 modelITMatrix;
 uniform mat4 viewMatrix;
 uniform mat4 projMatrix;
-// Precomputed projMatrix * viewMatrix * modelMatrix matrix
 uniform mat4 mvpMatrix;
+uniform mat4 modelITMatrix;
 
 // Inputs in default Qt3D locations
 layout (location = 0) in vec4 inPosition;
