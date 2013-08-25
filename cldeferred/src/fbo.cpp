@@ -47,6 +47,9 @@ bool FBO::init(QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
     // Only return true if the framebuffer is fully supported
     const bool error= glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE;
     _initialized= !error;
+
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
     return !error;
 }
 

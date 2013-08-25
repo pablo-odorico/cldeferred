@@ -3,6 +3,7 @@
 
 #include "clglwindow.h"
 #include "fbocl.h"
+#include "camera.h"
 
 #include <QtGui>
 #include <QDebug>
@@ -21,24 +22,32 @@ public:
     void renderGL();
     void resizeGL(QSize size);
 
+protected:
+    void grabbedMouseMoveEvent(QPointF delta);
+    void grabbedKeyPressEvent(int key);
+    void grabbedKeyReleaseEvent(int key);
+
 private:
     void renderToGBuffer();
-    void updateOutputTex();
-    void drawOutputTex();
+    void deferredPass();
+    void drawOutput();
 
     QSize maxSize;
 
+    QGLPainter* painter;
     // Program used to fill the gbuffer
     QOpenGLShaderProgram* firstPassProgram;
     // Program used to render outputTex
     QOpenGLShaderProgram* outputProgram;
 
     // Scene, camera, etc.
+    Camera camera;
     QGLAbstractScene* scene;
 
+    QElapsedTimer sceneTime;
+    qint64 lastRenderTime;
+
     QMatrix4x4 modelMatrix;
-    QMatrix4x4 viewMatrix;
-    QMatrix4x4 projMatrix;
 
     // Geometry buffer
     FBOCL gBuffer;
@@ -48,7 +57,7 @@ private:
     static const GLenum normalsFormat= GL_RG16F;
     // COLOR2: Depth
     static const GLenum depthFormat= GL_R32F;
-    // DEPTH: Used only for depth testing
+    // DEPTH: Used only for depth testing in the first pass
     static const GLenum depthTestFormat= GL_DEPTH_COMPONENT24;
 
     // Output texture
@@ -56,8 +65,8 @@ private:
     cl_mem outputBuffer;
     cl_kernel outputKernel;
 
-    // Misc
-    QGLPainter* painter;
+    int fpsFrameCount;
+    qint64 fpsLastTime;
 };
 
 

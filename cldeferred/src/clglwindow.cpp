@@ -160,14 +160,15 @@ void CLGLWindow::mouseMoveEvent(QMouseEvent* event)
         return;
 
     QPointF delta= event->globalPos() - _mouseLockPosition;
-    delta.rx() *=  1.0f/screen()->size().width();
-    delta.ry() *= -1.0f/screen()->size().height();
+    delta.rx() /=  screen()->size().width();
+    delta.ry() /= -screen()->size().height();
 
     if(!delta.x() and !delta.y())
         return;
 
     QCursor::setPos(_mouseLockPosition);
-    emit grabbedMouseMove(delta);
+
+    grabbedMouseMoveEvent(delta);
 }
 
 void CLGLWindow::grabMouse()
@@ -225,4 +226,13 @@ void CLGLWindow::keyPressEvent(QKeyEvent* event)
     default:
         break;
     }
+
+    if(_mouseGrabbed and !event->isAutoRepeat())
+        grabbedKeyPressEvent(event->key());
+}
+
+void CLGLWindow::keyReleaseEvent(QKeyEvent* event)
+{
+    if(_mouseGrabbed and !event->isAutoRepeat())
+        grabbedKeyReleaseEvent(event->key());
 }

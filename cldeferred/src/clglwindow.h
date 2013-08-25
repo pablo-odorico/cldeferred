@@ -82,9 +82,6 @@ public slots:
     void startRenderTimer(int targetFps) { _renderTimer.start(1000/targetFps); }
     void stopRenderTimer() { _renderTimer.stop(); }
 
-signals:
-    void grabbedMouseMove(QPointF delta);
-
 protected:
     bool event(QEvent* event);
 
@@ -94,6 +91,11 @@ protected:
     void mousePressEvent(QMouseEvent* event);
     void mouseMoveEvent(QMouseEvent* event);
     void keyPressEvent(QKeyEvent* event);
+    void keyReleaseEvent(QKeyEvent* event);
+
+    virtual void grabbedMouseMoveEvent(QPointF delta) { Q_UNUSED(delta); }
+    virtual void grabbedKeyPressEvent(int key) { Q_UNUSED(key); }
+    virtual void grabbedKeyReleaseEvent(int key) { Q_UNUSED(key); }
 
 private:
     void initialize();

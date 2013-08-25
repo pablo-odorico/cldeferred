@@ -6,10 +6,11 @@ const GLenum CLDeferred::depthFormat;
 const GLenum CLDeferred::depthTestFormat;
 
 CLDeferred::CLDeferred(QSize maxSize) :
+    CLGLWindow(),
     firstPassProgram(0), outputProgram(0),
-    scene(0), painter(0)
+    scene(0), painter(0), maxSize(maxSize),
+    fpsFrameCount(0), fpsLastTime(0)
 {
-    this->maxSize= maxSize;
 }
 
 void CLDeferred::initializeGL()
@@ -36,25 +37,31 @@ void CLDeferred::initializeGL()
 
     // 2nd pass init
     // Create output texture
-    QImage tempImg(maxSize.width(), maxSize.height(), QImage::Format_RGB32);
-    tempImg.fill(Qt::darkGray);
     glGenTextures(1, &outputTex);
     glBindTexture(GL_TEXTURE_2D, outputTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tempImg.width(), tempImg.height(), 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, static_cast<GLvoid*>(tempImg.bits()));
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, maxSize.width(), maxSize.height(), 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // Load scene
     scene= QGLAbstractScene::loadScene("models/untitled/untitled.obj");
-    //scene= QGLAbstractScene::loadScene("models/a10/untitled.obj");
 
     startRenderTimer(30);
+    sceneTime.start();
+    lastRenderTime= sceneTime.nsecsElapsed();
+    fpsLastTime= sceneTime.nsecsElapsed();
+
+    camera.setPosition(5, 5, 5);
+    camera.lookAt(0, 0, 0);
+    camera.setMoveSpeed(5);
 }
 
 void CLDeferred::initializeCL()
 {
     cl_int error;
+
+    gBuffer.setupCL(clCtx(), clQueue());
 
     outputBuffer= clCreateFromGLTexture2D(clCtx(), CL_MEM_WRITE_ONLY,
                                           GL_TEXTURE_2D, 0, outputTex, &error);
@@ -65,8 +72,6 @@ void CLDeferred::initializeCL()
         qDebug() << "Error loading kernel.";
         return;
     }
-
-    gBuffer.setupCL(clCtx(), clQueue());
 }
 
 void CLDeferred::resizeGL(QSize size)
@@ -75,36 +80,51 @@ void CLDeferred::resizeGL(QSize size)
 
     QList<GLenum> colorFormats= QList<GLenum>() << diffuseSpecFormat << normalsFormat << depthFormat;
     gBuffer.init(size, colorFormats, depthTestFormat);
-    // Set G-Buffer viewport
+
     glViewport(0, 0, size.width(), size.height());
 
-    gBuffer.unbind();
-    // Set default FBO viewport
-    glViewport(0, 0, size.width(), size.height());
+    camera.setProjection(60.0f, (float)size.width()/size.height(), 0.01f, 50.0f);
 }
 
 void CLDeferred::renderGL()
 {
-    static int frameId= 0;
-    frameId++;
-    bool showTime= (frameId % 20) == 0;
+    const qint64 now= sceneTime.nsecsElapsed();
+    QVector<qint64> times(3);
 
-    QElapsedTimer time;
-    time.start();
+    camera.move((now - lastRenderTime)/1000.0f);
 
-    // 1st pass, fill the geometry buffer
+    // 1st pass
     renderToGBuffer();
-    if(showTime) qDebug() << "GBuff" << time.nsecsElapsed()/1e6f;
+    times[0]= sceneTime.nsecsElapsed();
 
     // 2nd pass
-
-    // Update output texture from the CL output buffer
-    updateOutputTex();
-    if(showTime) qDebug() << "Update" << time.nsecsElapsed()/1e6f;
+    deferredPass();
+    times[1]= sceneTime.nsecsElapsed();
 
     // Draw output texture
-    drawOutputTex();
-    if(showTime) qDebug() << "DrawTex" << time.nsecsElapsed()/1e6f;
+    drawOutput();
+    times[2]= sceneTime.nsecsElapsed();
+
+    const qint64 fpsElapsed= now - fpsLastTime;
+    if(fpsElapsed > 5e9) {
+        const float elapsed1st = (times[0] - now     ) / 1e6f;
+        const float elapsed2nd = (times[1] - times[0]) / 1e6f;
+        const float elapsedDraw= (times[2] - times[1]) / 1e6f;
+        const float totalTime= elapsed1st + elapsed2nd + elapsedDraw;
+
+        qDebug("");
+        qDebug("  FPS       : %.01f Hz.", fpsFrameCount/(fpsElapsed/1e9d));
+        qDebug("  1st pass  : %.02f ms.", elapsed1st);
+        qDebug("  2nd pass  : %.02f ms.", elapsed2nd);
+        qDebug("  Draw quad : %.02f ms.", elapsedDraw);
+        qDebug("  Total time: %.02f ms. (Max. %.01f FPS)", totalTime, 1000/totalTime);
+
+        fpsLastTime= now;
+        fpsFrameCount= 0;
+    }
+
+    fpsFrameCount++;
+    lastRenderTime= now;
 }
 
 void CLDeferred::renderToGBuffer()
@@ -113,24 +133,14 @@ void CLDeferred::renderToGBuffer()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    projMatrix.setToIdentity();
-    projMatrix.perspective(60.0f, (float)width()/height(), 1.0f, 15.0f);
-
-    viewMatrix.setToIdentity();
-    viewMatrix.lookAt(QVector3D(5,5,5), QVector3D(0,0,0), QVector3D(0,1,0));
-
-    static float rot= 1.0f;
-    modelMatrix.setToIdentity();
-    modelMatrix.rotate(rot, 0,1,0);
-    rot++;
-
     firstPassProgram->bind();
     firstPassProgram->setUniformValue("modelMatrix", modelMatrix);
     firstPassProgram->setUniformValue("modelITMatrix", modelMatrix.inverted().transposed());
-    firstPassProgram->setUniformValue("viewMatrix", viewMatrix);
-    firstPassProgram->setUniformValue("projMatrix", projMatrix);
-    firstPassProgram->setUniformValue("mvpMatrix", projMatrix * viewMatrix * modelMatrix);
+    firstPassProgram->setUniformValue("viewMatrix", camera.viewMatrix());
+    firstPassProgram->setUniformValue("projMatrix", camera.projMatrix());
+    firstPassProgram->setUniformValue("mvpMatrix", camera.projMatrix() * camera.viewMatrix() * modelMatrix);
 
+    // Draw scene
     scene->mainNode()->draw(painter);
 
     firstPassProgram->release();
@@ -138,7 +148,7 @@ void CLDeferred::renderToGBuffer()
     gBuffer.unbind();
 }
 
-void CLDeferred::updateOutputTex()
+void CLDeferred::deferredPass()
 {
     cl_int error;
 
@@ -150,7 +160,7 @@ void CLDeferred::updateOutputTex()
     // Work group and NDRange
     size_t workGroupSize[2] = { 16, 16 };
     size_t ndRangeSize[2];
-    ndRangeSize[0]= roundUp(width(), workGroupSize[0]);
+    ndRangeSize[0]= roundUp(width() , workGroupSize[0]);
     ndRangeSize[1]= roundUp(height(), workGroupSize[1]);
 
     cl_mem gbDiffuseSpec= gBuffer.getColorBuffer(0);
@@ -175,7 +185,7 @@ void CLDeferred::updateOutputTex()
     checkCLError(error, "clFinish");
 }
 
-void CLDeferred::drawOutputTex()
+void CLDeferred::drawOutput()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -192,4 +202,29 @@ void CLDeferred::drawOutputTex()
     glEnd();
 
     outputProgram->release();
+}
+
+void CLDeferred::grabbedMouseMoveEvent(QPointF delta)
+{
+    const float sensibility= 100;
+    camera.setDeltaYaw( -delta.x() * sensibility);
+    camera.setDeltaPitch(delta.y() * sensibility);
+}
+
+void CLDeferred::grabbedKeyPressEvent(int key)
+{
+    if(key == Qt::Key_W) camera.toggleMovingDir(Camera::Front, true);
+    if(key == Qt::Key_S) camera.toggleMovingDir(Camera::Back , true);
+    if(key == Qt::Key_D) camera.toggleMovingDir(Camera::Right, true);
+    if(key == Qt::Key_A) camera.toggleMovingDir(Camera::Left , true);
+    if(key == Qt::Key_Shift) camera.setMoveSpeed(camera.moveSpeed() * 2.0f);
+}
+
+void CLDeferred::grabbedKeyReleaseEvent(int key)
+{
+    if(key == Qt::Key_W) camera.toggleMovingDir(Camera::Front, false);
+    if(key == Qt::Key_S) camera.toggleMovingDir(Camera::Back , false);
+    if(key == Qt::Key_D) camera.toggleMovingDir(Camera::Right, false);
+    if(key == Qt::Key_A) camera.toggleMovingDir(Camera::Left , false);
+    if(key == Qt::Key_Shift) camera.setMoveSpeed(camera.moveSpeed() / 2.0f);
 }
