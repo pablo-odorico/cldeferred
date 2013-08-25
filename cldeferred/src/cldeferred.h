@@ -1,15 +1,12 @@
-#ifndef GLWIDGET_H
-#define GLWIDGET_H
+#ifndef CLDEFERRED_H
+#define CLDEFERRED_H
 
 #include "clglwindow.h"
 #include "fbocl.h"
 #include "camera.h"
 
 #include <QtGui>
-#include <QDebug>
-#include <Qt3D/QGLTeapot>
 #include <Qt3D/QGLPainter>
-#include <Qt3D/QGLBuilder>
 #include <Qt3D/QGLAbstractScene>
 
 class CLDeferred : public CLGLWindow
@@ -35,17 +32,16 @@ private:
     QSize maxSize;
 
     QGLPainter* painter;
-    // Program used to fill the gbuffer
+    // GL Program used to fill the gbuffer
     QOpenGLShaderProgram* firstPassProgram;
-    // Program used to render outputTex
+    // GL Program used to render outputTex
     QOpenGLShaderProgram* outputProgram;
+    // CL Kernel for the 2nd pass
+    cl_kernel deferredPassKernel;
 
     // Scene, camera, etc.
     Camera camera;
     QGLAbstractScene* scene;
-
-    QElapsedTimer sceneTime;
-    qint64 lastRenderTime;
 
     QMatrix4x4 modelMatrix;
 
@@ -63,11 +59,13 @@ private:
     // Output texture
     GLuint outputTex;
     cl_mem outputBuffer;
-    cl_kernel outputKernel;
+
+    // Time metrics
+    QElapsedTimer sceneTime;
+    qint64 lastRenderTime;
 
     int fpsFrameCount;
     qint64 fpsLastTime;
 };
 
-
-#endif // GLWIDGET_H
+#endif // CLDEFERRED_H

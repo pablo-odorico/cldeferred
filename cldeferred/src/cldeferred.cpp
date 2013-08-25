@@ -5,11 +5,11 @@ const GLenum CLDeferred::normalsFormat;
 const GLenum CLDeferred::depthFormat;
 const GLenum CLDeferred::depthTestFormat;
 
-CLDeferred::CLDeferred(QSize maxSize) :
-    CLGLWindow(),
-    firstPassProgram(0), outputProgram(0),
-    scene(0), painter(0), maxSize(maxSize),
-    fpsFrameCount(0), fpsLastTime(0)
+CLDeferred::CLDeferred(QSize maxSize)
+    : CLGLWindow()
+    , firstPassProgram(0), outputProgram(0)
+    , scene(0), painter(0), maxSize(maxSize)
+    , fpsFrameCount(0), fpsLastTime(0)
 {
 }
 
@@ -60,15 +60,13 @@ void CLDeferred::initializeGL()
 void CLDeferred::initializeCL()
 {
     cl_int error;
-
-    gBuffer.setupCL(clCtx(), clQueue());
-
     outputBuffer= clCreateFromGLTexture2D(clCtx(), CL_MEM_WRITE_ONLY,
                                           GL_TEXTURE_2D, 0, outputTex, &error);
     if(checkCLError(error, "clCreateFromGLTexture2D"))
         return;
 
-    if(!loadKernel(clCtx(), &outputKernel, clDevice(), "kernels/output.cl", "outputKernel")) {
+    if(!loadKernel(clCtx(), &deferredPassKernel, clDevice(),
+                   "kernels/deferredPass.cl", "deferredPass")) {
         qDebug() << "Error loading kernel.";
         return;
     }
@@ -79,11 +77,11 @@ void CLDeferred::resizeGL(QSize size)
     qDebug() << "Resize GL" << size;
 
     QList<GLenum> colorFormats= QList<GLenum>() << diffuseSpecFormat << normalsFormat << depthFormat;
-    gBuffer.init(size, colorFormats, depthTestFormat);
+    gBuffer.init(clCtx(), size, colorFormats, depthTestFormat);
 
     glViewport(0, 0, size.width(), size.height());
 
-    camera.setProjection(60.0f, (float)size.width()/size.height(), 0.01f, 50.0f);
+    camera.setPerspective(60.0f, (float)size.width()/size.height(), 0.01f, 50.0f);
 }
 
 void CLDeferred::renderGL()
@@ -155,7 +153,7 @@ void CLDeferred::deferredPass()
     error= clEnqueueAcquireGLObjects(clQueue(), 1, &outputBuffer, 0, 0, 0);
     if(checkCLError(error, "clEnqueueAcquireGLObjects"))
         return;
-    gBuffer.enqueueAquireBuffers();
+    gBuffer.enqueueAquireBuffers(clQueue());
 
     // Work group and NDRange
     size_t workGroupSize[2] = { 16, 16 };
@@ -168,19 +166,20 @@ void CLDeferred::deferredPass()
     cl_mem gbDepth= gBuffer.getColorBuffer(2);
 
     // Launch kernel
-    error  = clSetKernelArg(outputKernel, 0, sizeof(cl_mem), (void*)&gbDiffuseSpec);
-    error |= clSetKernelArg(outputKernel, 1, sizeof(cl_mem), (void*)&gbNormals);
-    error |= clSetKernelArg(outputKernel, 2, sizeof(cl_mem), (void*)&gbDepth);
-    error |= clSetKernelArg(outputKernel, 3, sizeof(cl_mem), (void*)&outputBuffer);
-    error |= clEnqueueNDRangeKernel(clQueue(), outputKernel, 2, NULL, ndRangeSize, workGroupSize, 0, NULL, NULL);
+    error  = clSetKernelArg(deferredPassKernel, 0, sizeof(cl_mem), (void*)&gbDiffuseSpec);
+    error |= clSetKernelArg(deferredPassKernel, 1, sizeof(cl_mem), (void*)&gbNormals);
+    error |= clSetKernelArg(deferredPassKernel, 2, sizeof(cl_mem), (void*)&gbDepth);
+    error |= clSetKernelArg(deferredPassKernel, 3, sizeof(cl_mem), (void*)&outputBuffer);
+    error |= clEnqueueNDRangeKernel(clQueue(), deferredPassKernel, 2, NULL,
+                                    ndRangeSize, workGroupSize, 0, NULL, NULL);
     checkCLError(error, "outputKernel");
 
     error= clEnqueueReleaseGLObjects(clQueue(), 1, &outputBuffer, 0, 0, 0);
     if(checkCLError(error, "clEnqueueReleaseGLObjects"))
         return;
-    gBuffer.enqueueReleaseBuffers();
+    gBuffer.enqueueReleaseBuffers(clQueue());
 
-    // Sync
+    // Wait until the kernel finishes and the GL resources are released
     error= clFinish(clQueue());
     checkCLError(error, "clFinish");
 }
@@ -203,6 +202,10 @@ void CLDeferred::drawOutput()
 
     outputProgram->release();
 }
+
+//
+// User input
+//
 
 void CLDeferred::grabbedMouseMoveEvent(QPointF delta)
 {

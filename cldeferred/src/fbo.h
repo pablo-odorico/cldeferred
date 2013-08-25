@@ -30,9 +30,6 @@ public:
     int width() { return _width; }
     int height() { return _height; }
 
-    QImage depthToImage();
-    QImage diffuseToImage();
-
 protected:
     virtual void cleanup();
     // Create and attach a buffer object to the FBO

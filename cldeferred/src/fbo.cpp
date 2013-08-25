@@ -140,7 +140,7 @@ QImage FBO::normalsToImage()
     return image.mirrored();
 }
 */
-
+/*
 QImage FBO::diffuseToImage()
 {
     QImage image(_width, _height, QImage::Format_RGB32);
@@ -191,5 +191,4 @@ QImage FBO::depthToImage()
     // Return the image vertically-mirrored to correct scanline order
     return image.mirrored();
 }
-
-
+*/

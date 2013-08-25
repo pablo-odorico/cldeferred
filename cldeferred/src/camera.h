@@ -10,8 +10,13 @@ public:
 
     Camera();
 
+    QVector3D position() { return _position; }
+    void setPosition(const QVector3D position) { _position= position; updateViewMatrix(); }
+    void setPosition(float x, float y, float z) { setPosition(QVector3D(x,y,z)); }
+    void setDeltaPosition(const QVector3D delta) { setPosition(_position + delta); }
+
     float pitch() { return _pitch; }
-    void setPitch(float degrees) { _pitch= qBound(-89.0f, degrees, 89.0f); updateViewMatrix(); }
+    void setPitch(float degrees) { _pitch= qBound(-89.9f, degrees, 89.9f); updateViewMatrix(); }
     void setDeltaPitch(float deltaDegrees) { setPitch(_pitch + deltaDegrees); }
 
     float yaw() { return _yaw; }
@@ -22,12 +27,7 @@ public:
     void lookAt(QVector3D lookPos);
     void lookAt(float x, float y, float z) { lookAt(QVector3D(x,y,z)); }
 
-    QVector3D position() { return _position; }
-    void setPosition(const QVector3D position) { _position= position; updateViewMatrix(); }
-    void setPosition(float x, float y, float z) { setPosition(QVector3D(x,y,z)); }
-    void setDeltaPosition(const QVector3D delta) { setPosition(_position + delta); }
-
-    void setProjection(float verticalFOV, float aspectRatio, float near, float far);
+    void setPerspective(float verticalFOV, float aspectRatio, float near, float far);
 
     QMatrix4x4 viewMatrix() { return _viewMatrix; }
     QMatrix4x4 projMatrix() { return _projMatrix; }
@@ -49,11 +49,10 @@ private:
     QVector3D _position;
 
     float _moveSpeed;
+    uchar _movementFlags;
 
     QMatrix4x4 _viewMatrix;
     QMatrix4x4 _projMatrix;
-
-    int _movementFlags;
 };
 
 #endif // CAMERA_H

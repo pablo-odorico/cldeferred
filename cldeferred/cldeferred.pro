@@ -37,5 +37,5 @@ OTHER_FILES += \
     bin/shaders/firstpass.vert \
     bin/shaders/outputTex.frag \
     bin/shaders/outputTex.vert \
-    bin/kernels/output.cl
+    bin/kernels/deferredPass.cl
 

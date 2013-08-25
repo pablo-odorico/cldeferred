@@ -1,5 +1,5 @@
 
-__kernel void outputKernel(
+__kernel void deferredPass(
     __read_only image2d_t gbDiffuseSpec,
     __read_only image2d_t gbNormals,
     __read_only image2d_t gbDepth,

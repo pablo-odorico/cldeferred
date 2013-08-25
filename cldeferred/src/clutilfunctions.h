@@ -1,5 +1,5 @@
-#ifndef CLUTILS_H
-#define CLUTILS_H
+#ifndef CLUTILFUNCTIONS_H
+#define CLUTILFUNCTIONS_H
 
 #include <GL/glew.h>
 #include <CL/cl.h>
@@ -51,4 +51,4 @@ protected:
     bool gl2clFormat(GLenum glFormat, cl_channel_order& clOrder, cl_channel_type& clType);
 };
 
-#endif // CLUTILS_H
+#endif // CLUTILFUNCTIONS_H
