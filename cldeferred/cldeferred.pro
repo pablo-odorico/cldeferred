@@ -44,7 +44,8 @@ OTHER_FILES += \
     res/shaders/firstpass.vert \
     res/shaders/outputTex.frag \
     res/shaders/outputTex.vert \
-    res/kernels/deferredPass.cl
+    res/kernels/deferredPass.cl \
+    res/kernels/clutils.cl
 
 RESOURCES += \
     res/shaders.qrc \

@@ -1,7 +1,32 @@
+#include "clutils.cl"
+
 #include "cl_camera.h"
 
 // Image sampler
 const sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
+
+// Get view-space coord from 0..1 depth
+// http://www.opengl.org/wiki/Compute_eye_space_from_window_space#From_XYZ_of_gl_FragCoord
+float4 getViewPosFromDepth(
+    const int2 pos, const int2 size,
+    const float depth,
+    const float16 projMatrix, const float16 projMatrixInv)
+{
+    const float3 ndcPos= 2.0f * (float3)(convert_float2(pos)/size, depth) - 1.0f;
+
+    const float pm23= projMatrix.sE; // Mat. indices  0 1 2 3
+    const float pm22= projMatrix.sA; //               4 5 6 7
+    const float pm32= projMatrix.sB; //               8 9 A B
+                                     //               C D E F
+    const float clipW= pm23 / (ndcPos.z - pm22/pm32);
+    const float4 clipPos= (float4)(ndcPos * clipW, clipW);
+
+    return multMatVec(projMatrixInv, clipPos);
+}
+
+//
+// Kernel
+//
 
 __kernel
 void deferredPass(
@@ -12,76 +37,24 @@ void deferredPass(
     constant cl_camera* camera
 )
 {
-    // Get global position
-    const int x= get_global_id(0);
-    const int y= get_global_id(1);
+    // Get global position and size
+    const int2 pos= (int2)(get_global_id(0), get_global_id(1));
+    const int2 size= get_image_dim(output);
 
-    // Get output size
-    const int width= get_image_width(output);
-    const int height= get_image_height(output);
-
-    if(x>=width || y>=height)
+    if(pos.x >= size.x || pos.y >= size.y)
         return;
 
     // Load data from G-Buffer
-    float4 diffuseSpec= read_imagef(gbDiffuseSpec, sampler, (int2)(x,y));
+    float4 diffuseSpec= read_imagef(gbDiffuseSpec, sampler, pos);
 
-    float3 normal= read_imagef(gbNormals, sampler, (int2)(x,y)).xyz;
+    float3 normal= read_imagef(gbNormals, sampler, pos).xyz;
     normal.z= sqrt(1.0f - normal.x*normal.x - normal.y*normal.y);
 
-    float depth= read_imagef(gbDepth, sampler, (int2)(x,y)).x;
+    float depth= read_imagef(gbDepth, sampler, pos).x;
+    float4 viewPos= getViewPosFromDepth(pos, size, depth, camera->projMatrix, camera->projMatrixInv);
+    float4 worldPos= multMatVec(camera->viewMatrixInv, viewPos);
 
     // Write output
-    float4 color= diffuseSpec;
-    write_imagef(output, (int2)(x,y), color);
+    const float4 color= diffuseSpec;
+    write_imagef(output, pos, color);
 }
-
-
-    /*
-    static int first= 0;
-    if(first == 10) {
-        float* d= new float[gBuffer.width() * gBuffer.height()];
-        if(!d)
-            qDebug() << "Alloc error";
-        memset(d, 0, sizeof(d));
-
-        size_t origin[3] = {0, 0, 0};
-        size_t region[3] = {gBuffer.width(), gBuffer.height(), 1};
-        error= clEnqueueReadImage(clQueue(), gbDepth, CL_TRUE, origin, region, 0, 0, d, 0, NULL, NULL);
-        if(checkCLError(error, "read image"))
-            return;
-
-        QFile file("depth.txt");
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
-        QTextStream out(&file);
-        for(int y=0; y<gBuffer.height(); y++) {
-            for(int x=0; x<gBuffer.width(); x++) {
-                const float z= d[x + y * gBuffer.width()];
-                if(!z) continue;
-
-                const float ndcX= (2.0f * x)/gBuffer.width() - 1.0f;
-                const float ndcY= (2.0f * y)/gBuffer.height() - 1.0f;
-                const float ndcZ= 2.0f * z - 1.0f;
-
-                const float clipW= projMatrix(2,3) / (ndcZ - projMatrix(2,2)/projMatrix(3,2));
-                const float clipX= ndcX * clipW;
-                const float clipY= ndcY * clipW;
-                const float clipZ= ndcZ * clipW;
-                QVector4D clipPos(clipX, clipY, clipZ, clipW);
-
-                float eyeZ = projMatrix(2,3) / ((projMatrix(3,2) * ndcZ) - projMatrix(2,2));
-                const QVector3D eyeDirection(ndcX, ndcY, -1);
-                QVector4D vVector= (eyeDirection * eyeZ).toVector4D();
-                vVector.setW(1);
-
-                //QVector4D vVector= projMatrix.inverted() * clipPos;
-
-                QVector4D wVector= (viewMatrix * modelMatrix).inverted() * vVector;
-
-                out << wVector.x() << " " << wVector.y() << " " << wVector.z() << "\n";
-            }
-        }
-        file.close();
-    }
-    first++;
-    */

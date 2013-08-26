@@ -26,8 +26,14 @@ cl_mem CameraCL::clStructMem(cl_command_queue queue)
 
     cl_camera clStruct;
     // TODO implement operators= for cl_float3 and QVector3D, etc.
+
+    QMatrix4x4 viewMatrixInv= _viewMatrix.inverted();
     memcpy(&clStruct.viewMatrix, _viewMatrix.data(), sizeof(clStruct.viewMatrix));
+    memcpy(&clStruct.viewMatrixInv, viewMatrixInv.data(), sizeof(clStruct.viewMatrixInv));
+
+    QMatrix4x4 projMatrixInv= _projMatrix.inverted();
     memcpy(&clStruct.projMatrix, _projMatrix.data(), sizeof(clStruct.projMatrix));
+    memcpy(&clStruct.projMatrixInv, projMatrixInv.data(), sizeof(clStruct.projMatrixInv));
 
     clStruct.position.x= _position.x();
     clStruct.position.y= _position.y();
