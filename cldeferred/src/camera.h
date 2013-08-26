@@ -3,12 +3,13 @@
 
 #include <QtGui>
 
-class Camera
+class Camera : public QObject
 {
+Q_OBJECT
 public:
     enum MovementDirection { Front=0, Right, Back, Left };
 
-    Camera();
+    Camera(QObject* parent = 0);
 
     QVector3D position() { return _position; }
     void setPosition(const QVector3D position) { _position= position; updateViewMatrix(); }

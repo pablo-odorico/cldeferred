@@ -13,6 +13,8 @@ MOC_DIR = obj
 LIBS += -lGLEW -lOpenCL -lQt53D
 
 INCLUDEPATH += src/
+# Include path for shared kernel structs
+INCLUDEPATH += src/res/kernels/
 
 SOURCES += \
     src/main.cpp \
@@ -33,9 +35,13 @@ HEADERS += \
 
 OTHER_FILES += \
     TODO.txt \
-    bin/shaders/firstpass.frag \
-    bin/shaders/firstpass.vert \
-    bin/shaders/outputTex.frag \
-    bin/shaders/outputTex.vert \
-    bin/kernels/deferredPass.cl
+    res/shaders/firstpass.frag \
+    res/shaders/firstpass.vert \
+    res/shaders/outputTex.frag \
+    res/shaders/outputTex.vert \
+    res/kernels/deferredPass.cl
+
+RESOURCES += \
+    res/shaders.qrc \
+    res/kernels.qrc
 

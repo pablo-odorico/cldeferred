@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>shaders/firstpass.frag</file>
+        <file>shaders/firstpass.vert</file>
+        <file>shaders/outputTex.frag</file>
+        <file>shaders/outputTex.vert</file>
+    </qresource>
+</RCC>

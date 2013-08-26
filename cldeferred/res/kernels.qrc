@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file>kernels/deferredPass.cl</file>
+    </qresource>
+</RCC>

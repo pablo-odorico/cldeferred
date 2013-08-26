@@ -5,6 +5,7 @@
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
 #include <iostream>
+#include <QtCore>
 
 class CLUtilFunctions
 {
@@ -42,7 +43,7 @@ protected:
     void checkProgramBuild(cl_program program, cl_device_id device);
 
     static
-    bool loadProgramText(const char* path, char** text, size_t* length);
+    bool loadProgramText(const char* path, QByteArray& source);
 
     // Converts from an OpenGL format (eg GL_RGBA8) to an OpenCL
     // channel order/channel type pair (eg CL_RGBA, CL_UNORM_INT8)

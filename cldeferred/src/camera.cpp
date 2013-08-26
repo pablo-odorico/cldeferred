@@ -1,6 +1,7 @@
 #include "camera.h"
 
-Camera::Camera() :
+Camera::Camera(QObject* parent)
+    : QObject(parent),
     _pitch(0), _yaw(0), _position(0,0,0),
     _moveSpeed(1.0f), _movementFlags(0)
 {

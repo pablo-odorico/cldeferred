@@ -144,26 +144,13 @@ float CLUtilFunctions::eventElapsed(cl_event event)
     return float(end_time - start_time) * 1.0e-6f; // in ms.
 }
 
-bool CLUtilFunctions::loadProgramText(const char* path, char** text, size_t* length)
+bool CLUtilFunctions::loadProgramText(const char* path, QByteArray& source)
 {
-    ifstream is(path);
-    if(!is.is_open()) {
-        cerr << "Error loading file '" << path << "'." << endl;
+    QFile file(path);
+    if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
         return false;
-    }
 
-    is.seekg(0, ios::end);
-    *length= is.tellg();
-    is.seekg(0, ios::beg);
-
-    *text= (char*)malloc(*length + 1);
-
-    is.read(*text, *length);
-    is.close();
-
-    // Finalizar string
-    (*text)[*length]= 0;
-
+    source= file.readAll();
     return true;
 }
 
@@ -201,17 +188,18 @@ bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
                                 cl_device_id device, const char* path, const char* kernelName)
 {
     // Load program text into a string
-    char* programText;
-    size_t programLength;
-    if(!loadProgramText(path, &programText, &programLength)) {
+    QByteArray programText;
+    if(!loadProgramText(path, programText)) {
         cerr << "Error loading program text." << endl;
         return false;
     }
     // Create program
     cl_int error;
     cl_program program;
-    program= clCreateProgramWithSource(context, 1, (const char **)&programText, (const size_t *)&programLength, &error);
-    free(programText);
+    char* programData= programText.data();
+    size_t programLenght= programText.length();
+    program= clCreateProgramWithSource(context, 1, (const char **)&programData,
+                                       (const size_t *)&programLenght, &error);
     if(checkCLError(error, "loadKernel: clCreateProgramWithSource"))
         return false;
     // Compile program for all the GPUs in the context

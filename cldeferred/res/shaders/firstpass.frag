@@ -23,7 +23,8 @@ void main()
     vec3 diffuse = texture(qt_Texture1, texCoord).rgb;
     float spec = 1.0f;
 
-    outDiffuseSpec = vec4(diffuse, spec);
+    outDiffuseSpec.rgb= diffuse;
+    outDiffuseSpec.a= spec;
     outNormal = normal.xy;
     outDepth = gl_FragCoord.z;
 }

@@ -26,13 +26,13 @@ void CLDeferred::initializeGL()
 
     // 1st pass init
     firstPassProgram= new QOpenGLShaderProgram(this);
-    firstPassProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, "shaders/firstpass.vert");
-    firstPassProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, "shaders/firstpass.frag");
+    firstPassProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/firstpass.vert");
+    firstPassProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/firstpass.frag");
     firstPassProgram->link();
 
     outputProgram= new QOpenGLShaderProgram(this);
-    outputProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, "shaders/outputTex.vert");
-    outputProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, "shaders/outputTex.frag");
+    outputProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/outputTex.vert");
+    outputProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/outputTex.frag");
     outputProgram->link();
 
     // 2nd pass init
@@ -66,7 +66,7 @@ void CLDeferred::initializeCL()
         return;
 
     if(!loadKernel(clCtx(), &deferredPassKernel, clDevice(),
-                   "kernels/deferredPass.cl", "deferredPass")) {
+                   ":/kernels/deferredPass.cl", "deferredPass")) {
         qDebug() << "Error loading kernel.";
         return;
     }

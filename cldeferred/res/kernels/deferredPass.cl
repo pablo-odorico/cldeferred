@@ -1,9 +1,15 @@
+// Image sampler
+const sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
 
-__kernel void deferredPass(
-    __read_only image2d_t gbDiffuseSpec,
-    __read_only image2d_t gbNormals,
-    __read_only image2d_t gbDepth,
-    __write_only image2d_t output)
+__kernel
+void deferredPass(
+    read_only  image2d_t gbDiffuseSpec,
+    read_only  image2d_t gbNormals,
+    read_only  image2d_t gbDepth,
+    write_only image2d_t output
+/*    constant Camera camera,
+    constant Light* lights*/
+)
 {
     // Get global position
     const int x= get_global_id(0);
@@ -16,8 +22,7 @@ __kernel void deferredPass(
     if(x>=width || y>=height)
         return;
 
-    const sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
-
+    // Load data from G-Buffer
     float4 diffuseSpec= read_imagef(gbDiffuseSpec, sampler, (int2)(x,y));
 
     float3 normal= read_imagef(gbNormals, sampler, (int2)(x,y)).xyz;
@@ -25,8 +30,8 @@ __kernel void deferredPass(
 
     float depth= read_imagef(gbDepth, sampler, (int2)(x,y)).x;
 
+    // Write output
     float4 color= diffuseSpec;
-
     write_imagef(output, (int2)(x,y), color);
 }
 
