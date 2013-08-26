@@ -34,7 +34,7 @@ protected:
     // On compilation errors the compiler message is shown and loadKernel returns false
     static
     bool loadKernel(cl_context context, cl_kernel* kernel, cl_device_id device,
-                    const char* path, const char* kernelName);
+                    const char* path, const char* kernelName, const char* compileOptions= 0);
 
     static
     std::string clErrorToString(cl_int err);

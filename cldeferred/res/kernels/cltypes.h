@@ -1,0 +1,22 @@
+#ifndef CLTYPES_H
+#define CLTYPES_H
+
+#ifdef __cplusplus
+
+    // If included from C++, get types from cl.h
+    #include <CL/cl.h>
+
+#else
+
+    // If included from OpenCL code, define types to match the native ones
+    #define cl_float    float
+    #define cl_float2   float2
+    #define cl_float3   float3
+    #define cl_float4   float4
+    #define cl_float8   float8
+    #define cl_float16  float16
+    // TODO add more
+
+#endif
+
+#endif // CLTYPES_H

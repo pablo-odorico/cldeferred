@@ -11,7 +11,7 @@ public:
     FBOCL() : FBO() {}
     virtual ~FBOCL() { }
 
-    bool init(cl_context clContext, QSize size,
+    bool init(cl_context context, QSize size,
         QList<GLenum> colorFormats= QList<GLenum>() << GL_RGBA,
         GLenum depthFormat= GL_DEPTH_COMPONENT24);
 

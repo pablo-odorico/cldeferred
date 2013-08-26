@@ -3,7 +3,7 @@
 
 #include "clglwindow.h"
 #include "fbocl.h"
-#include "camera.h"
+#include "cameracl.h"
 
 #include <QtGui>
 #include <Qt3D/QGLPainter>
@@ -40,7 +40,7 @@ private:
     cl_kernel deferredPassKernel;
 
     // Scene, camera, etc.
-    Camera camera;
+    CameraCL camera;
     QGLAbstractScene* scene;
 
     QMatrix4x4 modelMatrix;

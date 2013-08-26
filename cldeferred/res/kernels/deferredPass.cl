@@ -1,3 +1,5 @@
+#include "cl_camera.h"
+
 // Image sampler
 const sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
 
@@ -6,9 +8,8 @@ void deferredPass(
     read_only  image2d_t gbDiffuseSpec,
     read_only  image2d_t gbNormals,
     read_only  image2d_t gbDepth,
-    write_only image2d_t output
-/*    constant Camera camera,
-    constant Light* lights*/
+    write_only image2d_t output,
+    constant cl_camera* camera
 )
 {
     // Get global position

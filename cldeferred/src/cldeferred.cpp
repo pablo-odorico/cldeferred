@@ -66,10 +66,13 @@ void CLDeferred::initializeCL()
         return;
 
     if(!loadKernel(clCtx(), &deferredPassKernel, clDevice(),
-                   ":/kernels/deferredPass.cl", "deferredPass")) {
+                   ":/kernels/deferredPass.cl", "deferredPass",
+                   "-I../res/kernels/")) {
         qDebug() << "Error loading kernel.";
         return;
     }
+
+    camera.init(clCtx());
 }
 
 void CLDeferred::resizeGL(QSize size)
@@ -164,12 +167,14 @@ void CLDeferred::deferredPass()
     cl_mem gbDiffuseSpec= gBuffer.getColorBuffer(0);
     cl_mem gbNormals= gBuffer.getColorBuffer(1);
     cl_mem gbDepth= gBuffer.getColorBuffer(2);
+    cl_mem cameraStruct= camera.clStructMem(clQueue());
 
     // Launch kernel
     error  = clSetKernelArg(deferredPassKernel, 0, sizeof(cl_mem), (void*)&gbDiffuseSpec);
     error |= clSetKernelArg(deferredPassKernel, 1, sizeof(cl_mem), (void*)&gbNormals);
     error |= clSetKernelArg(deferredPassKernel, 2, sizeof(cl_mem), (void*)&gbDepth);
     error |= clSetKernelArg(deferredPassKernel, 3, sizeof(cl_mem), (void*)&outputBuffer);
+    error |= clSetKernelArg(deferredPassKernel, 4, sizeof(cl_mem), (void*)&cameraStruct);
     error |= clEnqueueNDRangeKernel(clQueue(), deferredPassKernel, 2, NULL,
                                     ndRangeSize, workGroupSize, 0, NULL, NULL);
     checkCLError(error, "outputKernel");

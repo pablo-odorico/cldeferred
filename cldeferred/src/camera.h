@@ -42,7 +42,7 @@ public:
 
     void move(float elapsedMsecs);
 
-private:
+protected:
     void updateViewMatrix();
 
     float _pitch;

@@ -4,8 +4,6 @@
 #include <GL/glew.h>
 #include <QtCore>
 
-#include <QImage> // TODO scar
-
 class FBO
 {
 public:

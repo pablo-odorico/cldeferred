@@ -1,6 +1,6 @@
 #include "fbocl.h"
 
-bool FBOCL::init(cl_context clContext, QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
+bool FBOCL::init(cl_context context, QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
 {
     if(!FBO::init(size, colorFormats, depthFormat)) {
         qDebug() << "FBOCL::init: FBO::init failed";
@@ -12,7 +12,7 @@ bool FBOCL::init(cl_context clContext, QSize size, QList<GLenum> colorFormats, G
     // Map color buffers
     _colorBuffers.resize(_colorAttachs.count());
     for(int i=0; i<_colorAttachs.count(); i++) {
-        _colorBuffers[i]= clCreateFromGLRenderbuffer(clContext, CL_MEM_READ_ONLY,
+        _colorBuffers[i]= clCreateFromGLRenderbuffer(context, CL_MEM_READ_ONLY,
                                                      _colorAttachs[i].bufferId,
                                                      &error);
         checkCLError(error, "clCreateFromGLRenderbuffer color attach");

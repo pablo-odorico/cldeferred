@@ -185,7 +185,8 @@ void CLUtilFunctions::checkProgramBuild(cl_program program, cl_device_id device)
 }
 
 bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
-                                cl_device_id device, const char* path, const char* kernelName)
+                                 cl_device_id device, const char* path, const char* kernelName,
+                                 const char* compileOptions)
 {
     // Load program text into a string
     QByteArray programText;
@@ -203,7 +204,7 @@ bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
     if(checkCLError(error, "loadKernel: clCreateProgramWithSource"))
         return false;
     // Compile program for all the GPUs in the context
-    error= clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+    error= clBuildProgram(program, 0, NULL, compileOptions, NULL, NULL);
     if(checkCLError(error, "loadKernel: clBuildProgram")) {
         checkProgramBuild(program, device);
         return false;

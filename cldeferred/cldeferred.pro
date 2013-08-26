@@ -9,12 +9,16 @@ QMAKE_CXXFLAGS_RELEASE = -march=native -O3 -fPIC
 DESTDIR = bin
 OBJECTS_DIR = obj
 MOC_DIR = obj
+RCC_DIR = obj
 
 LIBS += -lGLEW -lOpenCL -lQt53D
 
 INCLUDEPATH += src/
 # Include path for shared kernel structs
-INCLUDEPATH += src/res/kernels/
+INCLUDEPATH += res/kernels/
+
+# Enable OpenCL support in various classes
+DEFINES += CLSUPPORT
 
 SOURCES += \
     src/main.cpp \
@@ -23,7 +27,8 @@ SOURCES += \
     src/cldeferred.cpp \
     src/clutilfunctions.cpp \
     src/fbocl.cpp \
-    src/camera.cpp
+    src/camera.cpp \
+    src/cameracl.cpp
 
 HEADERS += \
     src/fbo.h \
@@ -31,7 +36,10 @@ HEADERS += \
     src/cldeferred.h \
     src/clutilfunctions.h \
     src/fbocl.h \
-    src/camera.h
+    src/camera.h \
+    src/cameracl.h \
+    res/kernels/cltypes.h \
+    res/kernels/cl_camera.h
 
 OTHER_FILES += \
     TODO.txt \
