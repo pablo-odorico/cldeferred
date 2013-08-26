@@ -17,9 +17,6 @@ INCLUDEPATH += src/
 # Include path for shared kernel structs
 INCLUDEPATH += res/kernels/
 
-# Enable OpenCL support in various classes
-DEFINES += CLSUPPORT
-
 SOURCES += \
     src/main.cpp \
     src/fbo.cpp \
