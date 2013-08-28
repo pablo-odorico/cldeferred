@@ -8,7 +8,8 @@
 class CameraCL : public Camera, protected CLUtilFunctions
 {
 public:
-    CameraCL(QObject* parent=0);
+    CameraCL();
+    ~CameraCL() { }
 
     // Init must be called before calling any other methods
     bool init(cl_context context);

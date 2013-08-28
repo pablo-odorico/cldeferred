@@ -4,7 +4,7 @@ TEMPLATE = app
 QT += core gui opengl
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-QMAKE_CXXFLAGS_RELEASE = -march=native -O3 -fPIC
+QMAKE_CXXFLAGS_RELEASE = -Wno-reorder -Wno-cpp -march=native -O3 -fPIC
 
 DESTDIR = bin
 OBJECTS_DIR = obj
@@ -25,7 +25,12 @@ SOURCES += \
     src/clutilfunctions.cpp \
     src/fbocl.cpp \
     src/camera.cpp \
-    src/cameracl.cpp
+    src/cameracl.cpp \
+    src/spotlight.cpp \
+    src/scene.cpp \
+    src/lightmanager.cpp \
+    src/light.cpp \
+    src/occlusionbuffer.cpp
 
 HEADERS += \
     src/fbo.h \
@@ -36,7 +41,13 @@ HEADERS += \
     src/camera.h \
     src/cameracl.h \
     res/kernels/cltypes.h \
-    res/kernels/cl_camera.h
+    res/kernels/cl_camera.h \
+    src/spotlight.h \
+    src/scene.h \
+    res/kernels/cl_spotlight.h \
+    src/lightmanager.h \
+    src/light.h \
+    src/occlusionbuffer.h
 
 OTHER_FILES += \
     TODO.txt \
@@ -45,7 +56,10 @@ OTHER_FILES += \
     res/shaders/outputTex.frag \
     res/shaders/outputTex.vert \
     res/kernels/deferredPass.cl \
-    res/kernels/clutils.cl
+    res/kernels/clutils.cl \
+    res/shaders/shadowmapping.vert \
+    res/shaders/shadowmapping.frag \
+    res/kernels/occlusionPass.cl
 
 RESOURCES += \
     res/shaders.qrc \

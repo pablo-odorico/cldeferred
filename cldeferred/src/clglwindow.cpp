@@ -3,6 +3,7 @@
 #include <QtCore/QCoreApplication>
 #include <QtGui/QResizeEvent>
 
+#include <QtGui>
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLPaintDevice>
 #include <QtGui/QPainter>
@@ -10,6 +11,7 @@
 
 CLGLWindow::CLGLWindow(QWindow* parent)
     : QWindow(parent)
+    , _glPainter(0)
     , _glContext(0)
     , _glDevice(0)
     , _updatePending(false)
@@ -30,6 +32,9 @@ void CLGLWindow::initialize()
 {
     // OpenGL init
     glewInit();
+    // Create GL painter
+    _glPainter= new QGLPainter(this);
+    _glPainter->setStandardEffect(QGL::LitModulateTexture2D);
     // OpenGL user init
     initializeGL();
 

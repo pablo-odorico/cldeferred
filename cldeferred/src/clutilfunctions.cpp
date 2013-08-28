@@ -185,20 +185,15 @@ void CLUtilFunctions::checkProgramBuild(cl_program program, cl_device_id device)
 }
 
 bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
-                                 cl_device_id device, const char* path, const char* kernelName,
+                                 cl_device_id device, QString programText, const char* kernelName,
                                  const char* compileOptions)
 {
-    // Load program text into a string
-    QByteArray programText;
-    if(!loadProgramText(path, programText)) {
-        cerr << "Error loading program text." << endl;
-        return false;
-    }
     // Create program
     cl_int error;
     cl_program program;
-    char* programData= programText.data();
-    size_t programLenght= programText.length();
+    QByteArray programTextData= programText.toLatin1();
+    char* programData= programTextData.data();
+    size_t programLenght= programTextData.length();
     program= clCreateProgramWithSource(context, 1, (const char **)&programData,
                                        (const size_t *)&programLenght, &error);
     if(checkCLError(error, "loadKernel: clCreateProgramWithSource"))
@@ -218,6 +213,19 @@ bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
     clReleaseProgram(program);
 
     return true;
+}
+
+bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
+                                 cl_device_id device, const char* path, const char* kernelName,
+                                 const char* compileOptions)
+{
+    // Load program text into a string
+    QByteArray programText;
+    if(!loadProgramText(path, programText)) {
+        cerr << "Error loading program text." << endl;
+        return false;
+    }
+    return loadKernel(context, kernel, device, QString(programText), kernelName, compileOptions);
 }
 
 bool CLUtilFunctions::gl2clFormat(GLenum glFormat, cl_channel_order& clOrder, cl_channel_type& clType)

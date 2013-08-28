@@ -7,20 +7,23 @@
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
 #include "clutilfunctions.h"
-#include <QtOpenGL>
 
 #include <QtGui/QWindow>
+#include <QOpenGLContext>
+#include <QOpenGLPaintDevice>
+#include <Qt3D/QGLPainter>
 
 class QPainter;
 class QOpenGLContext;
 class QOpenGLPaintDevice;
+class QGLPainter;
 
 class CLGLWindow : public QWindow, protected CLUtilFunctions
 {
     Q_OBJECT
 public:
     explicit CLGLWindow(QWindow* parent = 0);
-    ~CLGLWindow();
+    virtual ~CLGLWindow();
 
     virtual void renderGL() = 0;
     virtual void initializeGL() = 0;
@@ -28,10 +31,11 @@ public:
     virtual void resizeGL(QSize size) = 0;
 
     QOpenGLContext* glCtx() { return _glContext; }
+    QGLPainter* glPainter() { return _glPainter; }
 
-    cl_context clCtx() { return _clContext; }
-    cl_device_id clDevice() { return _clDevice; }
-    cl_command_queue clQueue() { return _clQueue; }
+    cl_context clCtx() const { return _clContext; }
+    cl_device_id clDevice() const { return _clDevice; }
+    cl_command_queue clQueue() const { return _clQueue; }
 
 public slots:
     void grabMouse();
@@ -68,6 +72,7 @@ private:
     QPoint _mouseGrabPosition;
     QPoint _mouseLockPosition;
 
+    QGLPainter* _glPainter;
     QOpenGLContext* _glContext;
     QOpenGLPaintDevice* _glDevice;
 

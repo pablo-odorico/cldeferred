@@ -4,5 +4,7 @@
         <file>shaders/firstpass.vert</file>
         <file>shaders/outputTex.frag</file>
         <file>shaders/outputTex.vert</file>
+        <file>shaders/shadowmapping.vert</file>
+        <file>shaders/shadowmapping.frag</file>
     </qresource>
 </RCC>

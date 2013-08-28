@@ -1,8 +1,7 @@
 #include "camera.h"
 
-Camera::Camera(QObject* parent)
-    : QObject(parent),
-    _pitch(0), _yaw(0), _position(0,0,0),
+Camera::Camera()
+    : _pitch(0), _yaw(0), _position(0,0,0),
     _moveSpeed(1.0f), _movementFlags(0)
 {
     updateViewMatrix();
@@ -21,7 +20,13 @@ void Camera::setPerspective(float verticalFOV, float aspectRatio, float near, fl
     _projMatrix.perspective(verticalFOV, aspectRatio, near, far);
 }
 
-QVector3D Camera::lookVector()
+void Camera::setOrthoProjection(float left, float right, float bottom, float top, float near, float far)
+{
+    _projMatrix.setToIdentity();
+    _projMatrix.ortho(left, right, bottom, top, near, far);
+}
+
+QVector3D Camera::lookVector() const
 {
     // The output vector will have a length of 1
     // http://en.wikipedia.org/wiki/Spherical_coordinate_system

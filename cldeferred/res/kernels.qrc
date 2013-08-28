@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>kernels/deferredPass.cl</file>
+        <file>kernels/occlusionPass.cl</file>
     </qresource>
 </RCC>

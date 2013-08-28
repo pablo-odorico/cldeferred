@@ -48,6 +48,7 @@ bool FBO::init(QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
     const bool error= glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE;
     _initialized= !error;
 
+    // Unbind
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
     return !error;
@@ -85,6 +86,9 @@ void FBO::bind(GLenum target)
         colorTargets[i]= _colorAttachs[i].target;
 
     glDrawBuffers(colorTargets.count(), colorTargets.data());
+
+    // Set FBO viewport
+    glViewport(0, 0, _width, _height);
 }
 
 void FBO::unbind()
@@ -140,7 +144,7 @@ QImage FBO::normalsToImage()
     return image.mirrored();
 }
 */
-/*
+
 QImage FBO::diffuseToImage()
 {
     QImage image(_width, _height, QImage::Format_RGB32);
@@ -155,8 +159,9 @@ QImage FBO::diffuseToImage()
 
     // Return the image vertically-mirrored to correct the scanline order
     return image.mirrored();
-}
 
+}
+/*
 QImage FBO::depthToImage()
 {
     QImage image(_width, _height, QImage::Format_RGB32);

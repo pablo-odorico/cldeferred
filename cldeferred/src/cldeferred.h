@@ -3,16 +3,16 @@
 
 #include "clglwindow.h"
 #include "fbocl.h"
-#include "cameracl.h"
+#include "scene.h"
+#include "occlusionkernel.h"
 
 #include <QtGui>
-#include <Qt3D/QGLPainter>
-#include <Qt3D/QGLAbstractScene>
 
 class CLDeferred : public CLGLWindow
 {
 public:
     CLDeferred(QSize maxSize= QSize(1920,1080));
+    virtual ~CLDeferred() { }
 
     void initializeGL();
     void initializeCL();
@@ -31,19 +31,17 @@ private:
 
     QSize maxSize;
 
-    QGLPainter* painter;
     // GL Program used to fill the gbuffer
     QOpenGLShaderProgram* firstPassProgram;
-    // GL Program used to render outputTex
-    QOpenGLShaderProgram* outputProgram;
+    // Kernel used to calculate light occlusions
+    OcclusionBuffer occlusionKernel;
     // CL Kernel for the 2nd pass
     cl_kernel deferredPassKernel;
+    // GL Program used to render outputTex
+    QOpenGLShaderProgram* outputProgram;
 
-    // Scene, camera, etc.
-    CameraCL camera;
-    QGLAbstractScene* scene;
-
-    QMatrix4x4 modelMatrix;
+    // Scene
+    Scene scene;
 
     // Geometry buffer
     FBOCL gBuffer;

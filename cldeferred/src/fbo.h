@@ -4,6 +4,8 @@
 #include <GL/glew.h>
 #include <QtCore>
 
+#include <QImage>
+
 class FBO
 {
 public:
@@ -25,8 +27,11 @@ public:
     virtual void unbind();
     void clear();
 
-    int width() { return _width; }
-    int height() { return _height; }
+    int width() const { return _width; }
+    int height() const { return _height; }
+    QSize size() const { return QSize(_width, _height); }
+
+    QImage diffuseToImage();
 
 protected:
     virtual void cleanup();

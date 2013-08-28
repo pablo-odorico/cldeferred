@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 
     // If included from C++, get types from cl.h
-    #include <CL/cl.h>
+    #include <CL/cl_platform.h>
 
 #else
 

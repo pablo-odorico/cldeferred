@@ -35,6 +35,9 @@ protected:
     static
     bool loadKernel(cl_context context, cl_kernel* kernel, cl_device_id device,
                     const char* path, const char* kernelName, const char* compileOptions= 0);
+    static
+    bool loadKernel(cl_context context, cl_kernel* kernel, cl_device_id device,
+                    QString programText, const char* kernelName, const char* compileOptions= 0);
 
     static
     std::string clErrorToString(cl_int err);

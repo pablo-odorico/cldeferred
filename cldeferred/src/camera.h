@@ -3,38 +3,40 @@
 
 #include <QtGui>
 
-class Camera : public QObject
+class Camera
 {
-Q_OBJECT
 public:
     enum MovementDirection { Front=0, Right, Back, Left };
 
-    Camera(QObject* parent = 0);
+    Camera();
+    virtual ~Camera() { }
 
-    QVector3D position() { return _position; }
+    QVector3D position() const { return _position; }
     void setPosition(const QVector3D position) { _position= position; updateViewMatrix(); }
     void setPosition(float x, float y, float z) { setPosition(QVector3D(x,y,z)); }
     void setDeltaPosition(const QVector3D delta) { setPosition(_position + delta); }
 
-    float pitch() { return _pitch; }
+    float pitch() const { return _pitch; }
     void setPitch(float degrees) { _pitch= qBound(-89.9f, degrees, 89.9f); updateViewMatrix(); }
     void setDeltaPitch(float deltaDegrees) { setPitch(_pitch + deltaDegrees); }
 
-    float yaw() { return _yaw; }
+    float yaw() const { return _yaw; }
     void setYaw(float degrees) { _yaw= fmod(degrees, 360.0f); updateViewMatrix(); }
     void setDeltaYaw(float deltaDegrees) { setYaw(_yaw + deltaDegrees); }
 
-    QVector3D lookVector();
+    QVector3D lookVector() const;
     void lookAt(QVector3D lookPos);
     void lookAt(float x, float y, float z) { lookAt(QVector3D(x,y,z)); }
+    void lookAt(QVector3D lookFrom, QVector3D lookTo) { setPosition(lookFrom); lookAt(lookTo); }
 
     void setPerspective(float verticalFOV, float aspectRatio, float near, float far);
+    void setOrthoProjection(float left, float right, float bottom, float top, float near, float far);
 
-    QMatrix4x4 viewMatrix() { return _viewMatrix; }
-    QMatrix4x4 projMatrix() { return _projMatrix; }
+    QMatrix4x4 viewMatrix() const { return _viewMatrix; }
+    QMatrix4x4 projMatrix() const { return _projMatrix; }
 
     // Camera movement
-    float moveSpeed() { return _moveSpeed; }
+    float moveSpeed() const { return _moveSpeed; }
     void setMoveSpeed(float unitsPerSec) { _moveSpeed= unitsPerSec; }
 
     void resetMovingDir() { _movementFlags= 0; }

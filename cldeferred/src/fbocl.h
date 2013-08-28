@@ -8,7 +8,7 @@
 class FBOCL : public FBO, protected CLUtilFunctions
 {
 public:
-    FBOCL() : FBO() {}
+    FBOCL() : FBO() { }
     virtual ~FBOCL() { }
 
     bool init(cl_context context, QSize size,

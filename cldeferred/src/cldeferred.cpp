@@ -8,7 +8,7 @@ const GLenum CLDeferred::depthTestFormat;
 CLDeferred::CLDeferred(QSize maxSize)
     : CLGLWindow()
     , firstPassProgram(0), outputProgram(0)
-    , scene(0), painter(0), maxSize(maxSize)
+    , maxSize(maxSize)
     , fpsFrameCount(0), fpsLastTime(0)
 {
 }
@@ -17,12 +17,12 @@ void CLDeferred::initializeGL()
 {
     qDebug() << "Initialize GL";
 
-    painter= new QGLPainter(this);
-
     // General OpenGL config
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_BACK);
     glEnable(GL_CULL_FACE);
+    // GL painter config
+    glPainter()->setStandardEffect(QGL::LitModulateTexture2D);
 
     // 1st pass init
     firstPassProgram= new QOpenGLShaderProgram(this);
@@ -44,17 +44,16 @@ void CLDeferred::initializeGL()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-    // Load scene
-    scene= QGLAbstractScene::loadScene("models/untitled/untitled.obj");
-
     startRenderTimer(30);
     sceneTime.start();
     lastRenderTime= sceneTime.nsecsElapsed();
     fpsLastTime= sceneTime.nsecsElapsed();
 
-    camera.setPosition(5, 5, 5);
-    camera.lookAt(0, 0, 0);
-    camera.setMoveSpeed(5);
+    scene.init(glPainter());
+    if(!scene.loadScene("models/untitled/untitled.obj"))
+        qDebug() << "Could not load scene!";
+    scene.camera().lookAt(QVector3D(5, 5, 5), QVector3D(0, 0, 0));
+    scene.camera().setMoveSpeed(5);
 }
 
 void CLDeferred::initializeCL()
@@ -72,7 +71,12 @@ void CLDeferred::initializeCL()
         return;
     }
 
-    camera.init(clCtx());
+    if(!occlusionKernel.init(clCtx(), clDevice(), 3)) {
+        qDebug() << "Error initializing occlusion kernel.";
+        return;
+    }
+
+    scene.camera().init(clCtx());
 }
 
 void CLDeferred::resizeGL(QSize size)
@@ -82,9 +86,7 @@ void CLDeferred::resizeGL(QSize size)
     QList<GLenum> colorFormats= QList<GLenum>() << diffuseSpecFormat << normalsFormat << depthFormat;
     gBuffer.init(clCtx(), size, colorFormats, depthTestFormat);
 
-    glViewport(0, 0, size.width(), size.height());
-
-    camera.setPerspective(60.0f, (float)size.width()/size.height(), 0.01f, 50.0f);
+    scene.camera().setPerspective(60.0f, (float)size.width()/size.height(), 0.01f, 50.0f);
 }
 
 void CLDeferred::renderGL()
@@ -92,7 +94,7 @@ void CLDeferred::renderGL()
     const qint64 now= sceneTime.nsecsElapsed();
     QVector<qint64> times(3);
 
-    camera.move((now - lastRenderTime)/1000.0f);
+    scene.camera().move((now - lastRenderTime)/1000.0f);
 
     // 1st pass
     renderToGBuffer();
@@ -113,7 +115,7 @@ void CLDeferred::renderGL()
         const float elapsedDraw= (times[2] - times[1]) / 1e6f;
         const float totalTime= elapsed1st + elapsed2nd + elapsedDraw;
 
-        qDebug("");
+        qDebug(" ");
         qDebug("  FPS       : %.01f Hz.", fpsFrameCount/(fpsElapsed/1e9d));
         qDebug("  1st pass  : %.02f ms.", elapsed1st);
         qDebug("  2nd pass  : %.02f ms.", elapsed2nd);
@@ -134,17 +136,7 @@ void CLDeferred::renderToGBuffer()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    firstPassProgram->bind();
-    firstPassProgram->setUniformValue("modelMatrix", modelMatrix);
-    firstPassProgram->setUniformValue("modelITMatrix", modelMatrix.inverted().transposed());
-    firstPassProgram->setUniformValue("viewMatrix", camera.viewMatrix());
-    firstPassProgram->setUniformValue("projMatrix", camera.projMatrix());
-    firstPassProgram->setUniformValue("mvpMatrix", camera.projMatrix() * camera.viewMatrix() * modelMatrix);
-
-    // Draw scene
-    scene->mainNode()->draw(painter);
-
-    firstPassProgram->release();
+    scene.draw(firstPassProgram, Scene::MVPMatrix | Scene::ModelITMatrix);
 
     gBuffer.unbind();
 }
@@ -167,7 +159,7 @@ void CLDeferred::deferredPass()
     cl_mem gbDiffuseSpec= gBuffer.getColorBuffer(0);
     cl_mem gbNormals= gBuffer.getColorBuffer(1);
     cl_mem gbDepth= gBuffer.getColorBuffer(2);
-    cl_mem cameraStruct= camera.clStructMem(clQueue());
+    cl_mem cameraStruct= scene.camera().clStructMem(clQueue());
 
     // Launch kernel
     error  = clSetKernelArg(deferredPassKernel, 0, sizeof(cl_mem), (void*)&gbDiffuseSpec);
@@ -191,6 +183,8 @@ void CLDeferred::deferredPass()
 
 void CLDeferred::drawOutput()
 {
+    glViewport(0, 0, width(), height());
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     outputProgram->bind();
@@ -215,24 +209,24 @@ void CLDeferred::drawOutput()
 void CLDeferred::grabbedMouseMoveEvent(QPointF delta)
 {
     const float sensibility= 100;
-    camera.setDeltaYaw( -delta.x() * sensibility);
-    camera.setDeltaPitch(delta.y() * sensibility);
+    scene.camera().setDeltaYaw( -delta.x() * sensibility);
+    scene.camera().setDeltaPitch(delta.y() * sensibility);
 }
 
 void CLDeferred::grabbedKeyPressEvent(int key)
 {
-    if(key == Qt::Key_W) camera.toggleMovingDir(Camera::Front, true);
-    if(key == Qt::Key_S) camera.toggleMovingDir(Camera::Back , true);
-    if(key == Qt::Key_D) camera.toggleMovingDir(Camera::Right, true);
-    if(key == Qt::Key_A) camera.toggleMovingDir(Camera::Left , true);
-    if(key == Qt::Key_Shift) camera.setMoveSpeed(camera.moveSpeed() * 2.0f);
+    if(key == Qt::Key_W) scene.camera().toggleMovingDir(Camera::Front, true);
+    if(key == Qt::Key_S) scene.camera().toggleMovingDir(Camera::Back , true);
+    if(key == Qt::Key_D) scene.camera().toggleMovingDir(Camera::Right, true);
+    if(key == Qt::Key_A) scene.camera().toggleMovingDir(Camera::Left , true);
+    if(key == Qt::Key_Shift) scene.camera().setMoveSpeed(scene.camera().moveSpeed() * 2.0f);
 }
 
 void CLDeferred::grabbedKeyReleaseEvent(int key)
 {
-    if(key == Qt::Key_W) camera.toggleMovingDir(Camera::Front, false);
-    if(key == Qt::Key_S) camera.toggleMovingDir(Camera::Back , false);
-    if(key == Qt::Key_D) camera.toggleMovingDir(Camera::Right, false);
-    if(key == Qt::Key_A) camera.toggleMovingDir(Camera::Left , false);
-    if(key == Qt::Key_Shift) camera.setMoveSpeed(camera.moveSpeed() / 2.0f);
+    if(key == Qt::Key_W) scene.camera().toggleMovingDir(Camera::Front, false);
+    if(key == Qt::Key_S) scene.camera().toggleMovingDir(Camera::Back , false);
+    if(key == Qt::Key_D) scene.camera().toggleMovingDir(Camera::Right, false);
+    if(key == Qt::Key_A) scene.camera().toggleMovingDir(Camera::Left , false);
+    if(key == Qt::Key_Shift) scene.camera().setMoveSpeed(scene.camera().moveSpeed() / 2.0f);
 }
