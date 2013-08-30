@@ -14,7 +14,7 @@ void SpotLight::setParams(float cutOff, float exponent, float linearAtenuation, 
     _lightCamera.setPerspective(_cutOff, 1.0f, nearValue, 1.0f/_linearAtenuation);
 }
 
-void SpotLight::clUpdateStruct(cl_command_queue queue, cl_mem buffer, size_t index)
+void SpotLight::updateStructCL(cl_command_queue queue, cl_mem buffer, size_t index)
 {
     cl_spotlight clStruct;
 

@@ -22,7 +22,7 @@ public:
     QVector3D lookVector() const { return _lightCamera.lookVector(); }
     void lookAt(QVector3D lookPos) { _lightCamera.lookAt(lookPos); }
     void lookAt(float x, float y, float z) { lookAt(QVector3D(x,y,z)); }
-    void lookAt(QVector3D lookFrom, QVector3D lookTo) { setPosition(lookFrom); lookAt(lookTo); }
+    void lookAt(QVector3D lookFrom, QVector3D lookTo) { _lightCamera.lookAt(lookFrom, lookTo); }
 
     float pitch() const { return _lightCamera.pitch(); }
     void setPitch(float degrees) { _lightCamera.setPitch(degrees); }
@@ -32,7 +32,7 @@ public:
     void setYaw(float degrees) { _lightCamera.setYaw(degrees); }
     void setDeltaYaw(float deltaDegrees) { _lightCamera.setDeltaYaw(deltaDegrees); }
 
-    void clUpdateStruct(cl_command_queue queue, cl_mem buffer, size_t index);
+    void updateStructCL(cl_command_queue queue, cl_mem buffer, size_t index);
 
 private:
     float _cutOff;           // Field of view of the light camera, in degrees

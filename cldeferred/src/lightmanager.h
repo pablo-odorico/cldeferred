@@ -20,12 +20,16 @@ public:
 
     // LightManager will delete all light objects on it's dtor
     void addSpotLight(SpotLight* spotLight) { _spotLights << spotLight; }
+    SpotLight* spotLight(int i) { return _spotLights[i]; }
 
     // Update all OpenCL light structs
     void updateStructs(cl_command_queue queue);
-    // Updates the OpenCL struct of a single spot light
-    void updateSpotLightStruct(cl_command_queue queue, int index);
+    // Recalculate all of the lights' shadow maps
+    void updateShadowMaps(const Scene& scene);
 
+    cl_mem spotStructs();
+    QVector<cl_mem> aquireSpotDepths(cl_command_queue queue);
+    bool releaseSpotDephts(cl_command_queue queue);
 
 private:
     bool _initialized;

@@ -19,7 +19,8 @@ public:
         _bindedTarget(GL_NONE), _id(0) { }
     virtual ~FBO() { cleanup(); }
 
-    virtual bool init(QSize size,
+    // resize MUST be called before using the fbo
+    virtual bool resize(QSize size,
         QList<GLenum> colorFormats= QList<GLenum>() << GL_RGBA,
         GLenum depthFormat= GL_DEPTH_COMPONENT24);
 
@@ -32,16 +33,18 @@ public:
     QSize size() const { return QSize(_width, _height); }
 
     QImage diffuseToImage();
+    QImage depthToImage();
 
 protected:
     virtual void cleanup();
     // Create and attach a buffer object to the FBO
     Attachment createAttach(GLenum format, GLenum target);
 
+    bool _initialized;
+
     int _width;
     int _height;
 
-    bool _initialized;
     GLenum _bindedTarget;
 
     GLuint _id;

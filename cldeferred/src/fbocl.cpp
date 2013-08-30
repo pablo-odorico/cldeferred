@@ -1,11 +1,13 @@
 #include "fbocl.h"
+#include <cassert>
 
-bool FBOCL::init(cl_context context, QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
+bool FBOCL::resize(cl_context context, QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
 {
-    if(!FBO::init(size, colorFormats, depthFormat)) {
+    if(!FBO::resize(size, colorFormats, depthFormat)) {
         qDebug() << "FBOCL::init: FBO::init failed";
         return false;
     }
+    _initialized= false;
 
     cl_int error;
 
@@ -24,35 +26,42 @@ bool FBOCL::init(cl_context context, QSize size, QList<GLenum> colorFormats, GLe
     checkCLError(error, "clCreateFromGLRenderbuffer depth attach");
     */
 
+    _initialized= true;
     return true;
 }
 
-bool FBOCL::enqueueAquireBuffers(cl_command_queue clQueue)
+QVector<cl_mem> FBOCL::aquireColorBuffers(cl_command_queue queue)
 {
+    assert(_initialized);
+
     cl_int error;
 
-    error= clEnqueueAcquireGLObjects(clQueue, _colorBuffers.count(), _colorBuffers.data(), 0, 0, 0);
-    if(checkCLError(error, "FBOCL::enqueueAquireBuffers: clEnqueueAcquireGLObjects colors"))
-        return false;
+    error= clEnqueueAcquireGLObjects(queue, _colorBuffers.count(), _colorBuffers.data(), 0, 0, 0);
+    if(checkCLError(error, "FBOCL::aquireColorBuffers: clEnqueueAcquireGLObjects"))
+        return QVector<cl_mem>();
+
+    return _colorBuffers;
+}
+
+bool FBOCL::releaseColorBuffers(cl_command_queue queue)
+{
+    assert(_initialized);
+
+    cl_int error;
+
+    error= clEnqueueReleaseGLObjects(queue, _colorBuffers.count(), _colorBuffers.data(), 0, 0, 0);
+
+    return !checkCLError(error, "FBOCL::releaseColorBuffers: clEnqueueReleaseGLObjects");
+}
+
+
 /*
     error= clEnqueueAcquireGLObjects(clQueue, 1, &_depthBuffer, 0, 0, 0);
     if(checkCLError(error, "FBOCL::enqueueAquireBuffers: clEnqueueAcquireGLObjects depth"))
         return false;
 */
-    return true;
-}
-
-bool FBOCL::enqueueReleaseBuffers(cl_command_queue clQueue)
-{
-    cl_int error;
-
-    error= clEnqueueReleaseGLObjects(clQueue, _colorBuffers.count(), _colorBuffers.data(), 0, 0, 0);
-    if(checkCLError(error, "FBOCL::enqueueReleaseBuffers: clEnqueueReleaseGLObjects color"))
-        return false;
 /*
     error= clEnqueueReleaseGLObjects(clQueue, 1, &_depthBuffer, 0, 0, 0);
     if(checkCLError(error, "FBOCL::enqueueReleaseBuffers: clEnqueueReleaseGLObjects depth"))
         return false;
 */
-    return true;
-}

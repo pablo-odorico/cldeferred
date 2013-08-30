@@ -28,6 +28,7 @@ public:
     virtual void renderGL() = 0;
     virtual void initializeGL() = 0;
     virtual void initializeCL() = 0;
+    virtual void finalizeInit() = 0; // Called after OpenCL and OpenGL are set up
     virtual void resizeGL(QSize size) = 0;
 
     QOpenGLContext* glCtx() { return _glContext; }

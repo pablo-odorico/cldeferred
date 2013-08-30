@@ -1,32 +1,53 @@
 #include "occlusionbuffer.h"
+#include <cassert>
 
 OcclusionBuffer::OcclusionBuffer()
-    : _initialized(false), _spotLightCount(-1)
+    : _initialized(false), _spotLightCount(-1), _bufferSize(0,0)
 {
     QFile file(":/kernels/occlusionPass.cl");
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
-        qDebug() << "OcclusionKernel::OcclusionKernel: Could not load source.";
+        qDebug() << "OcclusionBuffer::OcclusionBuffer: Could not load source.";
     _source= QString(file.readAll());
 }
 
-void OcclusionBuffer::init(cl_context context, cl_device_id device)
+bool OcclusionBuffer::resize(cl_context context, cl_device_id device, QSize size)
 {
     _context= context;
     _device= device;
 
+    // If the buffer was allocated, release it
+    const bool firstTime= _bufferSize == QSize(0,0);
+    if(!firstTime) {
+        const cl_int error= clReleaseMemObject(_buffer);
+        checkCLError(error, "clReleaseMemObject");
+    }
+
+    _bufferSize= size;
+
+    // Allocate occlusion buffer
+    cl_int error;
+    _buffer= clCreateBuffer(_context, CL_MEM_READ_WRITE, bufferBytes(), NULL, &error);
+    if(checkCLError(error, "clCreateBuffer"))
+        return false;
 
     _initialized= true;
+
+    return true;
 }
 
 
 bool OcclusionBuffer::updateKernel(int spotLightCount)
 {
+    assert(_initialized);
+
     if(spotLightCount == _spotLightCount)
         return true;
 
     // If this is not the first time, delete the old kernel
-    if(_spotLightCount != -1) {
-// TODO
+    const bool firstTime= _spotLightCount == -1;
+    if(!firstTime) {
+        const cl_int error= clReleaseKernel(_kernel);
+        checkCLError(error, "clReleaseKernel");
     }
     _spotLightCount= spotLightCount;
 
@@ -53,26 +74,17 @@ bool OcclusionBuffer::update(
         cl_mem cameraDepthImg,
         cl_mem spotLightStructs,
         QVector<cl_mem> spotLightDepthImgs,
-        cl_mem occlusionBuffer,
         QSize screenSize)
 {
-    if(!_initialized) {
-        qDebug() << "OcclusionKernel::operator(): Not initialized.";
-        return;
-    }
+    assert(_initialized);
 
     // Update kernel to match the current number of lights
     if(!updateKernel(spotLightDepthImgs.count())) {
-        qDebug() << "OcclusionKernel::operator(): Failed to update kernel.";
-        return;
+        qDebug() << "OcclusionBuffer::operator(): Failed to update kernel.";
+        return false;
     }
 
     cl_int error;
-
-    error  = clEnqueueAcquireGLObjects(queue, 1, &cameraDepthImg, 0, 0, 0);
-    error |= clEnqueueAcquireGLObjects(queue, spotLightDepthImgs.count(), spotLightDepthImgs.data(), 0, 0, 0);
-    if(checkCLError(error, "clEnqueueAcquireGLObjects"))
-        return;
 
     // Work group and NDRange
     size_t workGroupSize[2] = { 16, 16 };
@@ -89,14 +101,18 @@ bool OcclusionBuffer::update(
         error |= clSetKernelArg(_kernel, argIndex, sizeof(cl_mem), (void*)&spotLightDepthImgs[i]);
         argIndex++;
     }
-    error |= clSetKernelArg(_kernel, argIndex, sizeof(cl_mem), (void*)&occlusionBuffer);
+    error |= clSetKernelArg(_kernel, argIndex, sizeof(cl_mem), (void*)&_buffer);
 
     // Launch kernel
     error |= clEnqueueNDRangeKernel(queue, _kernel, 2, NULL, ndRangeSize, workGroupSize, 0, NULL, NULL);
-    checkCLError(error, "occlusionKernel");
+    if(checkCLError(error, "OcclusionBuffer kernel"))
+        return false;
 
-    error  = clEnqueueReleaseGLObjects(queue, 1, &cameraDepthImg, 0, 0, 0);
-    error |= clEnqueueReleaseGLObjects(queue, spotLightDepthImgs.count(), spotLightDepthImgs.data(), 0, 0, 0);
-    if(checkCLError(error, "clEnqueueReleaseGLObjects"))
-        return;
+    return true;
+}
+
+cl_mem OcclusionBuffer::buffer()
+{
+    assert(_initialized);
+    return _buffer;
 }

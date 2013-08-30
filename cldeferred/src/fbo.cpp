@@ -17,7 +17,7 @@ FBO::Attachment FBO::createAttach(GLenum format, GLenum target)
     return attach;
 }
 
-bool FBO::init(QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
+bool FBO::resize(QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
 {
     assert(colorFormats.count());
 
@@ -27,6 +27,7 @@ bool FBO::init(QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
     if(_initialized) {
         unbind();
         cleanup();
+        _initialized= false;
     }
 
     // Generate and bind FBO
@@ -56,10 +57,7 @@ bool FBO::init(QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
 
 void FBO::cleanup()
 {
-    if(!_initialized) {
-        qDebug() << "FBO::cleanup: Uninitialized!";
-        return;
-    }
+    assert(_initialized);
 
     unbind();
 
@@ -74,10 +72,8 @@ void FBO::cleanup()
 
 void FBO::bind(GLenum target)
 {
-    if(!_initialized) {
-        qDebug() << "FBO::bind: Uninitialized!";
-        return;
-    }
+    assert(_initialized);
+
     _bindedTarget= target;
     glBindFramebuffer(target, _id);
 
@@ -93,6 +89,8 @@ void FBO::bind(GLenum target)
 
 void FBO::unbind()
 {
+    assert(_initialized);
+
     if(_bindedTarget == GL_NONE) {
         //qDebug() << "FBO::unbind: Not binded!";
         return;
@@ -103,6 +101,8 @@ void FBO::unbind()
 
 void FBO::clear()
 {
+    assert(_initialized);
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
@@ -161,24 +161,18 @@ QImage FBO::diffuseToImage()
     return image.mirrored();
 
 }
-/*
+
 QImage FBO::depthToImage()
 {
     QImage image(_width, _height, QImage::Format_RGB32);
 
     bind(GL_READ_FRAMEBUFFER);
-    glReadBuffer(GL_DEPTH_ATTACHMENT);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
     // Read float data to the image buffer (sizeof float == sizeof RGB32)
     glReadPixels(0,0, _width,_height, GL_DEPTH_COMPONENT, GL_FLOAT,
                  static_cast<GLvoid*>(image.bits()));
     unbind();
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-
-
-    QFile file("depth22.txt");
-    file.open(QIODevice::WriteOnly | QIODevice::Text);
-    QTextStream out(&file);
-
 
     // Convert float values to colors
     for(int y=0; y<_height; y++) {
@@ -186,14 +180,11 @@ QImage FBO::depthToImage()
             const int index= x + y * _width;
             const float df= ((float*)image.bits())[index];
             const uchar d= df * 255.0f;
-            out << x << " " << y << " " << df << "\n";
             ((QRgb*)image.bits())[index]= (df == 1.0f) ? qRgb(128,128,255) : qRgb(d,d,d);
         }
     }
 
-    file.close();
-
     // Return the image vertically-mirrored to correct scanline order
     return image.mirrored();
 }
-*/
+

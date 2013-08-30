@@ -10,14 +10,23 @@ Scene::~Scene()
     delete _scene;
 }
 
-void Scene::draw(const Camera& camera, QOpenGLShaderProgram* program, int uniformsFlags) const
+void Scene::init(QGLPainter* painter, cl_context context)
+{
+    _painter= painter;
+    _camera.init(context);
+    _lights.init(context);
+}
+
+void Scene::draw(const Camera& camera, QOpenGLShaderProgram* program,
+                 int uniformsFlags, bool bindProgram) const
 {
     if(!_models or !_painter) {
         qDebug() << "Scene::draw: Null scene or painter not set.";
         return;
     }
 
-    program->bind();
+    if(bindProgram)
+        program->bind();
 
     if(uniformsFlags & ViewMatrix)
         program->setUniformValue("viewMatrix", camera.viewMatrix());
@@ -50,7 +59,8 @@ void Scene::draw(const Camera& camera, QOpenGLShaderProgram* program, int unifor
         n->geometry().draw(_painter, n->start(), n->count());
     }
 
-    program->release();
+    if(bindProgram)
+        program->release();
 }
 
 void Scene::draw(QOpenGLShaderProgram* program, int uniformsFlags) const
@@ -68,4 +78,10 @@ bool Scene::loadScene(QString path)
 
     _models= _scene->mainNode();
     return true;
+}
+
+void Scene::updateStructsCL(cl_command_queue queue)
+{
+    _camera.updateStructCL(queue);
+    _lights.updateStructs(queue);
 }

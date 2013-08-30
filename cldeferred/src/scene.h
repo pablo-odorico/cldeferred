@@ -24,10 +24,11 @@ public:
     ~Scene();
 
     // init MUST be called before calling draw
-    void init(QGLPainter* painter) { _painter= painter; }
+    void init(QGLPainter* painter, cl_context context);
 
     void draw(QOpenGLShaderProgram* program, int uniformsFlags) const;
-    void draw(const Camera& camera, QOpenGLShaderProgram* program, int uniformsFlags) const;
+    void draw(const Camera& camera, QOpenGLShaderProgram* program,
+              int uniformsFlags, bool bindProgram=true) const;
 
     QGLSceneNode* models() { return _models; }
     void setModels(QGLSceneNode* models) { _models= models; }
@@ -37,6 +38,9 @@ public:
     void setCamera(const CameraCL& camera) { _camera= camera; }
 
     LightManager& lightManager() { return _lights; }
+    void updateShadowMaps() { _lights.updateShadowMaps(*this); }
+
+    void updateStructsCL(cl_command_queue queue);
 
 private:
     CameraCL _camera;

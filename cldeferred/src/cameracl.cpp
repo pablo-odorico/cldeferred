@@ -1,4 +1,5 @@
 #include "cameracl.h"
+#include <cassert>
 
 CameraCL::CameraCL()
     : Camera()
@@ -8,10 +9,7 @@ CameraCL::CameraCL()
 
 bool CameraCL::init(cl_context context)
 {
-    if(_initialized) {
-        qDebug() << "CameraCL::init: Already initialized";
-        return false;
-    }
+    assert(!_initialized);
 
     cl_int error;
     _clMem= clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_camera), NULL, &error);
@@ -22,25 +20,25 @@ bool CameraCL::init(cl_context context)
     return true;
 }
 
-cl_mem CameraCL::clStructMem(cl_command_queue queue)
+void CameraCL::updateStructCL(cl_command_queue queue)
 {
-    if(!_initialized) {
-        qDebug() << "CameraCL::clMem: Not initialized!";
-        return 0;
-    }
+    assert(_initialized);
 
     cl_camera clStruct;
     // TODO implement operators= for cl_float3 and QVector3D, etc.
 
-    memcpy(&clStruct.viewMatrix, _viewMatrix.data(), sizeof(clStruct.viewMatrix));
-    QMatrix4x4 viewMatrixInv= _viewMatrix.inverted();
-    memcpy(&clStruct.viewMatrixInv, viewMatrixInv.data(), sizeof(clStruct.viewMatrixInv));
+    memcpy(&clStruct.viewMatrix, _viewMatrix.transposed().data(), sizeof(cl_float16));
 
-    memcpy(&clStruct.projMatrix, _projMatrix.data(), sizeof(clStruct.projMatrix));
+    QMatrix4x4 viewMatrixInv= _viewMatrix.inverted();
+    memcpy(&clStruct.viewMatrixInv, viewMatrixInv.transposed().data(), sizeof(cl_float16));
+
+    memcpy(&clStruct.projMatrix, _projMatrix.transposed().data(), sizeof(cl_float16));
+
     QMatrix4x4 projMatrixInv= _projMatrix.inverted();
-    memcpy(&clStruct.projMatrixInv, projMatrixInv.data(), sizeof(clStruct.projMatrixInv));
+    memcpy(&clStruct.projMatrixInv, projMatrixInv.transposed().data(), sizeof(cl_float16));
+
     QMatrix4x4 vpMatrixInv= (_projMatrix * _viewMatrix).inverted();
-    memcpy(&clStruct.vpMatrixInv, vpMatrixInv.data(), sizeof(clStruct.vpMatrixInv));
+    memcpy(&clStruct.vpMatrixInv, vpMatrixInv.transposed().data(), sizeof(cl_float16));
 
     clStruct.position.x= _position.x();
     clStruct.position.y= _position.y();
@@ -51,9 +49,26 @@ cl_mem CameraCL::clStructMem(cl_command_queue queue)
     clStruct.lookVector.y= look.y();
     clStruct.lookVector.z= look.z();
 
-    clEnqueueWriteBuffer(queue, _clMem, CL_FALSE, 0, sizeof(cl_camera),
-                         &clStruct, 0, NULL, NULL);
+/*
+    memset(&clStruct, 0, sizeof(cl_camera));
+    QMatrix4x4 test= QMatrix4x4();
+    test(0,0)=0.3;
+    test(0,1)=0.6;
+    test(0,2)=0.8;
+    test(0,3)=1.0;
+    memcpy(&clStruct.projMatrix, test.transposed().data(), sizeof(cl_float16));
+*/
+    qDebug() << _projMatrix(2,3) << _projMatrix(2,2) << _projMatrix(3,2);
 
-    return _clMem;
+    cl_int error;
+    error= clEnqueueWriteBuffer(queue, _clMem, CL_FALSE, 0, sizeof(cl_camera),
+                             &clStruct, 0, NULL, NULL);
+
+    checkCLError(error, "Enqueue write struct");
 }
 
+cl_mem CameraCL::structCL()
+{
+    assert(_initialized);
+    return _clMem;
+}

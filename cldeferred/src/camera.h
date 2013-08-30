@@ -17,7 +17,7 @@ public:
     void setDeltaPosition(const QVector3D delta) { setPosition(_position + delta); }
 
     float pitch() const { return _pitch; }
-    void setPitch(float degrees) { _pitch= qBound(-89.9f, degrees, 89.9f); updateViewMatrix(); }
+    void setPitch(float degrees) { _pitch= qBound(-89.99f, degrees, 89.99f); updateViewMatrix(); }
     void setDeltaPitch(float deltaDegrees) { setPitch(_pitch + deltaDegrees); }
 
     float yaw() const { return _yaw; }

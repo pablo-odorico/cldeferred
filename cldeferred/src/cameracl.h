@@ -14,7 +14,8 @@ public:
     // Init must be called before calling any other methods
     bool init(cl_context context);
 
-    cl_mem clStructMem(cl_command_queue queue);
+    void updateStructCL(cl_command_queue queue);
+    cl_mem structCL();
 
 private:
     bool _initialized;

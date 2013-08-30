@@ -45,13 +45,11 @@ void Camera::lookAt(QVector3D lookPos)
     // Reconstruct pitch/yaw from the look direction
     const QVector3D lookDir= (lookPos - _position).normalized();
 
-    const float theta= acosf(lookDir.z());
-    const float phi= atan2f(lookDir.y(), lookDir.x());
+    const float theta= acosf(lookDir.y());
+    const float phi= atan2f(lookDir.z(), lookDir.x());
 
-    _pitch= 90.0f - (theta * 180.0f / M_PI);
-    _yaw  = 90.0f - (phi   * 180.0f / M_PI);
-
-    updateViewMatrix();
+    setPitch(90.0f - (theta * 180.0f / M_PI));
+    setYaw  (90.0f - (phi   * 180.0f / M_PI));
 }
 
 void Camera::toggleMovingDir(MovementDirection direction, bool moving)

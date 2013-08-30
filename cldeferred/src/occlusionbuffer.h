@@ -8,21 +8,22 @@ class OcclusionBuffer : protected CLUtilFunctions
 public:
     OcclusionBuffer();
 
-    // TODO pasar width/height y actualizar buffer
-    void init(cl_context context, cl_device_id device);
+    // Resize MUST be called before using the buffer
+    bool resize(cl_context context, cl_device_id device, QSize size);
 
+    // cameraDepthImg and spotLightDepthImgs must be aquired before calling update
     bool update(cl_command_queue queue,
                 cl_mem cameraStruct,
                 cl_mem cameraDepthImg,
                 cl_mem spotLightStructs,
                 QVector<cl_mem> spotLightDepthImgs,
-                cl_mem occlusionBuffer,
                 QSize screenSize);
 
-    cl_mem getBuffer() { return _buffer; }
+    cl_mem buffer();
 
 private:
     bool updateKernel(int spotLightCount);
+    int bufferBytes() { return _bufferSize.width() * _bufferSize.height() * sizeof(uint); }
 
     bool _initialized;
     QString _source;
@@ -35,6 +36,7 @@ private:
     cl_device_id _device;
 
     // Global memory buffer of uint32_t's
+    QSize _bufferSize;
     cl_mem _buffer;
 };
 

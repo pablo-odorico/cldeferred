@@ -19,6 +19,7 @@ public:
     // Shadow mapping
     // 1. Enable
     void enableShadows(bool value);
+    bool hasShadows() { return _shadowMapping; }
     // 2. Setup
     bool setupShadowMap(
             cl_context context, QSize shadowMapSize= QSize(512, 512),
@@ -26,7 +27,7 @@ public:
             GLenum depthTestingFormat= GL_DEPTH_COMPONENT24); // Must be a depth format
     // 3. Update shadow map
     void updateShadowMap(const Scene& scene);
-    // 4. Use FBO, the depth map is stored in COLOR0
+    // 4. Use FBO image
     FBOCL& shadowMapFBO() { return _depthFbo; }
 
     QColor ambientColor() const { return _ambientColor; }

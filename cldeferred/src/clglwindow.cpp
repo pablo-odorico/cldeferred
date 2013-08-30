@@ -51,6 +51,8 @@ void CLGLWindow::initialize()
     qDebug() << "   Version :" << (char*)glGetString(GL_VERSION);
     qDebug() << "   GLSL    :" << (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
     qDebug() << "   GPU     :" << (char*)glGetString(GL_RENDERER);
+
+    finalizeInit();
 }
 
 void CLGLWindow::renderLater()

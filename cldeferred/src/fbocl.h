@@ -11,15 +11,15 @@ public:
     FBOCL() : FBO() { }
     virtual ~FBOCL() { }
 
-    bool init(cl_context context, QSize size,
+    bool resize(cl_context context, QSize size,
         QList<GLenum> colorFormats= QList<GLenum>() << GL_RGBA,
         GLenum depthFormat= GL_DEPTH_COMPONENT24);
 
-    bool enqueueAquireBuffers(cl_command_queue clQueue);
-    bool enqueueReleaseBuffers(cl_command_queue clQueue);
+    QVector<cl_mem> aquireColorBuffers(cl_command_queue queue);
+    bool releaseColorBuffers(cl_command_queue queue);
 
-    cl_mem getColorBuffer(int i) { return _colorBuffers[i]; }
-    //cl_mem getDepthBuffer() { return _depthBuffer; }
+    //cl_mem aquireDepthBuffer(cl_command_queue queue);
+    //bool releaseDepthBuffer(cl_command_queue queue);
 
 private:
     // OpenCL-mapped FBO buffers

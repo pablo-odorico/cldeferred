@@ -4,7 +4,7 @@
 #include "clglwindow.h"
 #include "fbocl.h"
 #include "scene.h"
-#include "occlusionkernel.h"
+#include "occlusionbuffer.h"
 
 #include <QtGui>
 
@@ -16,6 +16,7 @@ public:
 
     void initializeGL();
     void initializeCL();
+    void finalizeInit();
     void renderGL();
     void resizeGL(QSize size);
 
@@ -25,7 +26,9 @@ protected:
     void grabbedKeyReleaseEvent(int key);
 
 private:
+    // Render stages
     void renderToGBuffer();
+    void updateShadowMaps();
     void deferredPass();
     void drawOutput();
 
@@ -33,8 +36,8 @@ private:
 
     // GL Program used to fill the gbuffer
     QOpenGLShaderProgram* firstPassProgram;
-    // Kernel used to calculate light occlusions
-    OcclusionBuffer occlusionKernel;
+    // Light occlusion buffer, used to calculate shadows
+    OcclusionBuffer occlusionBuffer;
     // CL Kernel for the 2nd pass
     cl_kernel deferredPassKernel;
     // GL Program used to render outputTex
@@ -56,7 +59,7 @@ private:
 
     // Output texture
     GLuint outputTex;
-    cl_mem outputBuffer;
+    cl_mem outputTexBuffer;
 
     // Time metrics
     QElapsedTimer sceneTime;

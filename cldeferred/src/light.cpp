@@ -15,7 +15,7 @@ bool Light::setupShadowMap(cl_context context, QSize shadowMapSize,
         qDebug() << "Light::setupShadowMap: Shadow mapping disabled.";
         return false;
     }
-    if(!_depthFbo.init(context, shadowMapSize, QList<GLenum>() << storedDepthFormat,
+    if(!_depthFbo.resize(context, shadowMapSize, QList<GLenum>() << storedDepthFormat,
                        depthTestingFormat))
     {
         qDebug() << "Light::setupShadowMap: could not init _depthFbo";
@@ -60,8 +60,10 @@ void Light::updateShadowMap(const Scene& scene)
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    program->bind();
     program->setUniformValue("fboSize", _depthFbo.size());
-    scene.draw(_lightCamera, program, Scene::MVPMatrix);
+    scene.draw(_lightCamera, program, Scene::MVPMatrix, false);
+    program->release();
 
     _depthFbo.unbind();
 }
