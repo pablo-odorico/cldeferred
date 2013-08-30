@@ -58,7 +58,7 @@ void CameraCL::updateStructCL(cl_command_queue queue)
     test(0,3)=1.0;
     memcpy(&clStruct.projMatrix, test.transposed().data(), sizeof(cl_float16));
 */
-    qDebug() << _projMatrix(2,3) << _projMatrix(2,2) << _projMatrix(3,2);
+    //qDebug() << _projMatrix(2,3) << _projMatrix(2,2) << _projMatrix(3,2);
 
     cl_int error;
     error= clEnqueueWriteBuffer(queue, _clMem, CL_FALSE, 0, sizeof(cl_camera),

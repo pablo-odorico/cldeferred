@@ -3,10 +3,11 @@
 #include "cl_camera.h"
 #include "cl_spotlight.h"
 
-
+// Noo
 const sampler_t normSampler= CLK_NORMALIZED_COORDS_TRUE | \
     CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
-const sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
+
+const sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
 
 
 #define DEPTH_PARAM_NAME(prefix,N) prefix##N##depth
@@ -22,6 +23,10 @@ uint packColor(const float4 color)
         clamp((int)(color.s2 * 255.0f), 0, 255) << 0;
 }
 
+#define multMatVec(m,v) \
+    (float4)(dot((m).s0123,(v)),dot((m).s4567,(v)),dot((m).s89AB,(v)),dot((m).sCDEF,(v)))
+
+/*
 float4 multMatVec(const float16 m, const float4 v)
 {
     return (float4) (
@@ -31,7 +36,7 @@ float4 multMatVec(const float16 m, const float4 v)
         dot(m.sCDEF, v)
     );
 }
-
+*/
 
 // Get clip coord from 0..1 depth
 // http://www.opengl.org/wiki/Compute_eye_space_from_window_space#From_XYZ_of_gl_FragCoord
@@ -40,10 +45,11 @@ float4 getClipPosFromDepth(
     const float depth,
     const float16 projMatrix)
 {
-    float3 ndcPos;
-    ndcPos.x= (2.0f * screenPos.x) / screenSize.x - 1.0f;
-    ndcPos.y= (2.0f * screenPos.y) / screenSize.y - 1.0f;
-    ndcPos.z= (2.0f * depth) - 1.0f;
+    float3 ndcPos= (float3)(
+        (float)screenPos.x/screenSize.x,
+        (float)screenPos.y/screenSize.y,
+        depth);
+    ndcPos= 2.0f * ndcPos - 1.0f;
 
     const float pm23= projMatrix.sB; // Mat. indices  0 1 2 3
     const float pm22= projMatrix.sA; //               4 5 6 7
@@ -53,7 +59,7 @@ float4 getClipPosFromDepth(
     const float clipW= pm23 / (ndcPos.z - pm22/pm32);
     const float4 clipPos= (float4)(ndcPos * clipW, clipW);
 
-    return clipPos * clipW;
+    return clipPos;
 }
 
 
@@ -64,7 +70,7 @@ void occlusionPass(
     constant cl_spotlight* spotLights,
 //    DEF_DEPTH_PARAM(spotLight, 0),
     read_only image2d_t spotLight0depth,
-    write_only global uint* occlusionBuffer
+    write_only global float4* occlusionBuffer
 )
 {
     const int2 pos= (int2)(get_global_id(0), get_global_id(1));
@@ -74,8 +80,8 @@ void occlusionPass(
         return;
 
     const float camDepth= read_imagef(cameraDepth, sampler, pos).x;
-    float4 clipPos= getClipPosFromDepth(pos, size, camDepth, camera->projMatrix);
-    const float4 worldPos= multMatVec(camera->vpMatrixInv, clipPos);
+    //float4 clipPos= getClipPosFromDepth(pos, size, camDepth, camera->projMatrix);
+    //const float4 worldPos= multMatVec(camera->vpMatrixInv, clipPos);
 
     //uint occlusion= 0;
     //float4 lightClipPos;
@@ -111,9 +117,45 @@ void occlusionPass(
 */
     //float c= camDepth;
     //occlusionBuffer[pos.x + pos.y * size.x]= packColor((float4)(c,c,c, 1.0f));
-
-    //occlusionBuffer[pos.x + pos.y * size.x]= packColor((float4)(worldPos.xyz/2.0f+0.5f, 1.0f));
-    occlusionBuffer[pos.x + pos.y * size.x]= packColor((float4)(worldPos.xyz, 1.0f));
-
+    //occlusionBuffer[pos.x + pos.y * size.x]= packColor((float4)(clipPos.xyz/2.0f+0.5f, 1.0f));
+    //occlusionBuffer[pos.x + pos.y * size.x]= packColor((float4)(worldPos.xyz, 1.0f));
     //occlusionBuffer[pos.x + pos.y * size.x]= packColor((float4)(camera->projMatrix.s012, 1.0f));
+
+    float3 ndcPos= (float3)(
+        (float)pos.x/size.x,
+        (float)pos.y/size.y,
+        camDepth);
+    ndcPos= 2.0f * ndcPos - 1.0f;
+
+    const float16 projMatrix= camera->projMatrix;
+    const float pm32= projMatrix.sB; // Mat. indices  0 1 2 3
+    const float pm22= projMatrix.sA; //               4 5 6 7
+    const float pm23= projMatrix.sE; //               8 9 A B
+                                     //               C D E F
+
+    const float clipW= pm32 / (ndcPos.z - pm22/pm23);
+    const float4 clipPos= (float4)(ndcPos * clipW, clipW);
+
+    const float4 world= multMatVec(camera->vpMatrixInv, clipPos);
+
+    /*(float4) (
+        dot(camera->vpMatrixInv.s0123, clipPos),
+        dot(camera->vpMatrixInv.s4567, clipPos),
+        dot(camera->vpMatrixInv.s89AB, clipPos),
+        dot(camera->vpMatrixInv.sCDEF, clipPos));*/
+
+    float4 outp= camDepth ? world : (float3)(0,0,-1);
+
+    const int idx= pos.x + pos.y * size.x;
+    occlusionBuffer[idx]= outp;
+
+/*
+    if(idx == 0) {
+        occlusionBuffer[0]= camera->vpMatrixInv.s0123;
+        occlusionBuffer[1]= camera->vpMatrixInv.s4567;
+        occlusionBuffer[2]= camera->vpMatrixInv.s89AB;
+        occlusionBuffer[3]= camera->vpMatrixInv.sCDEF;
+    }
+    */
+
 }

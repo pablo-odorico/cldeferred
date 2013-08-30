@@ -21,9 +21,10 @@ public:
 
     cl_mem buffer();
 
+    int bufferBytes() { return _bufferSize.width() * _bufferSize.height() * sizeof(uint) * 4; } // TODO sacar por 4
+
 private:
     bool updateKernel(int spotLightCount);
-    int bufferBytes() { return _bufferSize.width() * _bufferSize.height() * sizeof(uint); }
 
     bool _initialized;
     QString _source;
