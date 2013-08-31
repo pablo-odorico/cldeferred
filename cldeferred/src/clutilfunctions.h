@@ -7,6 +7,8 @@
 #include <iostream>
 #include <QtCore>
 
+#define checkCLError(error,msg) checkCLErrorFunc((error), (msg), __FILE__, __LINE__)
+
 class CLUtilFunctions
 {
 protected:
@@ -20,8 +22,9 @@ protected:
 
     // If error != CL_SUCCESS, checkError shows the error string and returns true
     // If msg != 0, the message is shown in the error report
+    // Call this function using the checkCLError and checkCLError macros defined above
     static
-    bool checkCLError(cl_int error, const char* msg= 0);
+    bool checkCLErrorFunc(cl_int error, const char* msg, const char* file, const int line);
 
     static
     int roundUp(int count, int multiple);
@@ -40,19 +43,21 @@ protected:
                     QString programText, const char* kernelName, const char* compileOptions= 0);
 
     static
-    std::string clErrorToString(cl_int err);
+    const char* clErrorToString(cl_int err);
 
+private:
     static
     void checkProgramBuild(cl_program program, cl_device_id device);
 
     static
     bool loadProgramText(const char* path, QByteArray& source);
-
+/*
     // Converts from an OpenGL format (eg GL_RGBA8) to an OpenCL
     // channel order/channel type pair (eg CL_RGBA, CL_UNORM_INT8)
     // returns false on error
     static
     bool gl2clFormat(GLenum glFormat, cl_channel_order& clOrder, cl_channel_type& clType);
+    */
 };
 
 #endif // CLUTILFUNCTIONS_H

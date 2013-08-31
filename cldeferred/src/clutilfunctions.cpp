@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <QDebug>
 
 // X11 OpenGL functions
 #include <GL/glx.h>
@@ -18,7 +19,10 @@ bool CLUtilFunctions::setupOpenCLGL(cl_context& context, cl_command_queue& queue
     if(checkCLError(clError, "clGetPlatformIDs"))
         return false;
 
-    // Select default GPU
+    // Select default GPU    
+    /*cl_device_id devs[2];
+    clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 2, devs, NULL);
+    device= devs[1];*/
     clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
     if(checkCLError(clError, "clGetDeviceIDs"))
         return false;
@@ -43,7 +47,7 @@ bool CLUtilFunctions::setupOpenCLGL(cl_context& context, cl_command_queue& queue
     return true;
 }
 
-string CLUtilFunctions::clErrorToString(cl_int err)
+const char* CLUtilFunctions::clErrorToString(cl_int err)
 {
     // OpenCL 1.2 enums
     switch (err) {
@@ -110,16 +114,12 @@ string CLUtilFunctions::clErrorToString(cl_int err)
     }
 }
 
-bool CLUtilFunctions::checkCLError(cl_int error, const char* msg)
+bool CLUtilFunctions::checkCLErrorFunc(cl_int error, const char* msg, const char* file, const int line)
 {
     if(error == CL_SUCCESS)
         return false;
 
-    cerr << "** OpenCL Error '" << clErrorToString(error);
-    if(msg)
-        cerr << "': " << msg << "." << endl;
-    else
-        cerr << "'." << endl;
+    qDebug("** %s:%d: OpenCL error '%s' %s.", file, line, clErrorToString(error), msg);
     return true;
 }
 
@@ -228,6 +228,7 @@ bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
     return loadKernel(context, kernel, device, QString(programText), kernelName, compileOptions);
 }
 
+/*
 bool CLUtilFunctions::gl2clFormat(GLenum glFormat, cl_channel_order& clOrder, cl_channel_type& clType)
 {
     switch(glFormat) {
@@ -263,3 +264,4 @@ bool CLUtilFunctions::gl2clFormat(GLenum glFormat, cl_channel_order& clOrder, cl
     }
     return true;
 }
+*/
