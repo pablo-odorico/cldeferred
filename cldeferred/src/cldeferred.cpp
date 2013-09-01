@@ -16,8 +16,6 @@ CLDeferred::CLDeferred(QSize maxSize)
 
 void CLDeferred::initializeGL()
 {
-    qDebug() << "Initialize GL";
-
     // General OpenGL config
     glEnable(GL_DEPTH_TEST);
     glCullFace(GL_BACK);
@@ -56,7 +54,7 @@ void CLDeferred::initializeCL()
 
     if(!loadKernel(clCtx(), &deferredPassKernel, clDevice(),
                    ":/kernels/deferredPass.cl", "deferredPass",
-                   "-I../res/kernels/")) {
+                   "-I../res/kernels/ -Werror")) {
         qDebug() << "Error loading kernel.";
         return;
     }
@@ -86,7 +84,7 @@ void CLDeferred::finalizeInit()
 
 void CLDeferred::resizeGL(QSize size)
 {
-    qDebug() << "Resize GL" << size;
+    qDebug() << "Resize to" << size.width() << "x" << size.height();
     assert(size.width() <= maxSize.width());
     assert(size.height() <= maxSize.height());
 
@@ -132,20 +130,18 @@ void CLDeferred::renderGL()
     times[3]= sceneTime.nsecsElapsed();
 
     const qint64 fpsElapsed= now - fpsLastTime;
-    if(fpsElapsed > 5e9) {
+    if(fpsElapsed >4e9) {
         const float elapsed1st = (times[0] - now     ) / 1e6f;
         const float elapsedOccl= (times[1] - times[0]) / 1e6f;
         const float elapsed2nd = (times[2] - times[1]) / 1e6f;
         const float elapsedDraw= (times[3] - times[2]) / 1e6f;
         const float totalTime= elapsed1st + elapsedOccl + elapsed2nd + elapsedDraw;
 
-        qDebug(" ");
-        qDebug("  FPS       : %.01f Hz.", fpsFrameCount/(fpsElapsed/1e9d));
-        qDebug("  1st pass  : %.02f ms.", elapsed1st);
-        qDebug("  Occlu pass: %.02f ms.", elapsedOccl);
-        qDebug("  2nd pass  : %.02f ms.", elapsed2nd);
-        qDebug("  Draw quad : %.02f ms.", elapsedDraw);
-        qDebug("  Total time: %.02f ms. (Max. %.01f FPS)", totalTime, 1000/totalTime);
+        qDebug(" ");        
+        qDebug("FPS   : %.01f Hz. (Max. %.01f Hz.)", fpsFrameCount/(fpsElapsed/1e9d), 1000/totalTime);
+        qDebug("Times : G-Buffer | Occlusion | Deferred  | Draw quad | TOTAL");
+        qDebug("        %2.02f ms. | %2.02f ms.  | %2.02f ms.  | %2.02f ms.  | %.02f ms.",
+               elapsed1st, elapsedOccl, elapsed2nd, elapsedDraw, totalTime);
 
         fpsLastTime= now;
         fpsFrameCount= 0;
@@ -236,7 +232,7 @@ void CLDeferred::deferredPass()
 {
     cl_int error;
 
-    error= clEnqueueAcquireGLObjects(clQueue(), 1, &outputTexBuffer, 0, 0, 0);
+    error= clEnqueueAcquireGLObjects(clQueue(), 1, &outputTexBuffer, 0, 0, 0);    
     if(checkCLError(error, "clEnqueueAcquireGLObjects"))
         return;
     QVector<cl_mem> gBufferChannels= gBuffer.aquireColorBuffers(clQueue());

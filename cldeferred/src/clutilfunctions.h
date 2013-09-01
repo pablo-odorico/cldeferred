@@ -20,8 +20,7 @@ protected:
     bool setupOpenCLGL(cl_context& context, cl_command_queue& queue,
                        cl_device_id& device);
 
-    // If error != CL_SUCCESS, checkError shows the error string and returns true
-    // If msg != 0, the message is shown in the error report
+    // If error != CL_SUCCESS, checkError shows the error string and msg and returns true
     // Call this function using the checkCLError and checkCLError macros defined above
     static
     bool checkCLErrorFunc(cl_int error, const char* msg, const char* file, const int line);

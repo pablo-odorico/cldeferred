@@ -35,23 +35,40 @@ void CLGLWindow::initialize()
     // Create GL painter
     _glPainter= new QGLPainter(this);
     _glPainter->setStandardEffect(QGL::LitModulateTexture2D);
-    // OpenGL user init
-    initializeGL();
 
     // OpenCL init
     bool ok= setupOpenCLGL(_clContext, _clQueue, _clDevice);
     if(!ok) {
         qWarning() << "Could not initialize OpenCL";
+        exit(EXIT_FAILURE);
         return;
     }
+
+    // OpenGL user init
+    initializeGL();
     // OpenCL user init
     initializeCL();
 
-    qDebug() << "OpenGL Info";
+    qDebug() << "OpenGL";
     qDebug() << "   Version :" << (char*)glGetString(GL_VERSION);
     qDebug() << "   GLSL    :" << (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
-    qDebug() << "   GPU     :" << (char*)glGetString(GL_RENDERER);
+    qDebug() << "   Device  :" << (char*)glGetString(GL_RENDERER);
+    qDebug() << " ";
 
+    const int dataSize= 1024;
+    char data[dataSize];
+    data[0]= 0;
+
+    qDebug() << "OpenCL";
+    clGetDeviceInfo(_clDevice, CL_DEVICE_VERSION, dataSize, data, NULL);
+    qDebug() << "   Version :" << data;
+    clGetDeviceInfo(_clDevice, CL_DEVICE_NAME, dataSize, data, NULL);
+    qDebug() << "   Device  :" << data;
+    clGetDeviceInfo(_clDevice, CL_DEVICE_VENDOR, dataSize, data, NULL);
+    qDebug() << "   Vendor  :" << data;
+    qDebug() << " ";
+
+    // Final initialization
     finalizeInit();
 }
 

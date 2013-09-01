@@ -1,10 +1,13 @@
 #include "cldeferred.h"
 #include <QApplication>
-#include <QDebug>
+
+#include "debug.h"
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+
+    Debug::init();
 
     CLDeferred window;
     window.resize(854, 480);

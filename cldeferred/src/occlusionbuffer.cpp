@@ -65,7 +65,7 @@ bool OcclusionBuffer::updateKernel(int spotLightCount)
         occlusions += "SET_OCCLUSION(spotLights, " + QString::number(i) + ", spotLight) \n";
     sourceCopy.replace("/** OCCLUSIONS **/", occlusions);
 
-    return loadKernel(_context, &_kernel, _device, sourceCopy, "occlusionPass", "-I../res/kernels/");
+    return loadKernel(_context, &_kernel, _device, sourceCopy, "occlusionPass", "-I../res/kernels/ -Werror");
 }
 
 bool OcclusionBuffer::update(

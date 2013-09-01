@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <fstream>
-#include <QDebug>
+#include "debug.h"
 
 // X11 OpenGL functions
 #include <GL/glx.h>

@@ -30,7 +30,8 @@ SOURCES += \
     src/scene.cpp \
     src/lightmanager.cpp \
     src/light.cpp \
-    src/occlusionbuffer.cpp
+    src/occlusionbuffer.cpp \
+    src/debug.cpp
 
 HEADERS += \
     src/fbo.h \
@@ -47,7 +48,8 @@ HEADERS += \
     res/kernels/cl_spotlight.h \
     src/lightmanager.h \
     src/light.h \
-    src/occlusionbuffer.h
+    src/occlusionbuffer.h \
+    src/debug.h
 
 OTHER_FILES += \
     TODO.txt \
