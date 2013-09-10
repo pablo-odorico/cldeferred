@@ -5,29 +5,22 @@
     #include <stdio.h>
 #endif
 
-namespace Debug
+DebugColors::DebugColors()
 {
+    _colors.resize(colorCount);
 
-void init()
-{
 #ifdef __linux
-    bool colors= isatty(STDOUT_FILENO);
+    bool useColors= isatty(STDOUT_FILENO);
 #else
-    bool colors= false;
+    bool useColors= false;
 #endif
-/*
-    if(!colors) {
-        // Colors
-        red[0]= 0;
-        green[0]= 0;
-        violet[0]= 0;
-        cyan[0]= 0;
-        yellow[0]= 0;
-        // Default color
-        white[0]= 0;
-    }*/
+
+    if(useColors) {
+        _colors[RED]    = "\033[0;31m";
+        _colors[GREEN]  = "\033[0;32m";
+        _colors[VIOLET] = "\033[0;35m";
+        _colors[CYAN]   = "\033[0;36m";
+        _colors[YELLOW] = "\033[0;33m";
+        _colors[DEFAULT]= "\033[0m";
+    }
 }
-
-}
-
-

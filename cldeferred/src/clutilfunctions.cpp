@@ -19,7 +19,7 @@ bool CLUtilFunctions::setupOpenCLGL(cl_context& context, cl_command_queue& queue
     if(checkCLError(clError, "clGetPlatformIDs"))
         return false;
 
-    // Select default GPU    
+    // Select default GPU
     /*cl_device_id devs[2];
     clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 2, devs, NULL);
     device= devs[1];*/
@@ -119,7 +119,8 @@ bool CLUtilFunctions::checkCLErrorFunc(cl_int error, const char* msg, const char
     if(error == CL_SUCCESS)
         return false;
 
-    qDebug("** %s:%d: OpenCL error '%s' %s.", file, line, clErrorToString(error), msg);
+    qDebug("%s!! %s:%d:%s OpenCL error '%s' %s.", debugColor(RED), file,
+           line, debugColor(DEFAULT), clErrorToString(error), msg);
     return true;
 }
 
