@@ -1,10 +1,11 @@
 #include "fbocl.h"
 #include <cassert>
+#include "debug.h"
 
 bool FBOCL::resize(cl_context context, QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
 {
     if(!FBO::resize(size, colorFormats, depthFormat)) {
-        qDebug() << "FBOCL::init: FBO::init failed";
+        debugError("Resize failed");
         return false;
     }
     _initialized= false;

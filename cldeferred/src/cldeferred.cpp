@@ -1,5 +1,6 @@
 #include "cldeferred.h"
 #include <cassert>
+#include "debug.h"
 
 const GLenum CLDeferred::diffuseSpecFormat;
 const GLenum CLDeferred::normalsFormat;
@@ -55,7 +56,7 @@ void CLDeferred::initializeCL()
     if(!loadKernel(clCtx(), &deferredPassKernel, clDevice(),
                    ":/kernels/deferredPass.cl", "deferredPass",
                    "-I../res/kernels/ -Werror")) {
-        qDebug() << "Error loading kernel.";
+        debugError("Error loading kernel.");
         return;
     }
 }
@@ -65,7 +66,7 @@ void CLDeferred::finalizeInit()
     scene.init(glPainter(), clCtx());
 
     if(!scene.loadScene("models/untitled/untitled.obj"))
-        qDebug() << "Could not load scene!";
+        debugError("Could not load scene!");
     scene.camera().lookAt(QVector3D(5, 5, 5), QVector3D(0, 0, 0));
     scene.camera().setMoveSpeed(5);
 
@@ -84,7 +85,7 @@ void CLDeferred::finalizeInit()
 
 void CLDeferred::resizeGL(QSize size)
 {
-    qDebug() << "Resize to" << size.width() << "x" << size.height();
+    debugMsg("Resize to %d x %d.", size.width(), size.height());
     assert(size.width() <= maxSize.width());
     assert(size.height() <= maxSize.height());
 
@@ -93,11 +94,11 @@ void CLDeferred::resizeGL(QSize size)
     QList<GLenum> colorFormats= QList<GLenum>() << diffuseSpecFormat << normalsFormat << depthFormat;
     ok= gBuffer.resize(clCtx(), size, colorFormats, depthTestFormat);
     if(!ok)
-        qDebug() << "Error initializing G-Buffer FBO.";
+        debugError("Error initializing G-Buffer FBO.");
 
     ok= occlusionBuffer.resize(clCtx(), clDevice(), size);
     if(!ok)
-        qDebug() << "Error initializing occlusion buffer.";
+        debugError("Error initializing occlusion buffer.");
 
     scene.camera().setPerspective(60.0f, (float)size.width()/size.height(), 5, 10);
 }
@@ -137,7 +138,7 @@ void CLDeferred::renderGL()
         const float elapsedDraw= (times[3] - times[2]) / 1e6f;
         const float totalTime= elapsed1st + elapsedOccl + elapsed2nd + elapsedDraw;
 
-        qDebug(" ");        
+        qDebug(" ");
         qDebug("FPS   : %.01f Hz. (Max. %.01f Hz.)", fpsFrameCount/(fpsElapsed/1e9d), 1000/totalTime);
         qDebug("Times : G-Buffer | Occlusion | Deferred  | Draw quad | TOTAL");
         qDebug("        %2.02f ms. | %2.02f ms.  | %2.02f ms.  | %2.02f ms.  | %.02f ms.",
@@ -184,7 +185,7 @@ void CLDeferred::updateShadowMaps()
                 spotLightStructs, spotLightDepthImgs,
                 gBuffer.size());
     if(!ok)
-        qDebug() << "CLDeferred::updateOcclusionBuffer: Error.";
+        debugError("Error updating occlusion buffer.");
 
     lm.releaseSpotDephts(clQueue());
     gBuffer.releaseColorBuffers(clQueue());
@@ -232,13 +233,12 @@ void CLDeferred::deferredPass()
 {
     cl_int error;
 
-    error= clEnqueueAcquireGLObjects(clQueue(), 1, &outputTexBuffer, 0, 0, 0);    
+    error= clEnqueueAcquireGLObjects(clQueue(), 1, &outputTexBuffer, 0, 0, 0);
     if(checkCLError(error, "clEnqueueAcquireGLObjects"))
         return;
     QVector<cl_mem> gBufferChannels= gBuffer.aquireColorBuffers(clQueue());
     if(gBufferChannels.count() != 3) {
-        qDebug() << "CLDeferred::deferredPass: Wrong number of gbuffer channels"
-                 << gBufferChannels.count();
+        debugError("Wrong number of gbuffer channels %d", gBufferChannels.count());
         return;
     }
 

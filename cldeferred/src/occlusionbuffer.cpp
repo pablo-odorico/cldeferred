@@ -1,4 +1,5 @@
 #include "occlusionbuffer.h"
+#include "debug.h"
 #include <cassert>
 
 OcclusionBuffer::OcclusionBuffer()
@@ -6,7 +7,7 @@ OcclusionBuffer::OcclusionBuffer()
 {
     QFile file(":/kernels/occlusionPass.cl");
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
-        qDebug() << "OcclusionBuffer::OcclusionBuffer: Could not load source.";
+        debugError("Could not load source.");
     _source= QString(file.readAll());
 }
 
@@ -80,7 +81,7 @@ bool OcclusionBuffer::update(
 
     // Update kernel to match the current number of lights
     if(!updateKernel(spotLightDepthImgs.count())) {
-        qDebug() << "OcclusionBuffer::operator(): Failed to update kernel.";
+        debugError("Failed to update kernel.");
         return false;
     }
 

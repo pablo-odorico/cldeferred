@@ -1,4 +1,5 @@
 #include "scene.h"
+#include "debug.h"
 
 Scene::Scene()
     : _models(0), _scene(0), _painter(0)
@@ -21,7 +22,7 @@ void Scene::draw(const Camera& camera, QOpenGLShaderProgram* program,
                  int uniformsFlags, bool bindProgram) const
 {
     if(!_models or !_painter) {
-        qDebug() << "Scene::draw: Null scene or painter not set.";
+        debugWarning("Null scene or painter not set.");
         return;
     }
 

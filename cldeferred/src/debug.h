@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <QDebug>
+#include <typeinfo>
 
 class DebugColors
 {
@@ -24,18 +25,17 @@ private:
 #define debugColor(c) DebugColors::string(DebugColors::c)
 #define debugPrint(c, msg) std::cerr << debugColor(c) << msg << debugColor(DEFAULT)
 
-// Like qDebug(), these macros can be used as printf or as a stream
 
-#define debugMsg(...)   \
+#define debugMsg(...) { \
     debugPrint(CYAN, "** " << __FILE__ << ":" << __LINE__ << ": "); \
-    qDebug(__VA_ARGS__)
+    qDebug(__VA_ARGS__); }
 
-#define debugWarning(...)   \
+#define debugWarning(...) { \
     debugPrint(YELLOW, "ww " << __FILE__ << ":" << __LINE__ << ": "); \
-    qDebug(__VA_ARGS__)
+    qDebug(__VA_ARGS__); }
 
-#define debugError(...)   \
+#define debugError(...) { \
     debugPrint(RED, "!! " << __FILE__ << ":" << __LINE__ << ": "); \
-    qDebug(__VA_ARGS__)
+    qDebug(__VA_ARGS__); }
 
 #endif // DEBUG_H

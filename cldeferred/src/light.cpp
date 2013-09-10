@@ -1,5 +1,6 @@
 #include "light.h"
 #include "scene.h"
+#include "debug.h"
 
 Light::Light() :
     _shadowMapping(false),
@@ -12,13 +13,13 @@ bool Light::setupShadowMap(cl_context context, QSize shadowMapSize,
                            GLenum storedDepthFormat, GLenum depthTestingFormat)
 {
     if(!_shadowMapping) {
-        qDebug() << "Light::setupShadowMap: Shadow mapping disabled.";
+        debugWarning("Shadow mapping disabled.");
         return false;
     }
     if(!_depthFbo.resize(context, shadowMapSize, QList<GLenum>() << storedDepthFormat,
                        depthTestingFormat))
     {
-        qDebug() << "Light::setupShadowMap: could not init _depthFbo";
+        debugError("Could not init depth FBO.");
         return false;
     }
 
@@ -37,11 +38,11 @@ void Light::enableShadows(bool value)
 void Light::updateShadowMap(const Scene& scene)
 {
     if(!_shadowMapping) {
-        qDebug() << "Light::updateShadowMap: Shadow mapping disabled.";
+        debugWarning("Shadow mapping disabled.");
         return;
     }
     if(!_shadowMappingInit) {
-        qDebug() << "Light::updateShadowMap: Shadow mapping not initialized.";
+        debugWarning("Shadow mapping not initialized.");
         return;
     }
 

@@ -1,6 +1,8 @@
 #include "fbo.h"
 
+#include "debug.h"
 #include <cassert>
+
 
 FBO::Attachment FBO::createAttach(GLenum format, GLenum target)
 {
@@ -92,7 +94,7 @@ void FBO::unbind()
     assert(_initialized);
 
     if(_bindedTarget == GL_NONE) {
-        //qDebug() << "FBO::unbind: Not binded!";
+        debugWarning("Not binded!");
         return;
     }
     glBindFramebuffer(_bindedTarget, 0);
