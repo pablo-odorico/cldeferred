@@ -57,14 +57,16 @@ bool OcclusionBuffer::updateKernel(int spotLightCount)
     // Kernel parameters
     QString depthParams= "";
     for(int i=0; i<_spotLightCount; i++)
-        depthParams += "DEF_DEPTH_PARAM(spotLight, " + QString::number(i) + "), \n";
+        depthParams += "DEF_DEPTH_PARAM(spotLights, " + QString::number(i) + "), \n";
     sourceCopy.replace("/** DEPTH_PARAMS **/", depthParams);
 
     // Occlusion calculation calls
     QString occlusions= "";
     for(int i=0; i<_spotLightCount; i++)
-        occlusions += "SET_OCCLUSION(spotLights, " + QString::number(i) + ", spotLight) \n";
+        occlusions += "SET_OCCLUSION(spotLights, " + QString::number(i) + ") \n";
     sourceCopy.replace("/** OCCLUSIONS **/", occlusions);
+
+    //qDebug() << sourceCopy;
 
     return loadKernel(_context, &_kernel, _device, sourceCopy, "occlusionPass", "-I../res/kernels/ -Werror");
 }

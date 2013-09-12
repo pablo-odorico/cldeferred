@@ -1,20 +1,10 @@
-//#include "clutils.cl"
+#include "clutils.cl"
 
 #include "cl_camera.h"
+#include "cl_spotlight.h"
 
 // Image sampler
 const sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
-
-
-float4 unpackColor(const uint color)
-{
-    return (float4)(
-        clamp(((color >> 16) & 0xFF) / 255.0f, 0.0f, 1.0f),
-        clamp(((color >> 8 ) & 0xFF) / 255.0f, 0.0f, 1.0f),
-        clamp(((color >> 0 ) & 0xFF) / 255.0f, 0.0f, 1.0f),
-        clamp(((color >> 24) & 0xFF) / 255.0f, 0.0f, 1.0f));
-
-}
 
 
 //
@@ -26,9 +16,10 @@ void deferredPass(
     read_only  image2d_t gbDiffuseSpec,
     read_only  image2d_t gbNormals,
     read_only  image2d_t gbDepth,
-    read_only global uint* occlusionBuffer,
+    read_only global float* occlusionBuffer,
     write_only image2d_t output,
-    constant cl_camera* camera
+    constant cl_camera* camera,
+    constant cl_spotlight* spotLights
 )
 {
     // Get global position
@@ -51,11 +42,12 @@ void deferredPass(
     float4 viewPos= multMatVec(camera->projMatrixInv, viewPos);
     float4 worldPos= multMatVec(camera->viewMatrixInv, viewPos);
 */
-    uint occlusion= occlusionBuffer[pos.x + pos.y * size.x];
+    float occlusion= occlusionBuffer[pos.x + pos.y * size.x];
 
     // Write output
-    const float4 color= unpackColor(occlusion);
+    const float4 color= diffuseSpec * occlusion;
 
+    //const float4 color= unpackColor(occlusion);
 
     write_imagef(output, pos, color);
 }

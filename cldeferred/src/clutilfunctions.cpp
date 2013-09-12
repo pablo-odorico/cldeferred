@@ -20,10 +20,10 @@ bool CLUtilFunctions::setupOpenCLGL(cl_context& context, cl_command_queue& queue
         return false;
 
     // Select default GPU
-    /*cl_device_id devs[2];
+    cl_device_id devs[2];
     clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 2, devs, NULL);
-    device= devs[1];*/
-    clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
+    device= devs[1];
+    //clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
     if(checkCLError(clError, "clGetDeviceIDs"))
         return false;
 

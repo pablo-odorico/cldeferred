@@ -23,7 +23,7 @@ public:
     // 2. Setup
     bool setupShadowMap(
             cl_context context, QSize shadowMapSize= QSize(512, 512),
-            GLenum storedDepthFormat= GL_R32F, // Must be a color format
+            GLenum storedDepthFormat= GL_RG32F, // Must be a color format, we use two channels per pixel
             GLenum depthTestingFormat= GL_DEPTH_COMPONENT24); // Must be a depth format
     // 3. Update shadow map
     void updateShadowMap(const Scene& scene);

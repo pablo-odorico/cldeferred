@@ -65,16 +65,16 @@ void CLDeferred::finalizeInit()
 {
     scene.init(glPainter(), clCtx());
 
-    if(!scene.loadScene("models/untitled/untitled.obj"))
+    if(!scene.loadScene("models/untitled/untitled2.obj"))
         debugError("Could not load scene!");
     scene.camera().lookAt(QVector3D(5, 5, 5), QVector3D(0, 0, 0));
     scene.camera().setMoveSpeed(5);
 
     SpotLight* spotLight= new SpotLight();
-    spotLight->lookAt(QVector3D(0, 5, 0), QVector3D(0, 0, 0));
-    spotLight->setParams(60, 1, 1/10.0f, 1);
-    spotLight->enableShadows(true);
-    spotLight->setupShadowMap(clCtx());
+    spotLight->lookAt(QVector3D(10, 10, 10), QVector3D(0, 0, 0));
+    spotLight->enableShadows(true);    
+    spotLight->setupShadowMap(clCtx(), QSize(512,512));
+    spotLight->setParams(30, 1, 1/30.0f, 1.0f);
     scene.lightManager().addSpotLight(spotLight);
 
     startRenderTimer(30);
@@ -100,16 +100,21 @@ void CLDeferred::resizeGL(QSize size)
     if(!ok)
         debugError("Error initializing occlusion buffer.");
 
-    scene.camera().setPerspective(60.0f, (float)size.width()/size.height(), 5, 10);
+    scene.camera().setPerspective(60.0f, (float)size.width()/size.height(), 0.1f, 5000.0f);
 }
 
 void CLDeferred::renderGL()
 {
     const qint64 now= sceneTime.nsecsElapsed();
-    QVector<qint64> times(3);
+    QVector<qint64> times(4);
 
     // Move camera
     scene.camera().move((now - lastRenderTime)/1000.0f);
+
+    static float a= 0;
+    a += 0.1f;
+    SpotLight* ssl= scene.lightManager().spotLight(0);
+    ssl->lookAt(QVector3D(10,10+2*sinf(a),10), QVector3D(0,0,0));
 
     // Update OpenCL structs
     scene.updateStructsCL(clQueue());
@@ -190,11 +195,11 @@ void CLDeferred::updateShadowMaps()
     lm.releaseSpotDephts(clQueue());
     gBuffer.releaseColorBuffers(clQueue());
 
-
+/*
     static int con= 0;
     con++;
     if(con==10) {
-        //lm.spotLight(0)->shadowMapFBO().diffuseToImage().save("depth.png");
+        lm.spotLight(0)->shadowMapFBO().diffuseToImage().save("depth.png");
 
         cl_float4 data[gBuffer.width() * gBuffer.height()];
 
@@ -224,9 +229,9 @@ void CLDeferred::updateShadowMaps()
         }
         file.close();
     }
+*/
 
-    const cl_int error= clFinish(clQueue());
-    checkCLError(error, "clFinish1");
+    checkCLError(clFinish(clQueue()), "clFinish");
 }
 
 void CLDeferred::deferredPass()
@@ -253,6 +258,7 @@ void CLDeferred::deferredPass()
     cl_mem gbDepth= gBufferChannels[2];
     cl_mem oBuffer= occlusionBuffer.buffer();
     cl_mem cameraStruct= scene.camera().structCL();
+    cl_mem spotLightStructs= scene.lightManager().spotStructs();
 
     // Launch kernel
     error  = clSetKernelArg(deferredPassKernel, 0, sizeof(cl_mem), (void*)&gbDiffuseSpec);
@@ -261,6 +267,7 @@ void CLDeferred::deferredPass()
     error |= clSetKernelArg(deferredPassKernel, 3, sizeof(cl_mem), (void*)&oBuffer);
     error |= clSetKernelArg(deferredPassKernel, 4, sizeof(cl_mem), (void*)&outputTexBuffer);
     error |= clSetKernelArg(deferredPassKernel, 5, sizeof(cl_mem), (void*)&cameraStruct);
+    error |= clSetKernelArg(deferredPassKernel, 6, sizeof(cl_mem), (void*)&spotLightStructs);
     error |= clEnqueueNDRangeKernel(clQueue(), deferredPassKernel, 2, NULL,
                                     ndRangeSize, workGroupSize, 0, NULL, NULL);
     checkCLError(error, "outputKernel");
@@ -272,7 +279,7 @@ void CLDeferred::deferredPass()
 
     // Wait until the kernel finishes and the GL resources are released
     error= clFinish(clQueue());
-    checkCLError(error, "clFinish2");
+    checkCLError(error, "clFinish");
 }
 
 void CLDeferred::drawOutput()

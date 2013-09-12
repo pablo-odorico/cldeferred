@@ -9,11 +9,13 @@ layout (location = 1) in vec4 inNormal;
 layout (location = 3) in vec2 inTexCoord;
 
 out vec2 texCoord;
-out vec3 normal;
+out vec3 worldNormal;
 
 void main()
 {
     gl_Position = mvpMatrix * inPosition;
+
     texCoord = inTexCoord;
-    normal = normalize((modelITMatrix * inNormal).xyz);
+
+    worldNormal = (modelITMatrix * inNormal).xyz;
 }

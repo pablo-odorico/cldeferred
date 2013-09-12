@@ -2,6 +2,8 @@
 #include "scene.h"
 #include <cassert>
 
+const int LightManager::maxLights;
+
 LightManager::LightManager()
     : _initialized(false)
 {
@@ -34,7 +36,7 @@ void LightManager::updateStructs(cl_command_queue queue)
 {
     assert(_initialized);
 
-    // Update spot lights
+    // Update spot lights   
     for(int i=0; i<qMin(maxLights, _spotLights.count()); i++)
         _spotLights[i]->updateStructCL(queue, _spotStructs, i);
 }

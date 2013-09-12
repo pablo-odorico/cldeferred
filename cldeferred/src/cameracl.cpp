@@ -49,17 +49,6 @@ void CameraCL::updateStructCL(cl_command_queue queue)
     clStruct.lookVector.y= look.y();
     clStruct.lookVector.z= look.z();
 
-/*
-    memset(&clStruct, 0, sizeof(cl_camera));
-    QMatrix4x4 test= QMatrix4x4();
-    test(0,0)=0.3;
-    test(0,1)=0.6;
-    test(0,2)=0.8;
-    test(0,3)=1.0;
-    memcpy(&clStruct.projMatrix, test.transposed().data(), sizeof(cl_float16));
-*/
-    //qDebug() << _projMatrix(2,3) << _projMatrix(2,2) << _projMatrix(3,2);
-
     cl_int error;
     error= clEnqueueWriteBuffer(queue, _clMem, CL_FALSE, 0, sizeof(cl_camera),
                              &clStruct, 0, NULL, NULL);

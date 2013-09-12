@@ -61,10 +61,9 @@ void Light::updateShadowMap(const Scene& scene)
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    program->bind();
-    program->setUniformValue("fboSize", _depthFbo.size());
-    scene.draw(_lightCamera, program, Scene::MVPMatrix, false);
-    program->release();
+    scene.draw(_lightCamera, program, Scene::MVPMatrix);
 
     _depthFbo.unbind();
+
+
 }
