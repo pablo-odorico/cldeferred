@@ -229,35 +229,47 @@ bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
     return loadKernel(context, kernel, device, QString(programText), kernelName, compileOptions);
 }
 
-/*
-bool CLUtilFunctions::gl2clFormat(GLenum glFormat, cl_channel_order& clOrder, cl_channel_type& clType)
+
+bool CLUtilFunctions::gl2clFormat(GLenum glFormat, cl_image_format& clFormat)
 {
     switch(glFormat) {
     // Some of the format mappings listed in the standard
     case GL_RGBA:
     case GL_RGBA8:
-        clOrder= CL_RGBA; clType= CL_UNORM_INT8;
+        clFormat.image_channel_order= CL_RGBA;
+        clFormat.image_channel_data_type= CL_UNORM_INT8;
         break;
     case GL_BGRA:
-        clOrder= CL_BGRA; clType= CL_UNORM_INT8;
+        clFormat.image_channel_order= CL_BGRA;
+        clFormat.image_channel_data_type= CL_UNORM_INT8;
         break;
     case GL_RGBA16:
-        clOrder= CL_RGBA; clType= CL_UNORM_INT16;
+        clFormat.image_channel_order= CL_RGBA;
+        clFormat.image_channel_data_type= CL_UNORM_INT16;
         break;
     case GL_RGBA16F:
-        clOrder= CL_RGBA; clType= CL_HALF_FLOAT;
+        clFormat.image_channel_order= CL_RGBA;
+        clFormat.image_channel_data_type= CL_HALF_FLOAT;
         break;
     case GL_DEPTH_COMPONENT16:
-        clOrder= CL_DEPTH; clType= CL_UNORM_INT16;
+        clFormat.image_channel_order= CL_DEPTH;
+        clFormat.image_channel_data_type= CL_UNORM_INT16;
         break;
     case GL_DEPTH_COMPONENT32F:
-        clOrder= CL_DEPTH; clType= CL_FLOAT;
+        clFormat.image_channel_order= CL_DEPTH;
+        clFormat.image_channel_data_type= CL_FLOAT;
         break;
 
     // Format mappings not listed in the standard
     case GL_RG16F:
-        clOrder= CL_RG; clType= CL_HALF_FLOAT;
+        clFormat.image_channel_order= CL_RG;
+        clFormat.image_channel_data_type= CL_HALF_FLOAT;
         break;
+    case GL_RG32F:
+        clFormat.image_channel_order= CL_RG;
+        clFormat.image_channel_data_type= CL_FLOAT;
+        break;
+
     // Unknown format
     default:
         cerr << "CLUtilFunctions::gl2clFormat: Could not convert format " << glFormat << endl;
@@ -265,4 +277,4 @@ bool CLUtilFunctions::gl2clFormat(GLenum glFormat, cl_channel_order& clOrder, cl
     }
     return true;
 }
-*/
+

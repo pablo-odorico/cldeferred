@@ -10,7 +10,7 @@
 
 class Scene;
 
-class Light
+class Light : protected CLUtilFunctions
 {
 public:
     Light();
@@ -22,7 +22,7 @@ public:
     bool hasShadows() { return _shadowMapping; }
     // 2. Setup
     bool setupShadowMap(
-            cl_context context, QSize shadowMapSize= QSize(512, 512),
+            cl_context context, QSize shadowMapSize= QSize(512, 512), int shadowMapDownsamples= 1,
             GLenum storedDepthFormat= GL_RG32F, // Must be a color format, we use two channels per pixel
             GLenum depthTestingFormat= GL_DEPTH_COMPONENT24); // Must be a depth format
     // 3. Update shadow map
@@ -40,6 +40,10 @@ public:
     void setSpecColor(QColor color) { _specColor= color; }
 
 protected:
+    // Returns the depth downsample size for a certain level
+    // If level==0, returns the depth fbo size
+    QSize depthDownsampleSize(int level);
+
     QColor _ambientColor;
     QColor _diffuseColor;
     QColor _specColor;
@@ -48,7 +52,10 @@ protected:
     bool _shadowMapping;
     bool _shadowMappingInit;
 
+    // FBO for the depth moments
     FBOCL _depthFbo;
+    // OpenCL images for the depth moments downsamples
+    QVector<cl_mem> _depthDownsamples;
 
     // Light "camera" used for shadow mapping
     Camera _lightCamera;

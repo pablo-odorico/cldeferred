@@ -50,13 +50,12 @@ private:
 
     static
     bool loadProgramText(const char* path, QByteArray& source);
-/*
+
     // Converts from an OpenGL format (eg GL_RGBA8) to an OpenCL
-    // channel order/channel type pair (eg CL_RGBA, CL_UNORM_INT8)
-    // returns false on error
+    // format (eg CL_RGBA, CL_UNORM_INT8). Returns false on error
     static
-    bool gl2clFormat(GLenum glFormat, cl_channel_order& clOrder, cl_channel_type& clType);
-    */
+    bool gl2clFormat(GLenum glFormat, cl_image_format &clFormat);
+
 };
 
 #endif // CLUTILFUNCTIONS_H
