@@ -278,3 +278,4 @@ bool CLUtilFunctions::gl2clFormat(GLenum glFormat, cl_image_format& clFormat)
     return true;
 }
 
+

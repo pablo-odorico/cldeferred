@@ -12,9 +12,14 @@ FBO::Attachment FBO::createAttach(GLenum format, GLenum target)
 
     glGenRenderbuffers(1, &attach.bufferId);
     glBindRenderbuffer(GL_RENDERBUFFER, attach.bufferId);
+    checkGLError("glGenBuffers");
+
     glRenderbufferStorage(GL_RENDERBUFFER, attach.format, _width, _height);
+    checkGLError("Buffer storage.");
+
     glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, attach.target,
                               GL_RENDERBUFFER, attach.bufferId);
+    checkGLError("Renderbuffer");
 
     return attach;
 }
@@ -35,6 +40,7 @@ bool FBO::resize(QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
     // Generate and bind FBO
     glGenFramebuffers(1, &_id);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _id);
+    checkGLError("glGenFramebuffers");
 
     // Create depth attachment
     _depthAttach= createAttach(depthFormat, GL_DEPTH_ATTACHMENT);
@@ -48,7 +54,11 @@ bool FBO::resize(QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
     }
 
     // Only return true if the framebuffer is fully supported
-    const bool error= glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE;
+    const GLenum complete= glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
+    const bool error= complete != GL_FRAMEBUFFER_COMPLETE;
+    if(error) {
+        debugError("Framebuffer not complete: %s.", gluGetString(complete));
+    }
     _initialized= !error;
 
     // Unbind

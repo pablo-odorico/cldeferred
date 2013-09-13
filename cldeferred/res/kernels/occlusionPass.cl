@@ -3,13 +3,8 @@
 #include "cl_camera.h"
 #include "cl_spotlight.h"
 
-
-#define DEPTH_PARAM_NAME(prefix,N) prefix##N##depth
-#define DEF_DEPTH_PARAM(prefix,N)  read_only image2d_t DEPTH_PARAM_NAME(prefix,N)
-
-
+// Variance Shadow Map calculation:
 // http://http.developer.nvidia.com/GPUGems3/gpugems3_ch08.html
-//
 
 float linstep(float low, float high, float v)
 {
@@ -25,8 +20,40 @@ float varianceShadowMap(const float2 moments, float compare)
     return clamp(max(p, p_max), 0.0f, 1.0f);
 }
 
+// Samples the depth moments image multiple times and averages the result
+// depths must be a float2 image
+// coord is the normalized centroid
+float2 depthBlurSample(read_only image2d_t depths, int radius, float2 coord)
+{
+    const sampler_t sampler= CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP | CLK_FILTER_LINEAR;
+    const float2 size= (float2)(get_image_width(depths), get_image_height(depths));
 
-__kernel
+    float2 moment= (float2)(0, 0);
+
+    for(int offsetY= -radius; offsetY <= radius; offsetY++)
+        for(int offsetX= -radius; offsetX <= radius; offsetX++)
+            moment += read_image2f(depths, sampler, coord + (float2)(offsetX/size.x,offsetY/size.y));
+    moment /= (2*radius+1) * (2*radius+1);
+
+    return moment;
+}
+
+float calcVisibility(read_only image2d_t lightDepths, const float4 worldPos, const float16 lightVPMatrix)
+{
+    const float4 lightClipPos= multMatVec(lightVPMatrix, worldPos);
+    const float4 lightBiasedNDC= (lightClipPos / lightClipPos.w) * 0.5f + 0.5f;
+    const float2 lightDepthMoment= depthBlurSample(lightDepths, 1, lightBiasedNDC.xy);
+    return varianceShadowMap(lightDepthMoment, lightBiasedNDC.z);
+}
+
+//
+// Occlusions Pass Kernel
+//
+
+#define DEPTH_PARAM_NAME(prefix,N) prefix##N##depth
+#define DEF_DEPTH_PARAM(prefix,N)  read_only image2d_t DEPTH_PARAM_NAME(prefix,N)
+
+kernel
 void occlusionPass(
     constant cl_camera* camera,
     read_only image2d_t cameraDepth,
@@ -45,47 +72,13 @@ void occlusionPass(
     const float camDepth= read_image1f(cameraDepth, camDepthSampler, pos);
 
     const float4 clipPos= getClipPosFromDepth(pos, size, camDepth, camera->projMatrix);
-    float4 worldPos= multMatVec(camera->vpMatrixInv, clipPos);
+    const float4 worldPos= multMatVec(camera->vpMatrixInv, clipPos);
 
-    float occlusion= 0;
-    float4 lightClipPos;
-    float4 lightBiasedNDC;
-    float2 lightDepthMoment;
+#define VISIBILITY(lights,N) \
+    calcVisibility(lights##N##depth, worldPos, lights[N].viewProjMatrix)
 
-// lights is the pointer to the light structs (eg. spotLights)
-// N: light number (resets for each type)
-// depthPrefix: used to create depthPrefix##Ndepth
+    /** ISIBILITIES **/ // VISIBILITY(spotLights, 0)
+    float visibility= VISIBILITY(spotLights, 0);
 
-    const sampler_t lightDepthSampler= CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP | CLK_FILTER_LINEAR;
-
-// Light depth moment, sampled with an offset
-#define M_BLURRADIUS    1
-#define M_BLURCOUNT     ((2*(M_BLURRADIUS)+1)*(2*(M_BLURRADIUS)+1))
-
-#define SET_OCCLUSION(lights,N)                         \
-    lightClipPos= multMatVec(lights[N].viewProjMatrix, worldPos);                              \
-    lightBiasedNDC= (lightClipPos / lightClipPos.w) * 0.5f + 0.5f;                             \
-                                                                                               \
-    lightDepthMoment= (float2)(0, 0);                                                          \
-    for(int offsetX= -M_BLURRADIUS; offsetX <= M_BLURRADIUS; offsetX++)                        \
-        for(int offsetY= -M_BLURRADIUS; offsetY <= M_BLURRADIUS; offsetY++)                    \
-            lightDepthMoment += read_image2f(lights##N##depth, lightDepthSampler,              \
-                                             lightBiasedNDC.xy + (float2)(offsetX/(float)size.x,offsetY/(float)size.y)); \
-    lightDepthMoment /= M_BLURCOUNT;                                                           \
-                                                                                               \
-    occlusion = varianceShadowMap(lightDepthMoment, lightBiasedNDC.z);
-
-    /** OCCLUSIONS **/ // SET_OCCLUSION(spotLights, 0)
-
-    occlusionBuffer[pos.x + pos.y * size.x]= occlusion;
-
-/*
-    //float4 pp= (float4)(camDepth, lightDepth, lightBiasedNDC.z, 0);
-    float d= occlusion; // fabs(lightDepth-lightBiasedNDC.z)
-    float4 pp= (float4)(pos.x, pos.y, d, 0);
-    //float4 pp= (float4)(lightNDCPos.xy, lightNDCPos.z/2.0f + 0.5f, 0);
-
-    if(!camDepth) pp.z= -1;
-    occlusionBuffer[pos.x + pos.y * size.x]= pp;
-*/
+    occlusionBuffer[pos.x + pos.y * size.x]= visibility;
 }

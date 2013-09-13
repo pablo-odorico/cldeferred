@@ -12,7 +12,7 @@ OBJECTS_DIR = obj
 MOC_DIR = obj
 RCC_DIR = obj
 
-LIBS += -lGLEW -lOpenCL -lQt53D
+LIBS += -lGLU -lGLEW -lOpenCL -lQt53D
 
 INCLUDEPATH += src/
 # Include path for shared kernel structs
@@ -32,7 +32,8 @@ SOURCES += \
     src/lightmanager.cpp \
     src/light.cpp \
     src/occlusionbuffer.cpp \
-    src/debug.cpp
+    src/debug.cpp \
+    src/glutilfunctions.cpp
 
 HEADERS += \
     src/fbo.h \
@@ -50,7 +51,8 @@ HEADERS += \
     src/lightmanager.h \
     src/light.h \
     src/occlusionbuffer.h \
-    src/debug.h
+    src/debug.h \
+    src/glutilfunctions.h
 
 OTHER_FILES += \
     TODO.txt \

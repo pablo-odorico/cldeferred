@@ -2,7 +2,8 @@
 #include <cassert>
 #include "debug.h"
 
-bool FBOCL::resize(cl_context context, QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
+bool FBOCL::resize(cl_context context, QSize size, QList<GLenum> colorFormats,
+                   GLenum depthFormat)
 {
     if(!FBO::resize(size, colorFormats, depthFormat)) {
         debugError("Resize failed");

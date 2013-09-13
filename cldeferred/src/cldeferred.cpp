@@ -67,7 +67,7 @@ void CLDeferred::finalizeInit()
 
     if(!scene.loadScene("models/untitled/untitled2.obj"))
         debugError("Could not load scene!");
-    scene.camera().lookAt(QVector3D(5, 5, 5), QVector3D(0, 0, 0));
+    scene.camera().lookAt(QVector3D(-8, .5f, -8), QVector3D(0, 0, 0));
     scene.camera().setMoveSpeed(5);
 
     SpotLight* spotLight= new SpotLight();
@@ -130,6 +130,12 @@ void CLDeferred::renderGL()
     // 2nd pass
     deferredPass();
     times[2]= sceneTime.nsecsElapsed();
+
+    static int frame= 0;
+    frame++;
+    if(frame==55) {
+        QPixmap::grabWindow(winId()).save("screen.ppm");
+    }
 
     // Draw output texture
     drawOutput();

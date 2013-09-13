@@ -63,8 +63,8 @@ bool OcclusionBuffer::updateKernel(int spotLightCount)
     // Occlusion calculation calls
     QString occlusions= "";
     for(int i=0; i<_spotLightCount; i++)
-        occlusions += "SET_OCCLUSION(spotLights, " + QString::number(i) + ") \n";
-    sourceCopy.replace("/** OCCLUSIONS **/", occlusions);
+        occlusions += "VISIBILITY(spotLights, " + QString::number(i) + ") \n";
+    sourceCopy.replace("/** VISIBILITIES **/", occlusions);
 
     //qDebug() << sourceCopy;
 
