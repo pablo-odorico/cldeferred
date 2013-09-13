@@ -18,7 +18,7 @@ public:
 
     // Shadow mapping
     // 1. Enable
-    void enableShadows(bool value);
+    void enableShadows(bool value) { _shadowMapping= value; }
     bool hasShadows() { return _shadowMapping; }
     // 2. Setup
     bool setupShadowMap(cl_context context, QSize shadowMapSize= QSize(512, 512),

@@ -23,7 +23,7 @@ float varianceShadowMap(const float2 moments, float compare)
 // Samples the depth moments image multiple times and averages the result
 // depths must be a float2 image
 // coord is the normalized centroid
-float2 depthBlurSample(read_only image2d_t depths, int radius, float2 coord)
+float2 depthBlurSample(read_only image2d_t depths, const int radius, const float2 coord)
 {
     const sampler_t sampler= CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP | CLK_FILTER_LINEAR;
     const float2 size= (float2)(get_image_width(depths), get_image_height(depths));
@@ -38,7 +38,7 @@ float2 depthBlurSample(read_only image2d_t depths, int radius, float2 coord)
     return moment;
 }
 
-float calcVisibility(read_only image2d_t lightDepths, const float4 worldPos, const float16 lightVPMatrix)
+float visibility(read_only image2d_t lightDepths, const float4 worldPos, const float16 lightVPMatrix)
 {
     const float4 lightClipPos= multMatVec(lightVPMatrix, worldPos);
     const float4 lightBiasedNDC= (lightClipPos / lightClipPos.w) * 0.5f + 0.5f;
@@ -57,9 +57,12 @@ kernel
 void occlusionPass(
     constant cl_camera* camera,
     read_only image2d_t cameraDepth,
+    int lightsWithShadows,              // Total number of lights that have shadows
     constant cl_spotlight* spotLights,
-    /** DEPTH_PARAMS **/ // DEF_DEPTH_PARAM(spotLights, 0),
-    write_only global float* occlusionBuffer
+    /** DEPTH_PARAMS **/
+    // DEF_DEPTH_PARAM(spotLights, 0),
+    // ...
+    write_only global uchar* occlusionBuffer
 )
 {
     const int2 pos= (int2)(get_global_id(0), get_global_id(1));
@@ -74,11 +77,15 @@ void occlusionPass(
     const float4 clipPos= getClipPosFromDepth(pos, size, camDepth, camera->projMatrix);
     const float4 worldPos= multMatVec(camera->vpMatrixInv, clipPos);
 
+    global uchar* dst= occlusionBuffer + (pos.x + pos.y * size.x) * lightsWithShadows;
+
 #define VISIBILITY(lights,N) \
-    calcVisibility(lights##N##depth, worldPos, lights[N].viewProjMatrix)
+    if(lights[N].hasShadows) { \
+        *dst= packOcclusion(1.0f - visibility(lights##N##depth, worldPos, lights[N].viewProjMatrix)); \
+        dst++; \
+    }
 
-    /** ISIBILITIES **/ // VISIBILITY(spotLights, 0)
-    float visibility= VISIBILITY(spotLights, 0);
-
-    occlusionBuffer[pos.x + pos.y * size.x]= visibility;
+    /** VISIBILITIES **/
+    // VISIBILITY(spotLights, 0)
+    // ...
 }

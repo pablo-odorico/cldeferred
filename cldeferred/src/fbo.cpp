@@ -57,7 +57,7 @@ bool FBO::resize(QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
     const GLenum complete= glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
     const bool error= complete != GL_FRAMEBUFFER_COMPLETE;
     if(error) {
-        debugError("Framebuffer not complete: %s.", gluGetString(complete));
+        debugFatal("Framebuffer not complete: %s.", gluGetString(complete));
     }
     _initialized= !error;
 

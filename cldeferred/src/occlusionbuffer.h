@@ -14,17 +14,18 @@ public:
     // cameraDepthImg and spotLightDepthImgs must be aquired before calling update
     bool update(cl_command_queue queue,
                 cl_mem cameraStruct,
-                cl_mem cameraDepthImg,
+                cl_mem cameraDepthImg, int lightsWithShadows,
                 cl_mem spotLightStructs,
                 QVector<cl_mem> spotLightDepthImgs,
                 QSize screenSize);
 
     cl_mem buffer();
 
-    int bufferBytes() { return _bufferSize.width() * _bufferSize.height() * sizeof(uint); } // TODO ver si pasar a float
+    size_t bufferBytes() { return _bufferSize.width() * _bufferSize.height() * _spotLightCount; }
 
 private:
     bool updateKernel(int spotLightCount);
+    bool updateBuffer();
 
     bool _initialized;
     QString _source;
@@ -39,6 +40,7 @@ private:
     // Global memory buffer of uint32_t's
     QSize _bufferSize;
     cl_mem _buffer;
+    size_t _lastBufferBytes;
 };
 
 #endif // OCCLUSIONBUFFER_H

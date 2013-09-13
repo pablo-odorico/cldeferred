@@ -27,9 +27,14 @@ public:
     // Recalculate all of the lights' shadow maps
     void updateShadowMaps(const Scene& scene);
 
+    // Returns the number of lights that have shadows
+    int lightsWithShadows();
+    int spotLightCount() { return _spotLights.count(); }
+
     cl_mem spotStructs();
     QVector<cl_mem> aquireSpotDepths(cl_command_queue queue);
     bool releaseSpotDephts(cl_command_queue queue);
+
 
 private:
     bool _initialized;

@@ -81,6 +81,16 @@ cl_mem LightManager::spotStructs()
 
 void LightManager::updateShadowMaps(const Scene& scene)
 {
+    foreach(SpotLight* spot, _spotLights) {
+        if(spot->hasShadows())
+            spot->updateShadowMap(scene);
+    }
+}
+
+int LightManager::lightsWithShadows()
+{
+    int count= 0;
     foreach(SpotLight* spot, _spotLights)
-        spot->updateShadowMap(scene);
+        count += spot->hasShadows();
+    return count;
 }

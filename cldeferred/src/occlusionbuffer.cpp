@@ -3,11 +3,12 @@
 #include <cassert>
 
 OcclusionBuffer::OcclusionBuffer()
-    : _initialized(false), _spotLightCount(-1), _bufferSize(0,0)
+    : _initialized(false), _spotLightCount(-1), _bufferSize(0,0),
+      _lastBufferBytes(0)
 {
     QFile file(":/kernels/occlusionPass.cl");
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
-        debugError("Could not load source.");
+        debugFatal("Could not load source.");
     _source= QString(file.readAll());
 }
 
@@ -15,24 +16,9 @@ bool OcclusionBuffer::resize(cl_context context, cl_device_id device, QSize size
 {
     _context= context;
     _device= device;
-
-    // If the buffer was allocated, release it
-    const bool firstTime= _bufferSize == QSize(0,0);
-    if(!firstTime) {
-        const cl_int error= clReleaseMemObject(_buffer);
-        checkCLError(error, "clReleaseMemObject");
-    }
-
     _bufferSize= size;
 
-    // Allocate occlusion buffer
-    cl_int error;
-    _buffer= clCreateBuffer(_context, CL_MEM_READ_WRITE, bufferBytes(), NULL, &error);
-    if(checkCLError(error, "clCreateBuffer"))
-        return false;
-
     _initialized= true;
-
     return true;
 }
 
@@ -64,17 +50,37 @@ bool OcclusionBuffer::updateKernel(int spotLightCount)
     QString occlusions= "";
     for(int i=0; i<_spotLightCount; i++)
         occlusions += "VISIBILITY(spotLights, " + QString::number(i) + ") \n";
-    sourceCopy.replace("/** VISIBILITIES **/", occlusions);
-
-    //qDebug() << sourceCopy;
+    sourceCopy.replace("/** VISIBILITIES **/", occlusions);    
 
     return loadKernel(_context, &_kernel, _device, sourceCopy, "occlusionPass", "-I../res/kernels/ -Werror");
+}
+
+bool OcclusionBuffer::updateBuffer()
+{
+    if(_lastBufferBytes == bufferBytes())
+        return true;
+
+    cl_int error;
+
+    if(_lastBufferBytes) {
+        error= clReleaseMemObject(_buffer);
+        checkCLError(error, "clReleaseMemObject");
+    }
+
+    // Allocate occlusion buffer
+    _buffer= clCreateBuffer(_context, CL_MEM_READ_WRITE, bufferBytes(), NULL, &error);
+    if(checkCLError(error, "clCreateBuffer"))
+        return false;
+
+    _lastBufferBytes= bufferBytes();
+    return true;
 }
 
 bool OcclusionBuffer::update(
         cl_command_queue queue,
         cl_mem cameraStruct,
         cl_mem cameraDepthImg,
+        int lightsWithShadows,
         cl_mem spotLightStructs,
         QVector<cl_mem> spotLightDepthImgs,
         QSize screenSize)
@@ -83,7 +89,12 @@ bool OcclusionBuffer::update(
 
     // Update kernel to match the current number of lights
     if(!updateKernel(spotLightDepthImgs.count())) {
-        debugError("Failed to update kernel.");
+        debugFatal("Failed to update kernel.");
+        return false;
+    }
+    // Update occlusion buffer to store the occlusion of all lights
+    if(!updateBuffer()) {
+        debugFatal("Failed to update buffer.");
         return false;
     }
 
@@ -98,8 +109,9 @@ bool OcclusionBuffer::update(
     // Set kernel parameters
     error  = clSetKernelArg(_kernel, 0, sizeof(cl_mem), (void*)&cameraStruct);
     error |= clSetKernelArg(_kernel, 1, sizeof(cl_mem), (void*)&cameraDepthImg);
-    error |= clSetKernelArg(_kernel, 2, sizeof(cl_mem), (void*)&spotLightStructs);
-    uint argIndex= 3;
+    error |= clSetKernelArg(_kernel, 2, sizeof(int)   , (void*)&lightsWithShadows);
+    error |= clSetKernelArg(_kernel, 3, sizeof(cl_mem), (void*)&spotLightStructs);
+    uint argIndex= 4;
     for(int i=0; i<spotLightDepthImgs.count(); i++) {
         error |= clSetKernelArg(_kernel, argIndex, sizeof(cl_mem), (void*)&spotLightDepthImgs[i]);
         argIndex++;
@@ -117,5 +129,6 @@ bool OcclusionBuffer::update(
 cl_mem OcclusionBuffer::buffer()
 {
     assert(_initialized);
+    assert(_lastBufferBytes);
     return _buffer;
 }

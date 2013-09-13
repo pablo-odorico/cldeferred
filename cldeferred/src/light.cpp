@@ -17,13 +17,9 @@ bool Light::setupShadowMap(cl_context context, QSize shadowMapSize,
     assert(shadowMapSize.x() & ((1 << shadowMapDownsamples) - 1) == 0);
     assert(shadowMapSize.y() & ((1 << shadowMapDownsamples) - 1) == 0);*/
 
-    if(!_shadowMapping) {
-        debugWarning("Shadow mapping disabled.");
-        return false;
-    }
     if(!_depthFbo.resize(context, shadowMapSize, QList<GLenum>() << storedDepthFormat, depthTestingFormat))
     {
-        debugError("Could not init depth FBO.");
+        debugFatal("Could not init depth FBO.");
         return false;
     }
 /*
@@ -51,14 +47,6 @@ bool Light::setupShadowMap(cl_context context, QSize shadowMapSize,
 */
     _shadowMappingInit= true;
     return true;
-}
-
-void Light::enableShadows(bool value)
-{
-    if(_shadowMapping and value)
-        return;
-    _shadowMapping= value;
-    _shadowMappingInit= false;
 }
 
 void Light::updateShadowMap(const Scene& scene)

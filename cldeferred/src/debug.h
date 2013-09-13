@@ -34,8 +34,8 @@ private:
     debugPrint(YELLOW, "ww " << __FILE__ << ":" << __LINE__ << ": "); \
     qDebug(__VA_ARGS__); }
 
-#define debugError(...) { \
+#define debugFatal(...) { \
     debugPrint(RED, "!! " << __FILE__ << ":" << __LINE__ << ": "); \
-    qDebug(__VA_ARGS__); }
+    qDebug(__VA_ARGS__); exit(EXIT_FAILURE); }
 
 #endif // DEBUG_H

@@ -16,10 +16,12 @@ void deferredPass(
     read_only  image2d_t gbDiffuseSpec,
     read_only  image2d_t gbNormals,
     read_only  image2d_t gbDepth,
-    read_only global float* occlusionBuffer,
+    read_only global uchar* occlusionBuffer,
     write_only image2d_t output,
     constant cl_camera* camera,
-    constant cl_spotlight* spotLights
+    constant cl_spotlight* spotLights,
+    int spotLightsCount,
+    int lightsWithShadows
 )
 {
     // Get global position
@@ -31,7 +33,7 @@ void deferredPass(
         return;
 
     // Load data from G-Buffer
-    float4 diffuseSpec= read_imagef(gbDiffuseSpec, sampler, pos);
+    const float4 diffuseSpec= read_imagef(gbDiffuseSpec, sampler, pos);
 
     float3 normal= read_imagef(gbNormals, sampler, pos).xyz;
     normal.z= sqrt(1.0f - normal.x*normal.x - normal.y*normal.y);
@@ -42,10 +44,21 @@ void deferredPass(
     float4 viewPos= multMatVec(camera->projMatrixInv, viewPos);
     float4 worldPos= multMatVec(camera->viewMatrixInv, viewPos);
 */
-    float occlusion= occlusionBuffer[pos.x + pos.y * size.x];
+
+    global uchar* occlusionPtr= occlusionBuffer + (pos.x + pos.y * size.x) * lightsWithShadows;
+
+    float occlusion= 0.0f;
+    int spotsWithShadows= 0;
+    for(int i=0; i<spotLightsCount; i++) {
+        if(spotLights[i].hasShadows) {
+            occlusion = max(occlusion, unpackOcclusion(occlusionPtr[spotsWithShadows]));
+            spotsWithShadows++;
+        }
+    }
+    //occlusion /= spotsWithShadows;
 
     // Write output
-    const float4 color= diffuseSpec * occlusion;
+    const float4 color= diffuseSpec * (1.0f - occlusion);
 
     //const float4 color= unpackColor(occlusion);
 

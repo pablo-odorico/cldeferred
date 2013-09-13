@@ -5,6 +5,25 @@
 #define read_image2f(image,sampler,pos)     read_imagef((image),(sampler),(pos)).xy
 #define read_image3f(image,sampler,pos)     read_imagef((image),(sampler),(pos)).xyz
 
+//
+// Float to uchar occlusion packing/unpacking
+//
+
+uchar packOcclusion(const float value)
+{
+    return clamp((int)(value * 255.0f), 0, 255);
+}
+
+float unpackOcclusion(const uchar value)
+{
+    return clamp(value / 255.0f, 0.0f, 1.0f);
+}
+
+
+//
+// Float4 to uint32 color packing/unpacking
+//
+
 float4 unpackColor(const uint color)
 {
     return (float4)(
@@ -24,6 +43,10 @@ uint packColor(const float4 color)
         clamp((int)(color.s2 * 255.0f), 0, 255) << 0;
 }
 
+//
+// Matrix operations
+//
+
 float4 multMatVec(const float16 m, const float4 v)
 {
     return (float4) (
@@ -33,6 +56,10 @@ float4 multMatVec(const float16 m, const float4 v)
         dot(m.sCDEF, v)
     );
 }
+
+//
+// 3D operations
+//
 
 // Get clip coord from 0..1 depth
 // http://www.opengl.org/wiki/Compute_eye_space_from_window_space#From_XYZ_of_gl_FragCoord
