@@ -3,7 +3,8 @@
 
 #include "cltypes.h"
 
-typedef struct  __attribute__ ((packed)) {
+typedef struct  __attribute__ ((packed))
+{
     cl_float16 viewMatrix;
     cl_float16 viewMatrixInv;
     cl_float16 projMatrix;

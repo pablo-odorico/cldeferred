@@ -87,7 +87,7 @@ void LightManager::updateShadowMaps(const Scene& scene)
     }
 }
 
-int LightManager::lightsWithShadows()
+int LightManager::lightsWithShadows() const
 {
     int count= 0;
     foreach(SpotLight* spot, _spotLights)

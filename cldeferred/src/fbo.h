@@ -10,13 +10,7 @@
 class FBO
 {
 public:
-    struct Attachment {
-        GLenum format;   // eg GL_RGBA
-        GLenum target;   // eg GL_COLOR_ATTACHMENT0
-        GLenum bufferId; // Returned by glGenRenderbuffers
-    };
-
-    FBO() : _width(0), _height(0), _initialized(false),
+    FBO() : _initialized(false),
         _bindedTarget(GL_NONE), _id(0) { }
     virtual ~FBO() { cleanup(); }
 
@@ -29,26 +23,29 @@ public:
     virtual void unbind();
     void clear();
 
-    int width() const { return _width; }
-    int height() const { return _height; }
-    QSize size() const { return QSize(_width, _height); }
+    int width() const { return _size.width(); }
+    int height() const { return _size.height(); }
+    QSize size() const { return _size; }
 
     QImage colorAttachImage(int index= 0);
     QImage depthAttachImage();
 
 protected:
+    struct Attachment {
+        GLenum format;   // eg GL_RGBA
+        GLenum target;   // eg GL_COLOR_ATTACHMENT0
+        GLenum bufferId; // Returned by glGenRenderbuffers
+    };
+
     virtual void cleanup();
     // Create and attach a buffer object to the FBO
     Attachment createAttach(GLenum format, GLenum target);
 
     bool _initialized;
-
-    int _width;
-    int _height;
-
     GLenum _bindedTarget;
-
     GLuint _id;
+
+    QSize _size;
 
     QVector<Attachment> _colorAttachs;
     Attachment _depthAttach;

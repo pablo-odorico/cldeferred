@@ -49,7 +49,6 @@ void CLDeferred::initializeCL()
                    ":/kernels/deferredPass.cl", "deferredPass",
                    "-I../res/kernels/ -Werror")) {
         debugFatal("Error loading kernel.");
-        return;
     }
 }
 
@@ -65,7 +64,7 @@ void CLDeferred::finalizeInit()
     SpotLight* spotLight= new SpotLight();
     spotLight->lookAt(QVector3D(10, 10, 10), QVector3D(0, 0, 0));
     spotLight->enableShadows(true);
-    spotLight->setupShadowMap(clCtx(), QSize(512,512));
+    spotLight->setupShadowMap(clCtx(), QSize(256, 256));
     spotLight->setParams(30, 1, 1/30.0f, 1.0f);
     scene.lightManager().addSpotLight(spotLight);
 /*
@@ -202,13 +201,13 @@ void CLDeferred::updateShadowMaps()
     // Update the shadow maps of all lights
     scene.updateShadowMaps();    
 
+    // Use those shadow maps to update the occlusion buffer
     cl_mem camStruct= scene.camera().structCL();
     cl_mem camDepth= gBuffer.aquireColorBuffers(clQueue()).at(2);
     cl_mem spotLightStructs= lm.spotStructs();
     QVector<cl_mem> spotLightDepthImgs= lm.aquireSpotDepths(clQueue());
 
-    bool ok;
-    ok= occlusionBuffer.update(
+    bool ok= occlusionBuffer.update(
                 clQueue(), camStruct, camDepth, lm.lightsWithShadows(),
                 spotLightStructs, spotLightDepthImgs,
                 gBuffer.size());
@@ -217,42 +216,6 @@ void CLDeferred::updateShadowMaps()
 
     lm.releaseSpotDephts(clQueue());
     gBuffer.releaseColorBuffers(clQueue());
-
-/*
-    static int con= 0;
-    con++;
-    if(con==10) {
-        lm.spotLight(0)->shadowMapFBO().diffuseToImage().save("depth.png");
-
-        cl_float4 data[gBuffer.width() * gBuffer.height()];
-
-        cl_int error;
-        error= clEnqueueReadBuffer(clQueue(), occlusionBuffer.buffer(), CL_TRUE, 0,
-                                   occlusionBuffer.bufferBytes(), data, 0, NULL, NULL);
-        if(checkCLError(error, "clEnqueueReadBuffer"))
-            return;
-        clFinish(clQueue());
-
-        QMatrix4x4 m= (scene.camera().projMatrix() * scene.camera().viewMatrix()).inverted();
-
-        QFile file("out.txt");
-        if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
-            return;
-        QTextStream out(&file);
-
-        for(int y=0; y<gBuffer.height(); y+=1) {
-            for(int x=0; x<gBuffer.width(); x+=1) {
-                cl_float4 pos= data[x + y * gBuffer.width()];
-                QVector4D vec(pos.x, pos.y, pos.z, pos.w);
-
-                //vec= m * vec;
-                if(pos.z != -1.0f)
-                    out << vec.x() << " " << vec.y() << " " << vec.z() << " " << "\n";
-            }
-        }
-        file.close();
-    }
-*/
 
     checkCLError(clFinish(clQueue()), "clFinish");
 }
@@ -313,11 +276,9 @@ void CLDeferred::deferredPass()
 void CLDeferred::drawOutput()
 {
     glViewport(0, 0, width(), height());
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     outputProgram->bind();       
-
     outputTex.bind();
 
     glBegin(GL_QUADS);

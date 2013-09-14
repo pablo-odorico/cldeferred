@@ -14,7 +14,7 @@ FBO::Attachment FBO::createAttach(GLenum format, GLenum target)
     glBindRenderbuffer(GL_RENDERBUFFER, attach.bufferId);
     checkGLError("glGenBuffers");
 
-    glRenderbufferStorage(GL_RENDERBUFFER, attach.format, _width, _height);
+    glRenderbufferStorage(GL_RENDERBUFFER, attach.format, width(), height());
     checkGLError("Buffer storage.");
 
     glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, attach.target,
@@ -28,9 +28,7 @@ bool FBO::resize(QSize size, QList<GLenum> colorFormats, GLenum depthFormat)
 {
     assert(colorFormats.count());
 
-    _width= size.width();
-    _height= size.height();
-
+    _size= size;
     if(_initialized) {
         unbind();
         cleanup();
@@ -102,8 +100,8 @@ void FBO::bind(GLenum target)
 
     glDrawBuffers(colorTargets.count(), colorTargets.data());
 
-    // Set FBO viewport    
-    glViewport(0, 0, _width, _height);
+    // Set FBO viewport
+    glViewport(0, 0, width(), height());
 
     checkGLError("Error binding");
 }
@@ -135,21 +133,21 @@ void FBO::clear()
 
 QImage FBO::normalsToImage()
 {
-    float xBuffer[_width * _height];
-    float yBuffer[_width * _height];
+    float xBuffer[width() * height()];
+    float yBuffer[width() * height()];
 
     bind(GL_READ_FRAMEBUFFER);
     glReadBuffer(GL_COLOR_ATTACHMENT1);
-    glReadPixels(0,0, _width,_height, GL_RED, GL_FLOAT, static_cast<GLvoid*>(xBuffer));
-    glReadPixels(0,0, _width,_height, GL_GREEN, GL_FLOAT, static_cast<GLvoid*>(yBuffer));
+    glReadPixels(0,0, width(),height(), GL_RED, GL_FLOAT, static_cast<GLvoid*>(xBuffer));
+    glReadPixels(0,0, width(),height(), GL_GREEN, GL_FLOAT, static_cast<GLvoid*>(yBuffer));
     unbind(GL_READ_FRAMEBUFFER);
 
-    QImage image(_width, _height, QImage::Format_RGB32);
+    QImage image(width(), height(), QImage::Format_RGB32);
 
     // Convert float values to colors
-    for(int y=0; y<_height; y++) {
-        for(int x=0; x<_width; x++) {
-            const int index= x + y * _width;
+    for(int y=0; y<height(); y++) {
+        for(int x=0; x<width(); x++) {
+            const int index= x + y * width();
             // Normal coords converted to fp32
             const float nx= xBuffer[index];
             const float ny= yBuffer[index];
@@ -171,12 +169,12 @@ QImage FBO::normalsToImage()
 
 QImage FBO::colorAttachImage(int index)
 {
-    QImage image(_width, _height, QImage::Format_RGB32);
+    QImage image(width(), height(), QImage::Format_RGB32);
 
     bind(GL_READ_FRAMEBUFFER);
     glReadBuffer(GL_COLOR_ATTACHMENT0 + index);
     // Channels are reversed to correct endianness
-    glReadPixels(0,0, _width,_height, GL_BGRA, GL_UNSIGNED_BYTE,
+    glReadPixels(0,0, width(),height(), GL_BGRA, GL_UNSIGNED_BYTE,
                  static_cast<GLvoid*>(image.bits()));
     unbind();
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
@@ -188,20 +186,20 @@ QImage FBO::colorAttachImage(int index)
 
 QImage FBO::depthAttachImage()
 {
-    QImage image(_width, _height, QImage::Format_RGB32);
+    QImage image(width(), height(), QImage::Format_RGB32);
 
     bind(GL_READ_FRAMEBUFFER);
     glReadBuffer(GL_COLOR_ATTACHMENT0);
     // Read float data to the image buffer (sizeof float == sizeof RGB32)
-    glReadPixels(0,0, _width,_height, GL_DEPTH_COMPONENT, GL_FLOAT,
+    glReadPixels(0,0, width(),height(), GL_DEPTH_COMPONENT, GL_FLOAT,
                  static_cast<GLvoid*>(image.bits()));
     unbind();
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
     // Convert float values to colors
-    for(int y=0; y<_height; y++) {
-        for(int x=0; x<_width; x++) {
-            const int index= x + y * _width;
+    for(int y=0; y<height(); y++) {
+        for(int x=0; x<width(); x++) {
+            const int index= x + y * width();
             const float df= ((float*)image.bits())[index];
             const uchar d= df * 255.0f;
             ((QRgb*)image.bits())[index]= (df == 1.0f) ? qRgb(128,128,255) : qRgb(d,d,d);

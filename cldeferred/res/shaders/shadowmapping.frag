@@ -1,7 +1,7 @@
 #version 330 core
 
-// Output buffers
-layout (location = 0) out vec2 outDepth; // COLOR0: Depth
+// Output: Depth moments in COLOR0
+layout (location = 0) out vec2 outDepth;
 
 void main()
 {

@@ -21,7 +21,7 @@ public:
 
     cl_mem buffer();
 
-    size_t bufferBytes() { return _bufferSize.width() * _bufferSize.height() * _spotLightCount; }
+    size_t bufferBytes() const { return _size.width() * _size.height() * _spotLightCount; }
 
 private:
     bool updateKernel(int spotLightCount);
@@ -38,7 +38,7 @@ private:
     cl_device_id _device;
 
     // Global memory buffer of uint32_t's
-    QSize _bufferSize;
+    QSize _size;
     cl_mem _buffer;
     size_t _lastBufferBytes;
 };

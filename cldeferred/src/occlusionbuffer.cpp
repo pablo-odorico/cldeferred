@@ -3,7 +3,7 @@
 #include <cassert>
 
 OcclusionBuffer::OcclusionBuffer()
-    : _initialized(false), _spotLightCount(-1), _bufferSize(0,0),
+    : _initialized(false), _spotLightCount(-1), _size(0,0),
       _lastBufferBytes(0)
 {
     QFile file(":/kernels/occlusionPass.cl");
@@ -16,7 +16,7 @@ bool OcclusionBuffer::resize(cl_context context, cl_device_id device, QSize size
 {
     _context= context;
     _device= device;
-    _bufferSize= size;
+    _size= size;
 
     _initialized= true;
     return true;
