@@ -2,9 +2,9 @@
     <qresource prefix="/">
         <file>shaders/firstpass.frag</file>
         <file>shaders/firstpass.vert</file>
-        <file>shaders/outputTex.frag</file>
-        <file>shaders/outputTex.vert</file>
         <file>shaders/shadowmapping.vert</file>
         <file>shaders/shadowmapping.frag</file>
+        <file>shaders/outputQuad.vert</file>
+        <file>shaders/outputQuad.frag</file>
     </qresource>
 </RCC>

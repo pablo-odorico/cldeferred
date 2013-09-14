@@ -7,10 +7,9 @@ const GLenum CLDeferred::normalsFormat;
 const GLenum CLDeferred::depthFormat;
 const GLenum CLDeferred::depthTestFormat;
 
-CLDeferred::CLDeferred(QSize maxSize)
+CLDeferred::CLDeferred()
     : CLGLWindow()
     , firstPassProgram(0), outputProgram(0)
-    , maxSize(maxSize)
     , fpsFrameCount(0), fpsLastTime(0)
 {
 }
@@ -25,34 +24,27 @@ void CLDeferred::initializeGL()
     glPainter()->setStandardEffect(QGL::LitModulateTexture2D);
 
     // 1st pass init
+    // gBuffer is created/resized on resizeGL()
     firstPassProgram= new QOpenGLShaderProgram(this);
     firstPassProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/firstpass.vert");
     firstPassProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/firstpass.frag");
     firstPassProgram->link();
 
     outputProgram= new QOpenGLShaderProgram(this);
-    outputProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/outputTex.vert");
-    outputProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/outputTex.frag");
-    outputProgram->link();
+    outputProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/outputQuad.vert");
+    outputProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/outputQuad.frag");
+    outputProgram->link();   
 
     // 2nd pass init
-    // Create output texture
-    glGenTextures(1, &outputTex);
-    glBindTexture(GL_TEXTURE_2D, outputTex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, maxSize.width(), maxSize.height(), 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    // outputTex is created/resized on resizeGL()
+    outputTex.setBindOptions(QGLTexture2D::InvertedYBindOption);
+    outputTex.setVerticalWrap(QGL::ClampToEdge);
+    outputTex.setHorizontalWrap(QGL::ClampToEdge);
+
 }
 
 void CLDeferred::initializeCL()
 {
-    cl_int error;
-    outputTexBuffer= clCreateFromGLTexture2D(
-                clCtx(), CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, outputTex, &error);
-    if(checkCLError(error, "clCreateFromGLTexture2D"))
-        return;
-
     if(!loadKernel(clCtx(), &deferredPassKernel, clDevice(),
                    ":/kernels/deferredPass.cl", "deferredPass",
                    "-I../res/kernels/ -Werror")) {
@@ -93,21 +85,32 @@ void CLDeferred::finalizeInit()
 void CLDeferred::resizeGL(QSize size)
 {
     debugMsg("Resize to %d x %d.", size.width(), size.height());
-    assert(size.width() <= maxSize.width());
-    assert(size.height() <= maxSize.height());
 
     bool ok;
 
+    // Set camera projection
+    scene.camera().setPerspective(60.0f, (float)size.width()/size.height(), 0.1f, 5000.0f);
+
+    // Resize G-Buffer
     QList<GLenum> colorFormats= QList<GLenum>() << diffuseSpecFormat << normalsFormat << depthFormat;
     ok= gBuffer.resize(clCtx(), size, colorFormats, depthTestFormat);
     if(!ok)
         debugFatal("Error initializing G-Buffer FBO.");
 
+    // Resize Occlusion Buffer
     ok= occlusionBuffer.resize(clCtx(), clDevice(), size);
     if(!ok)
-        debugFatal("Error initializing occlusion buffer.");
+        debugFatal("Error initializing occlusion buffer.");    
 
-    scene.camera().setPerspective(60.0f, (float)size.width()/size.height(), 0.1f, 5000.0f);
+    // Resize and map Output Texture
+    outputTex.setSize(size);
+    outputTex.bind();
+    cl_int error;
+    outputImage= clCreateFromGLTexture2D(
+        clCtx(), CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, outputTex.textureId(), &error);
+    if(checkCLError(error, "clCreateFromGLTexture2D"))
+        debugFatal("Could not map output texture.");
+
 }
 
 void CLDeferred::renderGL()
@@ -258,7 +261,7 @@ void CLDeferred::deferredPass()
 {
     cl_int error;
 
-    error= clEnqueueAcquireGLObjects(clQueue(), 1, &outputTexBuffer, 0, 0, 0);
+    error= clEnqueueAcquireGLObjects(clQueue(), 1, &outputImage, 0, 0, 0);
     if(checkCLError(error, "clEnqueueAcquireGLObjects"))
         return;
     QVector<cl_mem> gBufferChannels= gBuffer.aquireColorBuffers(clQueue());
@@ -288,7 +291,7 @@ void CLDeferred::deferredPass()
     error |= clSetKernelArg(deferredPassKernel, 1, sizeof(cl_mem), (void*)&gbNormals);
     error |= clSetKernelArg(deferredPassKernel, 2, sizeof(cl_mem), (void*)&gbDepth);
     error |= clSetKernelArg(deferredPassKernel, 3, sizeof(cl_mem), (void*)&oBuffer);
-    error |= clSetKernelArg(deferredPassKernel, 4, sizeof(cl_mem), (void*)&outputTexBuffer);
+    error |= clSetKernelArg(deferredPassKernel, 4, sizeof(cl_mem), (void*)&outputImage);
     error |= clSetKernelArg(deferredPassKernel, 5, sizeof(cl_mem), (void*)&cameraStruct);
     error |= clSetKernelArg(deferredPassKernel, 6, sizeof(cl_mem), (void*)&spotLightStructs);
     error |= clSetKernelArg(deferredPassKernel, 7, sizeof(int),    (void*)&spotLightCount);
@@ -297,7 +300,7 @@ void CLDeferred::deferredPass()
                                     ndRangeSize, workGroupSize, 0, NULL, NULL);
     checkCLError(error, "outputKernel");
 
-    error= clEnqueueReleaseGLObjects(clQueue(), 1, &outputTexBuffer, 0, 0, 0);
+    error= clEnqueueReleaseGLObjects(clQueue(), 1, &outputImage, 0, 0, 0);
     if(checkCLError(error, "clEnqueueReleaseGLObjects"))
         return;
     gBuffer.releaseColorBuffers(clQueue());
@@ -311,18 +314,17 @@ void CLDeferred::drawOutput()
 {
     glViewport(0, 0, width(), height());
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);    
 
-    outputProgram->bind();
+    outputProgram->bind();       
 
-    glBindTexture(GL_TEXTURE_2D, outputTex);
-    const float uMax= (float)width() / maxSize.width();
-    const float vMax= (float)height() / maxSize.height();
+    outputTex.bind();
+
     glBegin(GL_QUADS);
-        glVertex4f(-1,-1,    0,    0);
-        glVertex4f( 1,-1, uMax,    0);
-        glVertex4f( 1, 1, uMax, vMax);
-        glVertex4f(-1, 1,    0, vMax);
+        glVertex2f(-1,-1);
+        glVertex2f( 1,-1);
+        glVertex2f( 1, 1);
+        glVertex2f(-1, 1);
     glEnd();
 
     outputProgram->release();

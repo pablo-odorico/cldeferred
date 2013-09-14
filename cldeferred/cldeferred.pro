@@ -58,13 +58,13 @@ OTHER_FILES += \
     TODO.txt \
     res/shaders/firstpass.frag \
     res/shaders/firstpass.vert \
-    res/shaders/outputTex.frag \
-    res/shaders/outputTex.vert \
     res/kernels/deferredPass.cl \
     res/kernels/clutils.cl \
     res/shaders/shadowmapping.vert \
     res/shaders/shadowmapping.frag \
-    res/kernels/occlusionPass.cl
+    res/kernels/occlusionPass.cl \
+    res/shaders/outputQuad.frag \
+    res/shaders/outputQuad.vert
 
 RESOURCES += \
     res/shaders.qrc \

@@ -11,7 +11,7 @@
 class CLDeferred : public CLGLWindow
 {
 public:
-    CLDeferred(QSize maxSize= QSize(1920,1080));
+    CLDeferred();
     virtual ~CLDeferred() { }
 
     void initializeGL();
@@ -31,8 +31,6 @@ private:
     void updateShadowMaps();
     void deferredPass();
     void drawOutput();
-
-    QSize maxSize;
 
     // GL Program used to fill the gbuffer
     QOpenGLShaderProgram* firstPassProgram;
@@ -57,9 +55,9 @@ private:
     // DEPTH: Used only for depth testing in the first pass
     static const GLenum depthTestFormat= GL_DEPTH_COMPONENT24;
 
-    // Output texture
-    GLuint outputTex;
-    cl_mem outputTexBuffer;
+    // Output texture and mapped OpenCL Image
+    QGLTexture2D outputTex;
+    cl_mem outputImage;
 
     // Time metrics
     QElapsedTimer sceneTime;
