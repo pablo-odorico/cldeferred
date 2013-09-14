@@ -1,7 +1,7 @@
-#include "glutilfunctions.h"
+#include "glutils.h"
 #include "debug.h"
 
-bool GLUtilFunctions::checkGLErrorFunc(const char* msg, const char* file, const int line)
+bool GLUtils::checkGLErrorFunc(const char* msg, const char* file, const int line)
 {
     GLenum error= glGetError();
     if(error == GL_NO_ERROR)

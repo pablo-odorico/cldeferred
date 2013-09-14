@@ -1,9 +1,9 @@
 #ifndef OCCLUSIONBUFFER_H
 #define OCCLUSIONBUFFER_H
 
-#include "clutilfunctions.h"
+#include "clutils.h"
 
-class OcclusionBuffer : protected CLUtilFunctions
+class OcclusionBuffer
 {
 public:
     OcclusionBuffer();

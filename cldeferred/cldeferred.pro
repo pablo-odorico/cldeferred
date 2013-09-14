@@ -27,13 +27,13 @@ SOURCES += \
     src/occlusionbuffer.cpp \
     src/scene/camera.cpp \
     src/scene/cameracl.cpp \
-    src/utils/clutilfunctions.cpp \
     src/utils/debug.cpp \
-    src/utils/glutilfunctions.cpp \
     src/scene/light.cpp \
     src/scene/lightmanager.cpp \
     src/scene/scene.cpp \
-    src/scene/spotlight.cpp
+    src/scene/spotlight.cpp \
+    src/utils/clutils.cpp \
+    src/utils/glutils.cpp
 
 HEADERS += \
     src/fbo.h \
@@ -46,13 +46,13 @@ HEADERS += \
     src/occlusionbuffer.h \
     src/scene/camera.h \
     src/scene/cameracl.h \
-    src/utils/clutilfunctions.h \
     src/utils/debug.h \
-    src/utils/glutilfunctions.h \
     src/scene/light.h \
     src/scene/lightmanager.h \
     src/scene/scene.h \
-    src/scene/spotlight.h
+    src/scene/spotlight.h \
+    src/utils/clutils.h \
+    src/utils/glutils.h
 
 OTHER_FILES += \
     TODO.txt \

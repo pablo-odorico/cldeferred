@@ -52,7 +52,8 @@ bool OcclusionBuffer::updateKernel(int spotLightCount)
         occlusions += "VISIBILITY(spotLights, " + QString::number(i) + ") \n";
     sourceCopy.replace("/** VISIBILITIES **/", occlusions);    
 
-    return loadKernel(_context, &_kernel, _device, sourceCopy, "occlusionPass", "-I../res/kernels/ -Werror");
+    return CLUtils::loadKernel(_context, &_kernel, _device, sourceCopy,
+                               "occlusionPass", "-I../res/kernels/ -Werror");
 }
 
 bool OcclusionBuffer::updateBuffer()
@@ -103,8 +104,8 @@ bool OcclusionBuffer::update(
     // Work group and NDRange
     size_t workGroupSize[2] = { 16, 16 };
     size_t ndRangeSize[2];
-    ndRangeSize[0]= roundUp(screenSize.width() , workGroupSize[0]);
-    ndRangeSize[1]= roundUp(screenSize.height(), workGroupSize[1]);
+    ndRangeSize[0]= CLUtils::roundUp(screenSize.width() , workGroupSize[0]);
+    ndRangeSize[1]= CLUtils::roundUp(screenSize.height(), workGroupSize[1]);
 
     // Set kernel parameters
     error  = clSetKernelArg(_kernel, 0, sizeof(cl_mem), (void*)&cameraStruct);

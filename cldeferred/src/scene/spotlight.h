@@ -4,7 +4,7 @@
 #include "light.h"
 #include "cl_spotlight.h"
 
-class SpotLight : public Light, protected CLUtilFunctions
+class SpotLight : public Light
 {
 public:
     SpotLight();

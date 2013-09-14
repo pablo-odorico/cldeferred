@@ -10,7 +10,7 @@
 
 class Scene;
 
-class Light : protected CLUtilFunctions
+class Light
 {
 public:
     Light();

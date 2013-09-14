@@ -1,13 +1,13 @@
 #ifndef LIGHTMANAGER_H
 #define LIGHTMANAGER_H
 
-#include "clutilfunctions.h"
+#include "clutils.h"
 #include "spotlight.h"
 #include "cl_spotlight.h"
 
 #include <QtCore>
 
-class LightManager : protected CLUtilFunctions
+class LightManager
 {
 public:
     static const int maxLights = 32;

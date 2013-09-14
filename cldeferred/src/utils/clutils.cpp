@@ -1,4 +1,4 @@
-#include "clutilfunctions.h"
+#include "clutils.h"
 
 #include <iostream>
 #include <fstream>
@@ -9,7 +9,7 @@
 
 using namespace std;
 
-bool CLUtilFunctions::setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_device_id &device)
+bool CLUtils::setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_device_id &device)
 {
     cl_int clError;
 
@@ -47,7 +47,7 @@ bool CLUtilFunctions::setupOpenCLGL(cl_context& context, cl_command_queue& queue
     return true;
 }
 
-const char* CLUtilFunctions::clErrorToString(cl_int err)
+const char* CLUtils::clErrorToString(cl_int err)
 {
     // OpenCL 1.2 enums
     switch (err) {
@@ -114,7 +114,7 @@ const char* CLUtilFunctions::clErrorToString(cl_int err)
     }
 }
 
-bool CLUtilFunctions::checkCLErrorFunc(cl_int error, const char* msg, const char* file, const int line)
+bool CLUtils::checkCLErrorFunc(cl_int error, const char* msg, const char* file, const int line)
 {
     if(error == CL_SUCCESS)
         return false;
@@ -124,7 +124,7 @@ bool CLUtilFunctions::checkCLErrorFunc(cl_int error, const char* msg, const char
     return true;
 }
 
-int CLUtilFunctions::roundUp(int count, int multiple)
+int CLUtils::roundUp(int count, int multiple)
 {
     int r = count % multiple;
     if(!r)
@@ -133,7 +133,7 @@ int CLUtilFunctions::roundUp(int count, int multiple)
         return count + multiple - r;
 }
 
-float CLUtilFunctions::eventElapsed(cl_event event)
+float CLUtils::eventElapsed(cl_event event)
 {
     cl_int error;
 
@@ -145,7 +145,7 @@ float CLUtilFunctions::eventElapsed(cl_event event)
     return float(end_time - start_time) * 1.0e-6f; // in ms.
 }
 
-bool CLUtilFunctions::loadProgramText(const char* path, QByteArray& source)
+bool CLUtils::loadProgramText(const char* path, QByteArray& source)
 {
     QFile file(path);
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -155,7 +155,7 @@ bool CLUtilFunctions::loadProgramText(const char* path, QByteArray& source)
     return true;
 }
 
-void CLUtilFunctions::checkProgramBuild(cl_program program, cl_device_id device)
+void CLUtils::checkProgramBuild(cl_program program, cl_device_id device)
 {
     cl_int clError;
     cl_build_status build_status;
@@ -185,7 +185,7 @@ void CLUtilFunctions::checkProgramBuild(cl_program program, cl_device_id device)
 
 }
 
-bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
+bool CLUtils::loadKernel(cl_context context, cl_kernel* kernel,
                                  cl_device_id device, QString programText, const char* kernelName,
                                  const char* compileOptions)
 {
@@ -216,7 +216,7 @@ bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
     return true;
 }
 
-bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
+bool CLUtils::loadKernel(cl_context context, cl_kernel* kernel,
                                  cl_device_id device, const char* path, const char* kernelName,
                                  const char* compileOptions)
 {
@@ -230,7 +230,7 @@ bool CLUtilFunctions::loadKernel(cl_context context, cl_kernel* kernel,
 }
 
 
-bool CLUtilFunctions::gl2clFormat(GLenum glFormat, cl_image_format& clFormat)
+bool CLUtils::gl2clFormat(GLenum glFormat, cl_image_format& clFormat)
 {
     switch(glFormat) {
     // Some of the format mappings listed in the standard

@@ -3,9 +3,9 @@
 
 #include <QtCore>
 #include "fbo.h"
-#include "clutilfunctions.h"
+#include "clutils.h"
 
-class FBOCL : public FBO, protected CLUtilFunctions
+class FBOCL : public FBO
 {
 public:
     FBOCL() : FBO() { }

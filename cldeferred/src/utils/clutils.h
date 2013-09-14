@@ -7,11 +7,12 @@
 #include <iostream>
 #include <QtCore>
 
-#define checkCLError(error,msg) checkCLErrorFunc((error), (msg), __FILE__, __LINE__)
+#define checkCLError(error,msg) \
+    CLUtils::checkCLErrorFunc((error), (msg), __FILE__, __LINE__)
 
-class CLUtilFunctions
+class CLUtils
 {
-protected:
+public:
     // Creates an OpenCL context and queue with support for OpenGL interop
     // The OpenGL context must be created and made current before calling setupOpenCLGL
     //

@@ -6,7 +6,7 @@
 #include <GL/glew.h>
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
-#include "clutilfunctions.h"
+#include "clutils.h"
 
 #include <QtGui/QWindow>
 #include <QOpenGLContext>
@@ -18,7 +18,7 @@ class QOpenGLContext;
 class QOpenGLPaintDevice;
 class QGLPainter;
 
-class CLGLWindow : public QWindow, protected CLUtilFunctions
+class CLGLWindow : public QWindow, protected CLUtils
 {
     Q_OBJECT
 public:

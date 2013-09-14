@@ -3,9 +3,9 @@
 
 #include <GL/glew.h>
 
-#define checkGLError(msg) GLUtilFunctions::checkGLErrorFunc((msg), __FILE__, __LINE__)
+#define checkGLError(msg) GLUtils::checkGLErrorFunc((msg), __FILE__, __LINE__)
 
-class GLUtilFunctions
+class GLUtils
 {
 public:
     static

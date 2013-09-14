@@ -1,11 +1,11 @@
 #ifndef CAMERACL_H
 #define CAMERACL_H
 
-#include "clutilfunctions.h"
+#include "clutils.h"
 #include "camera.h"
 #include "cl_camera.h"
 
-class CameraCL : public Camera, protected CLUtilFunctions
+class CameraCL : public Camera
 {
 public:
     CameraCL();

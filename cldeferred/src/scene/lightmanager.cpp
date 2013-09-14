@@ -17,7 +17,7 @@ bool LightManager::init(cl_context context)
     cl_int error;
     _spotStructs= clCreateBuffer(context, CL_MEM_READ_ONLY, spotStructsSize,
                                  NULL, &error);
-    if(checkCLError(error, "LightManager::init: clCreateBuffer spotLights"))
+    if(checkCLError(error, "clCreateBuffer spotLights"))
         return false;
 
     /*

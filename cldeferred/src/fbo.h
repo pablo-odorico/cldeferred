@@ -5,7 +5,7 @@
 #include <QtCore>
 
 #include <QImage>
-#include "glutilfunctions.h"
+#include "glutils.h"
 
 class FBO
 {
