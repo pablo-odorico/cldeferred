@@ -14,7 +14,7 @@ RCC_DIR = obj
 
 LIBS += -lGLU -lGLEW -lOpenCL -lQt53D
 
-INCLUDEPATH += src/
+INCLUDEPATH += src/ src/scene/ src/utils/
 # Include path for shared kernel structs
 INCLUDEPATH += res/kernels/
 
@@ -23,36 +23,36 @@ SOURCES += \
     src/fbo.cpp \
     src/clglwindow.cpp \
     src/cldeferred.cpp \
-    src/clutilfunctions.cpp \
     src/fbocl.cpp \
-    src/camera.cpp \
-    src/cameracl.cpp \
-    src/spotlight.cpp \
-    src/scene.cpp \
-    src/lightmanager.cpp \
-    src/light.cpp \
     src/occlusionbuffer.cpp \
-    src/debug.cpp \
-    src/glutilfunctions.cpp
+    src/scene/camera.cpp \
+    src/scene/cameracl.cpp \
+    src/utils/clutilfunctions.cpp \
+    src/utils/debug.cpp \
+    src/utils/glutilfunctions.cpp \
+    src/scene/light.cpp \
+    src/scene/lightmanager.cpp \
+    src/scene/scene.cpp \
+    src/scene/spotlight.cpp
 
 HEADERS += \
     src/fbo.h \
     src/clglwindow.h \
     src/cldeferred.h \
-    src/clutilfunctions.h \
     src/fbocl.h \
-    src/camera.h \
-    src/cameracl.h \
     res/kernels/cltypes.h \
     res/kernels/cl_camera.h \
-    src/spotlight.h \
-    src/scene.h \
     res/kernels/cl_spotlight.h \
-    src/lightmanager.h \
-    src/light.h \
     src/occlusionbuffer.h \
-    src/debug.h \
-    src/glutilfunctions.h
+    src/scene/camera.h \
+    src/scene/cameracl.h \
+    src/utils/clutilfunctions.h \
+    src/utils/debug.h \
+    src/utils/glutilfunctions.h \
+    src/scene/light.h \
+    src/scene/lightmanager.h \
+    src/scene/scene.h \
+    src/scene/spotlight.h
 
 OTHER_FILES += \
     TODO.txt \

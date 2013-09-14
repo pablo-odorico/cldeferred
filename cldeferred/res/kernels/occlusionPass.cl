@@ -42,7 +42,7 @@ float visibility(read_only image2d_t lightDepths, const float4 worldPos, const f
 {
     const float4 lightClipPos= multMatVec(lightVPMatrix, worldPos);
     const float4 lightBiasedNDC= (lightClipPos / lightClipPos.w) * 0.5f + 0.5f;
-    const float2 lightDepthMoment= depthBlurSample(lightDepths, 1, lightBiasedNDC.xy);
+    const float2 lightDepthMoment= depthBlurSample(lightDepths, 2, lightBiasedNDC.xy);
     return varianceShadowMap(lightDepthMoment, lightBiasedNDC.z);
 }
 

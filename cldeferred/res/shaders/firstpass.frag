@@ -4,7 +4,7 @@ uniform mat4 mvpMatrix;
 uniform mat4 modelITMatrix;
 
 // Default Qt3D uniforms
-uniform sampler2D qt_Texture1;
+uniform sampler2D qt_Texture0;
 
 // Inputs from the vertex shader
 in vec2 texCoord;
@@ -17,7 +17,7 @@ layout (location = 2) out float outDepth;      // COLOR2: Depth
 
 void main()
 {    
-    vec3 diffuse = texture(qt_Texture1, texCoord).rgb;
+    vec3 diffuse = texture(qt_Texture0, texCoord).rgb;
     float spec = 1.0f;
 
     outDiffuseSpec.rgb = diffuse;

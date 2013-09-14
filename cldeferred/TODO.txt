@@ -1,2 +1,4 @@
-- Check clGetGLContextInfoKHR to make clutils portable
+- Don't render uv coords and normals when shadowmapping
 
+OpenCL 1.2
+- Check clGetGLContextInfoKHR to make clutils portable
