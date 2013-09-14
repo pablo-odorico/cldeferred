@@ -33,8 +33,8 @@ public:
     int height() const { return _height; }
     QSize size() const { return QSize(_width, _height); }
 
-    QImage diffuseToImage();
-    QImage depthToImage();
+    QImage colorAttachImage(int index= 0);
+    QImage depthAttachImage();
 
 protected:
     virtual void cleanup();

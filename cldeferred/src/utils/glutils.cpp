@@ -9,7 +9,7 @@ bool GLUtils::checkGLErrorFunc(const char* msg, const char* file, const int line
 
     const GLubyte* errorString= gluErrorString(error);
 
-    qDebug("%s!! %s:%d:%s OpenGL error '%s' %s.", debugColor(RED), file,
+    qDebug("%s!! %s:%d:%s OpenGL error '%s': %s.", debugColor(RED), file,
            line, debugColor(DEFAULT), errorString, msg);
     return true;
 }

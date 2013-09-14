@@ -80,11 +80,18 @@ void FBO::cleanup()
     _colorAttachs.clear();
 
     glDeleteFramebuffers(1, &_id);
+
+    checkGLError("Error cleaning-up");
 }
 
 void FBO::bind(GLenum target)
 {
     assert(_initialized);
+    // Clear OpenGL error
+    glGetError();
+
+    if(_bindedTarget != GL_NONE and _bindedTarget != target)
+        debugWarning("Binded to another target.");
 
     _bindedTarget= target;
     glBindFramebuffer(target, _id);
@@ -95,13 +102,18 @@ void FBO::bind(GLenum target)
 
     glDrawBuffers(colorTargets.count(), colorTargets.data());
 
-    // Set FBO viewport
+    // Set FBO viewport    
     glViewport(0, 0, _width, _height);
+
+    checkGLError("Error binding");
 }
 
 void FBO::unbind()
 {
     assert(_initialized);
+
+    // Clear OpenGL error
+    glGetError();
 
     if(_bindedTarget == GL_NONE) {
         debugWarning("Not binded!");
@@ -157,12 +169,12 @@ QImage FBO::normalsToImage()
 }
 */
 
-QImage FBO::diffuseToImage()
+QImage FBO::colorAttachImage(int index)
 {
     QImage image(_width, _height, QImage::Format_RGB32);
 
     bind(GL_READ_FRAMEBUFFER);
-    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glReadBuffer(GL_COLOR_ATTACHMENT0 + index);
     // Channels are reversed to correct endianness
     glReadPixels(0,0, _width,_height, GL_BGRA, GL_UNSIGNED_BYTE,
                  static_cast<GLvoid*>(image.bits()));
@@ -174,7 +186,7 @@ QImage FBO::diffuseToImage()
 
 }
 
-QImage FBO::depthToImage()
+QImage FBO::depthAttachImage()
 {
     QImage image(_width, _height, QImage::Format_RGB32);
 

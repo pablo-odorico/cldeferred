@@ -141,15 +141,15 @@ void CLDeferred::renderGL()
     deferredPass();
     times[2]= sceneTime.nsecsElapsed();
 
-    static int frame= 0;
-    frame++;
-    if(frame==55) {
-        QPixmap::grabWindow(winId()).save("screen.ppm");
-    }
-
     // Draw output texture
     drawOutput();
     times[3]= sceneTime.nsecsElapsed();
+
+    static int frame= 0;
+    frame++;
+    if(frame==55) {
+        saveScreenshot();
+    }
 
     const qint64 fpsElapsed= now - fpsLastTime;
     if(fpsElapsed >4e9) {
@@ -314,7 +314,7 @@ void CLDeferred::drawOutput()
 {
     glViewport(0, 0, width(), height());
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);    
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     outputProgram->bind();       
 
@@ -332,7 +332,7 @@ void CLDeferred::drawOutput()
 
 //
 // User input
-//lightsWithShadows
+//
 
 void CLDeferred::grabbedMouseMoveEvent(QPointF delta)
 {
@@ -347,7 +347,7 @@ void CLDeferred::grabbedKeyPressEvent(int key)
     if(key == Qt::Key_S) scene.camera().toggleMovingDir(Camera::Back , true);
     if(key == Qt::Key_D) scene.camera().toggleMovingDir(Camera::Right, true);
     if(key == Qt::Key_A) scene.camera().toggleMovingDir(Camera::Left , true);
-    if(key == Qt::Key_Shift) scene.camera().setMoveSpeed(scene.camera().moveSpeed() * 2.0f);    
+    if(key == Qt::Key_Shift) scene.camera().setMoveSpeed(scene.camera().moveSpeed() * 2.0f);        
 }
 
 void CLDeferred::grabbedKeyReleaseEvent(int key)
@@ -357,4 +357,19 @@ void CLDeferred::grabbedKeyReleaseEvent(int key)
     if(key == Qt::Key_D) scene.camera().toggleMovingDir(Camera::Right, false);
     if(key == Qt::Key_A) scene.camera().toggleMovingDir(Camera::Left , false);
     if(key == Qt::Key_Shift) scene.camera().setMoveSpeed(scene.camera().moveSpeed() / 2.0f);
+}
+
+void CLDeferred::keyPressEvent(QKeyEvent *event)
+{
+    CLGLWindow::keyPressEvent(event);
+    if(event->key() == Qt::Key_P)
+        saveScreenshot();
+}
+
+void CLDeferred::saveScreenshot(QString prefix, QString ext)
+{
+    gBuffer.colorAttachImage(0).save(prefix + "_diffuse." + ext);
+    gBuffer.colorAttachImage(1).save(prefix + "_normals." + ext);
+    gBuffer.depthAttachImage().save(prefix + "_depth." + ext);
+    QPixmap::grabWindow(winId()).save(prefix + "_output." + ext);
 }

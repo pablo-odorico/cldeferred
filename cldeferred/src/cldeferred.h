@@ -20,10 +20,13 @@ public:
     void renderGL();
     void resizeGL(QSize size);
 
-protected:
+    void saveScreenshot(QString prefix= "screen", QString ext= "ppm");
+
+protected:    
     void grabbedMouseMoveEvent(QPointF delta);
     void grabbedKeyPressEvent(int key);
     void grabbedKeyReleaseEvent(int key);
+    void keyPressEvent(QKeyEvent *event);
 
 private:
     // Render stages
