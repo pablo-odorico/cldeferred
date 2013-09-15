@@ -22,7 +22,7 @@ public:
 
     void saveScreenshot(QString prefix= "screen", QString ext= "ppm");
 
-protected:    
+protected:
     void grabbedMouseMoveEvent(QPointF delta);
     void grabbedKeyPressEvent(int key);
     void grabbedKeyReleaseEvent(int key);
@@ -43,7 +43,7 @@ private:
     // CL Kernel for the 2nd pass
     cl_kernel deferredPassKernel;
     // CL Kernel for antialiasing the output texture
-    cl_kernel antialiasKernel;
+    cl_kernel fxaaKernel;
     // GL Program used to render outputTex
     QOpenGLShaderProgram* outputProgram;
 

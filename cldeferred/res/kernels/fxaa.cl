@@ -1,15 +1,50 @@
 //
-// OpenCL adaptation of NVIDIA FXAA 3.11 by TIMOTHY LOTTES (PC Version)
+// NVIDIA FXAA 3.11 by TIMOTHY LOTTES (PC Version)
+//
+// OpenCL adaptation by Pablo Odorico <pablo.odorico@gmail.com>
+// September 2013
 //
 
+//
+// Quality controls set to the default parameters
+//
+
+#ifndef FXAA_EDGE_THRES
+    #define FXAA_EDGE_THRES      0.1660f
+#endif
+
+#ifndef FXAA_EDGE_THRES_MIN
+    #define FXAA_EDGE_THRES_MIN  0.0833f
+#endif
+
+#ifndef FXAA_SUBPIX
+    #define FXAA_SUBPIX          0.7500f
+#endif
+
+//
+// Luma function used to detect edges
+//
+
+inline
 float luma(float4 sample)
 {
-    return dot(sample.xyz, (float3)(0.299f, 0.587f, 0.114f));
+#ifdef FXAA_DEPTH
+    // If appling FXAA on depth (for shadow mapping), use the first depth
+    // moment as luma
+    return sample.x;
+#else
+    // If luma is precomputed in sample.w return it, else compute it
+    #ifdef FXAA_ALPHALUMA
+        return sample.w;
+    #else
+        return dot(sample.xyz, (float3)(0.299f, 0.587f, 0.114f));
+    #endif
+#endif
 }
 
-#define fxaaQualityEdgeThreshold     0.166f
-#define fxaaQualityEdgeThresholdMin  0.0833f
-#define fxaaQualitySubpix            0.75f
+//
+// FXAA Kernel
+//
 
 kernel void fxaa(
     read_only  image2d_t input,
@@ -43,9 +78,9 @@ kernel void fxaa(
     float minWN = min(lumaN, lumaW);
     float rangeMax = max(maxWN, maxESM);
     float rangeMin = min(minWN, minESM);
-    float rangeMaxScaled = rangeMax * fxaaQualityEdgeThreshold;
+    float rangeMaxScaled = rangeMax * FXAA_EDGE_THRES;
     float range = rangeMax - rangeMin;
-    float rangeMaxClamped = max(fxaaQualityEdgeThresholdMin, rangeMaxScaled);
+    float rangeMaxClamped = max(FXAA_EDGE_THRES_MIN, rangeMaxScaled);
 
     if(range < rangeMaxClamped) {
         write_imagef(output, ipos, sampleM);
@@ -141,7 +176,7 @@ kernel void fxaa(
     if(!doneP) posP.x += offNP.x * FXAA_QUALITY__P1;
     if(!doneP) posP.y += offNP.y * FXAA_QUALITY__P1;
 
-   if(doneNP) {
+    if(doneNP) {
         if(!doneN) lumaEndN = luma(sample(posN.xy));
         if(!doneP) lumaEndP = luma(sample(posP.xy));
         if(!doneN) lumaEndN = lumaEndN - lumaNN * 0.5f;
@@ -341,7 +376,7 @@ kernel void fxaa(
     bool goodSpan = directionN ? goodSpanN : goodSpanP;
     float subpixG = subpixF * subpixF;
     float pixelOffset = (dst * (-spanLengthRcp)) + 0.5f;
-    float subpixH = subpixG * fxaaQualitySubpix;
+    float subpixH = subpixG * FXAA_SUBPIX;
 
     float pixelOffsetGood = goodSpan ? pixelOffset : 0.0f;
     float pixelOffsetSubpix = max(pixelOffsetGood, subpixH);

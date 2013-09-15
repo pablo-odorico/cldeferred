@@ -34,7 +34,7 @@ void CLDeferred::initializeGL()
     outputProgram= new QOpenGLShaderProgram(this);
     outputProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/outputQuad.vert");
     outputProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/outputQuad.frag");
-    outputProgram->link();   
+    outputProgram->link();
 
     // 2nd pass init
     // outputTex is created/resized on resizeGL()
@@ -56,9 +56,10 @@ void CLDeferred::initializeCL()
         debugFatal("Error loading kernel.");
     }
 
-    if(!loadKernel(clCtx(), &antialiasKernel, clDevice(),
+    // Load the FXAA setting the pre-computed luma flag
+    if(!loadKernel(clCtx(), &fxaaKernel, clDevice(),
                    ":/kernels/fxaa.cl", "fxaa",
-                   "-I../res/kernels/ -Werror")) {
+                   "-D FXAA_ALPHALUMA -I../res/kernels/ -Werror")) {
         debugFatal("Error loading kernel.");
     }
 }
@@ -110,13 +111,13 @@ void CLDeferred::resizeGL(QSize size)
     // Resize Occlusion Buffer
     ok= occlusionBuffer.resize(clCtx(), clDevice(), size);
     if(!ok)
-        debugFatal("Error initializing occlusion buffer.");    
+        debugFatal("Error initializing occlusion buffer.");
 
     // Resize and map Output Texture
     cl_int error;
 
     outputTex.setSize(size);
-    outputTex.bind();    
+    outputTex.bind();
     outputImage= clCreateFromGLTexture2D(
         clCtx(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, outputTex.textureId(), &error); // TODO change to WRITE
     if(checkCLError(error, "clCreateFromGLTexture2D"))
@@ -295,9 +296,9 @@ void CLDeferred::deferredPass()
         if(checkCLError(error, "clEnqueueAcquireGLObjects"))
             return;
 
-        error  = clSetKernelArg(antialiasKernel, 0, sizeof(cl_mem), (void*)&outputImage);
-        error |= clSetKernelArg(antialiasKernel, 1, sizeof(cl_mem), (void*)&outputImageAA);
-        error |= clEnqueueNDRangeKernel(clQueue(), antialiasKernel, 2, NULL,
+        error  = clSetKernelArg(fxaaKernel, 0, sizeof(cl_mem), (void*)&outputImage);
+        error |= clSetKernelArg(fxaaKernel, 1, sizeof(cl_mem), (void*)&outputImageAA);
+        error |= clEnqueueNDRangeKernel(clQueue(), fxaaKernel, 2, NULL,
                                         ndRangeSize, workGroupSize, 0, NULL, NULL);
         checkCLError(error, "antialiasKernel");
 
@@ -321,7 +322,7 @@ void CLDeferred::drawOutput()
     glViewport(0, 0, width(), height());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    outputProgram->bind();       
+    outputProgram->bind();
 
     if(enableAA)
         outputTexAA.bind();
@@ -357,7 +358,7 @@ void CLDeferred::grabbedKeyPressEvent(int key)
     if(key == Qt::Key_S) scene.camera().toggleMovingDir(Camera::Back , true);
     if(key == Qt::Key_D) scene.camera().toggleMovingDir(Camera::Right, true);
     if(key == Qt::Key_A) scene.camera().toggleMovingDir(Camera::Left , true);
-    if(key == Qt::Key_Shift) scene.camera().setMoveSpeed(scene.camera().moveSpeed() * 2.0f);        
+    if(key == Qt::Key_Shift) scene.camera().setMoveSpeed(scene.camera().moveSpeed() * 2.0f);
 }
 
 void CLDeferred::grabbedKeyReleaseEvent(int key)

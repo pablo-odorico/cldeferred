@@ -57,9 +57,11 @@ void deferredPass(
     //occlusion /= spotsWithShadows;
 
     // Write output
-    const float4 color= diffuseSpec * (1.0f - occlusion);
+    float4 color= diffuseSpec * (1.0f - occlusion);
 
-    //const float4 color= unpackColor(occlusion);
+    // FXAA:
+    // Pre-compute and store the Luma value in the Alpha Channel
+    color.w= dot(color.xyz, (float3)(0.299f, 0.587f, 0.114f));
 
     write_imagef(output, pos, color);
 }

@@ -23,6 +23,7 @@ float varianceShadowMap(const float2 moments, float compare)
 // Samples the depth moments image multiple times and averages the result
 // depths must be a float2 image
 // coord is the normalized centroid
+
 float2 depthBlurSample(read_only image2d_t depths, const int radius, const float2 coord)
 {
     const sampler_t sampler= CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP | CLK_FILTER_LINEAR;
@@ -79,11 +80,11 @@ void occlusionPass(
 
     global uchar* dst= occlusionBuffer + (pos.x + pos.y * size.x) * lightsWithShadows;
 
-#define VISIBILITY(lights,N) \
-    if(lights[N].hasShadows) { \
-        *dst= packOcclusion(1.0f - visibility(lights##N##depth, worldPos, lights[N].viewProjMatrix)); \
-        dst++; \
-    }
+    #define VISIBILITY(lights,N) \
+        if(lights[N].hasShadows) { \
+            *dst= packOcclusion(1.0f - visibility(lights##N##depth, worldPos, lights[N].viewProjMatrix)); \
+            dst++; \
+        }
 
     /** VISIBILITIES **/
     // VISIBILITY(spotLights, 0)
