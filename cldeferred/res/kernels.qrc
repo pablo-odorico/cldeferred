@@ -2,5 +2,6 @@
     <qresource prefix="/">
         <file>kernels/deferredPass.cl</file>
         <file>kernels/occlusionPass.cl</file>
+        <file>kernels/fxaa.cl</file>
     </qresource>
 </RCC>

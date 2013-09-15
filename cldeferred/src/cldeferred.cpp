@@ -11,6 +11,7 @@ CLDeferred::CLDeferred()
     : CLGLWindow()
     , firstPassProgram(0), outputProgram(0)
     , fpsFrameCount(0), fpsLastTime(0)
+    , enableAA(false)
 {
 }
 
@@ -41,12 +42,22 @@ void CLDeferred::initializeGL()
     outputTex.setVerticalWrap(QGL::ClampToEdge);
     outputTex.setHorizontalWrap(QGL::ClampToEdge);
 
+    outputTexAA.setBindOptions(QGLTexture2D::InvertedYBindOption);
+    outputTexAA.setVerticalWrap(QGL::ClampToEdge);
+    outputTexAA.setHorizontalWrap(QGL::ClampToEdge);
+
 }
 
 void CLDeferred::initializeCL()
 {
     if(!loadKernel(clCtx(), &deferredPassKernel, clDevice(),
                    ":/kernels/deferredPass.cl", "deferredPass",
+                   "-I../res/kernels/ -Werror")) {
+        debugFatal("Error loading kernel.");
+    }
+
+    if(!loadKernel(clCtx(), &antialiasKernel, clDevice(),
+                   ":/kernels/fxaa.cl", "fxaa",
                    "-I../res/kernels/ -Werror")) {
         debugFatal("Error loading kernel.");
     }
@@ -102,20 +113,27 @@ void CLDeferred::resizeGL(QSize size)
         debugFatal("Error initializing occlusion buffer.");    
 
     // Resize and map Output Texture
-    outputTex.setSize(size);
-    outputTex.bind();
     cl_int error;
+
+    outputTex.setSize(size);
+    outputTex.bind();    
     outputImage= clCreateFromGLTexture2D(
-        clCtx(), CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, outputTex.textureId(), &error);
+        clCtx(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, outputTex.textureId(), &error); // TODO change to WRITE
     if(checkCLError(error, "clCreateFromGLTexture2D"))
         debugFatal("Could not map output texture.");
 
+    outputTexAA.setSize(size);
+    outputTexAA.bind();
+    outputImageAA= clCreateFromGLTexture2D(
+        clCtx(), CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, outputTexAA.textureId(), &error);
+    if(checkCLError(error, "clCreateFromGLTexture2D"))
+        debugFatal("Could not map output texture AA.");
 }
 
 void CLDeferred::renderGL()
 {
     const qint64 now= sceneTime.nsecsElapsed();
-    QVector<qint64> times(4);
+    QVector<qint64> times(5);
 
     // Move camera
     scene.camera().move((now - lastRenderTime)/1000.0f);
@@ -132,17 +150,21 @@ void CLDeferred::renderGL()
     renderToGBuffer();
     times[0]= sceneTime.nsecsElapsed();
 
-    // Update occlusion buffer
+    // Update shadow maps: Render the scene once per each light with shadows
     updateShadowMaps();
     times[1]= sceneTime.nsecsElapsed();
 
+    // Update the occlusion buffer
+    updateOcclusionBuffer();
+    times[2]= sceneTime.nsecsElapsed();
+
     // 2nd pass
     deferredPass();
-    times[2]= sceneTime.nsecsElapsed();
+    times[3]= sceneTime.nsecsElapsed();
 
     // Draw output texture
     drawOutput();
-    times[3]= sceneTime.nsecsElapsed();
+    times[4]= sceneTime.nsecsElapsed();
 
     static int frame= 0;
     frame++;
@@ -152,17 +174,19 @@ void CLDeferred::renderGL()
 
     const qint64 fpsElapsed= now - fpsLastTime;
     if(fpsElapsed >4e9) {
-        const float elapsed1st = (times[0] - now     ) / 1e6f;
-        const float elapsedOccl= (times[1] - times[0]) / 1e6f;
-        const float elapsed2nd = (times[2] - times[1]) / 1e6f;
-        const float elapsedDraw= (times[3] - times[2]) / 1e6f;
-        const float totalTime= elapsed1st + elapsedOccl + elapsed2nd + elapsedDraw;
+        int i= 0;
+        const float elapsed1st = (times[i] - now       ) / 1e6f; i++;
+        const float elapsedShad= (times[i] - times[i-1]) / 1e6f; i++;
+        const float elapsedOccl= (times[i] - times[i-1]) / 1e6f; i++;
+        const float elapsed2nd = (times[i] - times[i-1]) / 1e6f; i++;
+        const float elapsedDraw= (times[i] - times[i-1]) / 1e6f; i++;
+        const float totalTime= elapsed1st + elapsedShad + elapsedOccl + elapsed2nd + elapsedDraw;
 
         qDebug(" ");
         qDebug("FPS   : %.01f Hz. (Max. %.01f Hz.)", fpsFrameCount/(fpsElapsed/1e9d), 1000/totalTime);
-        qDebug("Times : G-Buffer | Occlusion | Deferred  | Draw quad | TOTAL");
-        qDebug("        %2.02f ms. | %2.02f ms.  | %2.02f ms.  | %2.02f ms.  | %.02f ms.",
-               elapsed1st, elapsedOccl, elapsed2nd, elapsedDraw, totalTime);
+        qDebug("Times : G-Buffer | Shadow    | Occlusion | Deferred  | Draw quad | TOTAL");
+        qDebug("        %2.02f ms. | %2.02f ms.  | %2.02f ms.  | %2.02f ms.  | %2.02f ms.  | %.02f ms.",
+               elapsed1st, elapsedShad, elapsedOccl, elapsed2nd, elapsedDraw, totalTime);
 
         fpsLastTime= now;
         fpsFrameCount= 0;
@@ -189,6 +213,12 @@ void CLDeferred::renderToGBuffer()
 
 void CLDeferred::updateShadowMaps()
 {
+    // Update the shadow maps of all lights
+    scene.updateShadowMaps();
+}
+
+void CLDeferred::updateOcclusionBuffer()
+{
     LightManager& lm= scene.lightManager();
 
     // If no light has shadows, quit, but make sure that the occlusion buffer
@@ -197,9 +227,6 @@ void CLDeferred::updateShadowMaps()
     if(!lm.lightsWithShadows() and !firstTime)
         return;
     firstTime= false;
-
-    // Update the shadow maps of all lights
-    scene.updateShadowMaps();    
 
     // Use those shadow maps to update the occlusion buffer
     cl_mem camStruct= scene.camera().structCL();
@@ -227,6 +254,7 @@ void CLDeferred::deferredPass()
     error= clEnqueueAcquireGLObjects(clQueue(), 1, &outputImage, 0, 0, 0);
     if(checkCLError(error, "clEnqueueAcquireGLObjects"))
         return;
+
     QVector<cl_mem> gBufferChannels= gBuffer.aquireColorBuffers(clQueue());
     if(gBufferChannels.count() != 3) {
         debugFatal("Wrong number of gbuffer channels %d", gBufferChannels.count());
@@ -248,7 +276,6 @@ void CLDeferred::deferredPass()
     int    spotLightCount= scene.lightManager().spotLightCount();
     int    lightsWithShadows= scene.lightManager().lightsWithShadows();
 
-
     // Launch kernel
     error  = clSetKernelArg(deferredPassKernel, 0, sizeof(cl_mem), (void*)&gbDiffuseSpec);
     error |= clSetKernelArg(deferredPassKernel, 1, sizeof(cl_mem), (void*)&gbNormals);
@@ -262,6 +289,22 @@ void CLDeferred::deferredPass()
     error |= clEnqueueNDRangeKernel(clQueue(), deferredPassKernel, 2, NULL,
                                     ndRangeSize, workGroupSize, 0, NULL, NULL);
     checkCLError(error, "outputKernel");
+
+    if(enableAA) {
+        error= clEnqueueAcquireGLObjects(clQueue(), 1, &outputImageAA, 0, 0, 0);
+        if(checkCLError(error, "clEnqueueAcquireGLObjects"))
+            return;
+
+        error  = clSetKernelArg(antialiasKernel, 0, sizeof(cl_mem), (void*)&outputImage);
+        error |= clSetKernelArg(antialiasKernel, 1, sizeof(cl_mem), (void*)&outputImageAA);
+        error |= clEnqueueNDRangeKernel(clQueue(), antialiasKernel, 2, NULL,
+                                        ndRangeSize, workGroupSize, 0, NULL, NULL);
+        checkCLError(error, "antialiasKernel");
+
+        error= clEnqueueReleaseGLObjects(clQueue(), 1, &outputImageAA, 0, 0, 0);
+        if(checkCLError(error, "clEnqueueReleaseGLObjects"))
+            return;
+    }
 
     error= clEnqueueReleaseGLObjects(clQueue(), 1, &outputImage, 0, 0, 0);
     if(checkCLError(error, "clEnqueueReleaseGLObjects"))
@@ -279,7 +322,11 @@ void CLDeferred::drawOutput()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     outputProgram->bind();       
-    outputTex.bind();
+
+    if(enableAA)
+        outputTexAA.bind();
+    else
+        outputTex.bind();
 
     glBegin(GL_QUADS);
         glVertex2f(-1,-1);
@@ -290,6 +337,8 @@ void CLDeferred::drawOutput()
 
     outputProgram->release();
 }
+
+
 
 //
 // User input
@@ -323,8 +372,9 @@ void CLDeferred::grabbedKeyReleaseEvent(int key)
 void CLDeferred::keyPressEvent(QKeyEvent *event)
 {
     CLGLWindow::keyPressEvent(event);
-    if(event->key() == Qt::Key_P)
-        saveScreenshot();
+    const int key= event->key();
+    if(key == Qt::Key_P) saveScreenshot();
+    if(key == Qt::Key_M) enableAA= !enableAA;
 }
 
 void CLDeferred::saveScreenshot(QString prefix, QString ext)

@@ -39,10 +39,6 @@ public:
     void setSpecColor(QColor color) { _specColor= color; }
 
 protected:
-    // Returns the depth downsample size for a certain level
-    // If level==0, returns the depth fbo size
-    //QSize depthDownsampleSize(int level);
-
     QColor _ambientColor;
     QColor _diffuseColor;
     QColor _specColor;
@@ -53,8 +49,6 @@ protected:
 
     // FBO for the depth moments
     FBOCL _depthFbo;
-    // OpenCL images for the depth moments downsamples
-    //QVector<cl_mem> _depthDownsamples;
 
     // Light "camera" used for shadow mapping
     Camera _lightCamera;

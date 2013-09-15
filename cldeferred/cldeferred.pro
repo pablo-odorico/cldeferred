@@ -64,7 +64,8 @@ OTHER_FILES += \
     res/shaders/shadowmapping.frag \
     res/kernels/occlusionPass.cl \
     res/shaders/outputQuad.frag \
-    res/shaders/outputQuad.vert
+    res/shaders/outputQuad.vert \
+    res/kernels/fxaa.cl
 
 RESOURCES += \
     res/shaders.qrc \

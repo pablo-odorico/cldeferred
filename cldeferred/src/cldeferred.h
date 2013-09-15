@@ -32,6 +32,7 @@ private:
     // Render stages
     void renderToGBuffer();
     void updateShadowMaps();
+    void updateOcclusionBuffer();
     void deferredPass();
     void drawOutput();
 
@@ -41,6 +42,8 @@ private:
     OcclusionBuffer occlusionBuffer;
     // CL Kernel for the 2nd pass
     cl_kernel deferredPassKernel;
+    // CL Kernel for antialiasing the output texture
+    cl_kernel antialiasKernel;
     // GL Program used to render outputTex
     QOpenGLShaderProgram* outputProgram;
 
@@ -60,7 +63,9 @@ private:
 
     // Output texture and mapped OpenCL Image
     QGLTexture2D outputTex;
+    QGLTexture2D outputTexAA;
     cl_mem outputImage;
+    cl_mem outputImageAA;
 
     // Time metrics
     QElapsedTimer sceneTime;
@@ -68,6 +73,9 @@ private:
 
     int fpsFrameCount;
     qint64 fpsLastTime;
+
+    // Misc
+    bool enableAA;
 };
 
 #endif // CLDEFERRED_H

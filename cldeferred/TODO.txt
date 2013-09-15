@@ -2,3 +2,16 @@
 
 OpenCL 1.2
 - Check clGetGLContextInfoKHR to make clutils portable
+
+Contar juan
+- Movi archivos a src/scene y src/utils
+- Qt no puede cargar normal maps, ver assimp
+- Renombre CLUtils y GLUtils, ya no se hereda casi nunca
+- Pase a usar QGLtexture2d en cldeferred. Ahora se resizea y el shader es mas simple
+- Funcion saveScreenshot que guarda todos los buffers y el output, FBO::colorAttachImage(int index)
+
+Roadmap
+    Shading
+    HDR
+    Normal mapping
+    Bloom
