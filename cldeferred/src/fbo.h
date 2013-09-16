@@ -32,8 +32,8 @@ public:
 
 protected:
     struct Attachment {
-        GLenum format;   // eg GL_RGBA
-        GLenum target;   // eg GL_COLOR_ATTACHMENT0
+        GLenum format;   // eg. GL_RGBA
+        GLenum target;   // eg. GL_COLOR_ATTACHMENT0
         GLenum bufferId; // Returned by glGenRenderbuffers
     };
 

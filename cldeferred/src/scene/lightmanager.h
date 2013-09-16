@@ -25,15 +25,16 @@ public:
     // Update all OpenCL light structs
     void updateStructs(cl_command_queue queue);
     // Recalculate all of the lights' shadow maps
-    void updateShadowMaps(const Scene& scene);
+    void updateShadowMaps(const Scene& scene, cl_command_queue queue);
 
     // Returns the number of lights that have shadows
     int lightsWithShadows() const;
     int spotLightCount() const { return _spotLights.count(); }
 
     cl_mem spotStructs();
-    QVector<cl_mem> aquireSpotDepths(cl_command_queue queue);
-    bool releaseSpotDephts(cl_command_queue queue);
+    // OpenCL images of all the spot depths
+    // These buffers SHOULD NOT be acquired and released
+    QVector<cl_mem> spotDepths();
 
 private:
     bool _initialized;

@@ -45,18 +45,17 @@ public:
     static
     const char* clErrorToString(cl_int err);
 
+    // Converts from an OpenGL format (eg GL_RGBA8) to an OpenCL
+    // format (eg CL_RGBA, CL_UNORM_INT8). Returns false on error
+    static
+    bool gl2clFormat(GLenum glFormat, cl_image_format &clFormat);
+
 private:
     static
     void checkProgramBuild(cl_program program, cl_device_id device);
 
     static
     bool loadProgramText(const char* path, QByteArray& source);
-
-    // Converts from an OpenGL format (eg GL_RGBA8) to an OpenCL
-    // format (eg CL_RGBA, CL_UNORM_INT8). Returns false on error
-    static
-    bool gl2clFormat(GLenum glFormat, cl_image_format &clFormat);
-
 };
 
 #endif // CLUTILFUNCTIONS_H

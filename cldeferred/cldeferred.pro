@@ -65,7 +65,8 @@ OTHER_FILES += \
     res/kernels/occlusionPass.cl \
     res/shaders/outputQuad.frag \
     res/shaders/outputQuad.vert \
-    res/kernels/fxaa.cl
+    res/kernels/fxaa.cl \
+    res/kernels/depthDownsample.cl
 
 RESOURCES += \
     res/shaders.qrc \

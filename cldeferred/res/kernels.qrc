@@ -3,5 +3,6 @@
         <file>kernels/deferredPass.cl</file>
         <file>kernels/occlusionPass.cl</file>
         <file>kernels/fxaa.cl</file>
+        <file>kernels/depthDownsample.cl</file>
     </qresource>
 </RCC>

@@ -29,11 +29,16 @@ protected:
     void keyPressEvent(QKeyEvent *event);
 
 private:
-    // Render stages
-    void renderToGBuffer();
-    void updateShadowMaps();
+    // OpenGL render stages
+    void renderToGBuffer();  // Update the GBuffer
+    void renderShadowMaps(); // Update the shadow maps
+    // OpenCL render stages
+    void acquireCLObjects();
     void updateOcclusionBuffer();
     void deferredPass();
+    void antialiasPass();
+    void releaseCLObjects();
+    // Final stage (OpenGL)
     void drawOutput();
 
     // GL Program used to fill the gbuffer
@@ -74,8 +79,10 @@ private:
     int fpsFrameCount;
     qint64 fpsLastTime;
 
-    // Misc
+    // Misc        
     bool enableAA;
+
+    QVector<cl_mem> acquiredBuffers;
 };
 
 #endif // CLDEFERRED_H

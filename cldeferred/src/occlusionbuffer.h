@@ -11,7 +11,7 @@ public:
     // Resize MUST be called before using the buffer
     bool resize(cl_context context, cl_device_id device, QSize size);
 
-    // cameraDepthImg and spotLightDepthImgs must be aquired before calling update
+    // cameraDepthImg and spotLightDepthImgs must be acquired before calling update
     bool update(cl_command_queue queue,
                 cl_mem cameraStruct,
                 cl_mem cameraDepthImg, int lightsWithShadows,

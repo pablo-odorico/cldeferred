@@ -28,17 +28,11 @@
 inline
 float luma(float4 sample)
 {
-#ifdef FXAA_DEPTH
-    // If appling FXAA on depth (for shadow mapping), use the first depth
-    // moment as luma
-    return sample.x;
+// If luma is precomputed in sample.w return it, else compute it
+#ifdef FXAA_ALPHALUMA
+    return sample.w;
 #else
-    // If luma is precomputed in sample.w return it, else compute it
-    #ifdef FXAA_ALPHALUMA
-        return sample.w;
-    #else
-        return dot(sample.xyz, (float3)(0.299f, 0.587f, 0.114f));
-    #endif
+    return dot(sample.xyz, (float3)(0.299f, 0.587f, 0.114f));
 #endif
 }
 
@@ -82,9 +76,9 @@ kernel void fxaa(
     float range = rangeMax - rangeMin;
     float rangeMaxClamped = max(FXAA_EDGE_THRES_MIN, rangeMaxScaled);
 
+
     if(range < rangeMaxClamped) {
         write_imagef(output, ipos, sampleM);
-        //write_imagef(output, ipos, (float4)(0));
         return;
     }
 

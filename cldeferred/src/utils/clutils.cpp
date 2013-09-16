@@ -20,10 +20,10 @@ bool CLUtils::setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_dev
         return false;
 
     // Select default GPU
-    /*cl_device_id devs[2];
+    cl_device_id devs[2];
     clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 2, devs, NULL);
-    device= devs[1];*/
-    clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
+    device= devs[1];
+    //clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
     if(checkCLError(clError, "clGetDeviceIDs"))
         return false;
 
@@ -186,8 +186,8 @@ void CLUtils::checkProgramBuild(cl_program program, cl_device_id device)
 }
 
 bool CLUtils::loadKernel(cl_context context, cl_kernel* kernel,
-                                 cl_device_id device, QString programText, const char* kernelName,
-                                 const char* compileOptions)
+                         cl_device_id device, QString programText, const char* kernelName,
+                         const char* compileOptions)
 {
     // Create program
     cl_int error;

@@ -21,13 +21,15 @@ public:
     void enableShadows(bool value) { _shadowMapping= value; }
     bool hasShadows() { return _shadowMapping; }
     // 2. Setup
-    bool setupShadowMap(cl_context context, QSize shadowMapSize= QSize(512, 512),
+    bool setupShadowMap(
+            cl_context context, cl_device_id device, QSize shadowMapSize= QSize(512, 512),
             GLenum storedDepthFormat= GL_RG32F, // Must be a color format, we use two channels per pixel
-            GLenum depthTestingFormat= GL_DEPTH_COMPONENT24); // Must be a depth format
+            GLenum depthTestingFormat= GL_DEPTH_COMPONENT24 // Must be a depth format
+            );
     // 3. Update shadow map
-    void updateShadowMap(const Scene& scene);
-    // 4. Use FBO image
-    FBOCL& shadowMapFBO() { return _depthFbo; }
+    bool updateShadowMap(const Scene& scene, cl_command_queue queue);
+    // 4. Use the shadow map image
+    cl_mem shadowMapImage() { return _filteredDepth; }
 
     QColor ambientColor() const { return _ambientColor; }
     void setAmbientColor(QColor color) { _ambientColor= color; }
@@ -49,6 +51,9 @@ protected:
 
     // FBO for the depth moments
     FBOCL _depthFbo;
+    // OpenCL image for the filtered shadow map
+    cl_mem _filteredDepth;
+    cl_kernel _downsampleKernel;
 
     // Light "camera" used for shadow mapping
     Camera _lightCamera;

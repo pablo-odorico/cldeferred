@@ -1,6 +1,7 @@
 #include "lightmanager.h"
 #include "scene.h"
 #include <cassert>
+#include "debug.h"
 
 const int LightManager::maxLights;
 
@@ -41,36 +42,16 @@ void LightManager::updateStructs(cl_command_queue queue)
         _spotLights[i]->updateStructCL(queue, _spotStructs, i);
 }
 
-QVector<cl_mem> LightManager::aquireSpotDepths(cl_command_queue queue)
+QVector<cl_mem> LightManager::spotDepths()
 {
     assert(_initialized);
 
     QVector<cl_mem> buffers;
-    buffers.reserve(_spotLights.count());
 
-    foreach(SpotLight* spot, _spotLights) {
-        FBOCL& depthFBO= spot->shadowMapFBO();
-        QVector<cl_mem> colorBuffers= depthFBO.aquireColorBuffers(queue);
-        if(colorBuffers.empty())
-            return QVector<cl_mem>();
-        else
-            buffers << colorBuffers[0];
-    }
+    foreach(SpotLight* spot, _spotLights)
+        buffers << spot->shadowMapImage();
 
     return buffers;
-}
-
-bool LightManager::releaseSpotDephts(cl_command_queue queue)
-{
-    assert(_initialized);
-
-    foreach(SpotLight* spot, _spotLights) {
-        const bool ok= spot->shadowMapFBO().releaseColorBuffers(queue);
-        if(!ok)
-            return false;
-    }
-
-    return true;
 }
 
 cl_mem LightManager::spotStructs()
@@ -79,11 +60,13 @@ cl_mem LightManager::spotStructs()
     return _spotStructs;
 }
 
-void LightManager::updateShadowMaps(const Scene& scene)
+void LightManager::updateShadowMaps(const Scene& scene, cl_command_queue queue)
 {
     foreach(SpotLight* spot, _spotLights) {
-        if(spot->hasShadows())
-            spot->updateShadowMap(scene);
+        if(!spot->hasShadows()) continue;
+
+        if(!spot->updateShadowMap(scene, queue))
+            debugWarning("Error updating shadow map.");
     }
 }
 

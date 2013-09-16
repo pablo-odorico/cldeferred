@@ -15,10 +15,15 @@ public:
         QList<GLenum> colorFormats= QList<GLenum>() << GL_RGBA,
         GLenum depthFormat= GL_DEPTH_COMPONENT24);
 
-    QVector<cl_mem> aquireColorBuffers(cl_command_queue queue);
+    // Acquire/release buffers
+    bool acquireColorBuffers(cl_command_queue queue);
     bool releaseColorBuffers(cl_command_queue queue);
+    // Returns mapped OpenCL images for all the color attachments
+    // If acquireColorBuffers was not called, clEnqueueAcquireGLObjects must be
+    // called before using the buffers
+    QVector<cl_mem> colorBuffers();
 
-    //cl_mem aquireDepthBuffer(cl_command_queue queue);
+    //cl_mem acquireDepthBuffer(cl_command_queue queue);
     //bool releaseDepthBuffer(cl_command_queue queue);
 
 private:

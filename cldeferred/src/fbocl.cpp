@@ -32,15 +32,18 @@ bool FBOCL::resize(cl_context context, QSize size, QList<GLenum> colorFormats,
     return true;
 }
 
-QVector<cl_mem> FBOCL::aquireColorBuffers(cl_command_queue queue)
+bool FBOCL::acquireColorBuffers(cl_command_queue queue)
 {
     assert(_initialized);
 
     cl_int error;
-
     error= clEnqueueAcquireGLObjects(queue, _colorBuffers.count(), _colorBuffers.data(), 0, 0, 0);
-    if(checkCLError(error, "FBOCL::aquireColorBuffers: clEnqueueAcquireGLObjects"))
-        return QVector<cl_mem>();
+    return !checkCLError(error, "clEnqueueAcquireGLObjects");
+}
+
+QVector<cl_mem> FBOCL::colorBuffers()
+{
+    assert(_initialized);
 
     return _colorBuffers;
 }
@@ -50,16 +53,14 @@ bool FBOCL::releaseColorBuffers(cl_command_queue queue)
     assert(_initialized);
 
     cl_int error;
-
     error= clEnqueueReleaseGLObjects(queue, _colorBuffers.count(), _colorBuffers.data(), 0, 0, 0);
-
-    return !checkCLError(error, "FBOCL::releaseColorBuffers: clEnqueueReleaseGLObjects");
+    return !checkCLError(error, "clEnqueueReleaseGLObjects");
 }
 
 
 /*
     error= clEnqueueAcquireGLObjects(clQueue, 1, &_depthBuffer, 0, 0, 0);
-    if(checkCLError(error, "FBOCL::enqueueAquireBuffers: clEnqueueAcquireGLObjects depth"))
+    if(checkCLError(error, "FBOCL::enqueueAcquireBuffers: clEnqueueAcquireGLObjects depth"))
         return false;
 */
 /*

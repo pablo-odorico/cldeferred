@@ -38,7 +38,7 @@ public:
     void setCamera(const CameraCL& camera) { _camera= camera; }
 
     LightManager& lightManager() { return _lights; }
-    void updateShadowMaps() { _lights.updateShadowMaps(*this); }
+    void updateShadowMaps(cl_command_queue queue) { _lights.updateShadowMaps(*this, queue); }
 
     void updateStructsCL(cl_command_queue queue);
 
