@@ -9,6 +9,7 @@ Contar juan
 - Renombre CLUtils y GLUtils, ya no se hereda casi nunca
 - Pase a usar QGLtexture2d en cldeferred. Ahora se resizea y el shader es mas simple
 - Funcion saveScreenshot que guarda todos los buffers y el output, FBO::colorAttachImage(int index)
+- Juntar todos los aquires y releases
 
 Roadmap
     Shading
