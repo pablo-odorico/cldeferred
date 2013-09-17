@@ -45,7 +45,7 @@ void deferredPass(
 */
 
     global uchar* occlusionPtr= occlusionBuffer + (pos.x + pos.y * size.x) * lightsWithShadows;
-
+/*
     float occlusion= 0.0f;
     int spotsWithShadows= 0;
     for(int i=0; i<spotLightsCount; i++) {
@@ -55,6 +55,9 @@ void deferredPass(
         }
     }
     //occlusion /= spotsWithShadows;
+    */
+
+    float occlusion = unpackOcclusion(occlusionPtr[0]);
 
     // Write output
     float4 color= diffuseSpec * (1.0f - occlusion);

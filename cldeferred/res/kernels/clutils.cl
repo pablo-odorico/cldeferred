@@ -5,6 +5,8 @@
 #define read_image2f(image,sampler,pos)     read_imagef((image),(sampler),(pos)).xy
 #define read_image3f(image,sampler,pos)     read_imagef((image),(sampler),(pos)).xyz
 
+#define POW2(x) ((x)*(x))
+
 //
 // Float to uchar occlusion packing/unpacking
 //

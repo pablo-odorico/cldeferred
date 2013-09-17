@@ -3,8 +3,8 @@
 #include <cassert>
 
 OcclusionBuffer::OcclusionBuffer()
-    : _initialized(false), _spotLightCount(-1), _size(0,0),
-      _lastBufferBytes(0)
+    : _initialized(false), _spotLightCount(-1), _dirLightCount(-1),
+      _size(0,0), _lastBufferBytes(0)
 {
     QFile file(":/kernels/occlusionPass.cl");
     if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -23,20 +23,21 @@ bool OcclusionBuffer::resize(cl_context context, cl_device_id device, QSize size
 }
 
 
-bool OcclusionBuffer::updateKernel(int spotLightCount)
+bool OcclusionBuffer::updateKernel(int spotLightCount, int dirLightCount)
 {
     assert(_initialized);
 
-    if(spotLightCount == _spotLightCount)
+    if(spotLightCount==_spotLightCount and dirLightCount==_dirLightCount)
         return true;
 
     // If this is not the first time, delete the old kernel
-    const bool firstTime= _spotLightCount == -1;
+    const bool firstTime= _spotLightCount==-1 or _dirLightCount==-1;
     if(!firstTime) {
         const cl_int error= clReleaseKernel(_kernel);
         checkCLError(error, "clReleaseKernel");
     }
     _spotLightCount= spotLightCount;
+    _dirLightCount= dirLightCount;
 
     QString sourceCopy= _source;
 
@@ -44,12 +45,16 @@ bool OcclusionBuffer::updateKernel(int spotLightCount)
     QString depthParams= "";
     for(int i=0; i<_spotLightCount; i++)
         depthParams += "DEF_DEPTH_PARAM(spotLights, " + QString::number(i) + "), \n";
+    for(int i=0; i<_dirLightCount; i++)
+        depthParams += "DEF_DEPTH_PARAM(dirLights, " + QString::number(i) + "), \n";
     sourceCopy.replace("/** DEPTH_PARAMS **/", depthParams);
 
     // Occlusion calculation calls
     QString occlusions= "";
     for(int i=0; i<_spotLightCount; i++)
-        occlusions += "VISIBILITY(spotLights, " + QString::number(i) + ") \n";
+        occlusions += "VISIBILITY(spotLights, " + QString::number(i) + ", visibilitySpot) \n";
+    for(int i=0; i<_dirLightCount; i++)
+        occlusions += "VISIBILITY(dirLights, " + QString::number(i) + ", visibility) \n";
     sourceCopy.replace("/** VISIBILITIES **/", occlusions);    
 
     return CLUtils::loadKernel(_context, &_kernel, _device, sourceCopy,
@@ -77,19 +82,20 @@ bool OcclusionBuffer::updateBuffer()
     return true;
 }
 
-bool OcclusionBuffer::update(
-        cl_command_queue queue,
+bool OcclusionBuffer::update(cl_command_queue queue,
         cl_mem cameraStruct,
         cl_mem cameraDepthImg,
         int lightsWithShadows,
-        cl_mem spotLightStructs,
-        QVector<cl_mem> spotLightDepthImgs,
+        cl_mem spotLightStructs, cl_mem dirLightStructs,
+        QVector<cl_mem> spotLightDepthImgs, QVector<cl_mem> dirLightDepthImgs,
         QSize screenSize)
 {
     assert(_initialized);
 
     // Update kernel to match the current number of lights
-    if(!updateKernel(spotLightDepthImgs.count())) {
+    const int spotCount= spotLightDepthImgs.count();
+    const int dirCount= dirLightDepthImgs.count();
+    if(!updateKernel(spotCount, dirCount)) {
         debugFatal("Failed to update kernel.");
         return false;
     }
@@ -112,9 +118,14 @@ bool OcclusionBuffer::update(
     error |= clSetKernelArg(_kernel, 1, sizeof(cl_mem), (void*)&cameraDepthImg);
     error |= clSetKernelArg(_kernel, 2, sizeof(int)   , (void*)&lightsWithShadows);
     error |= clSetKernelArg(_kernel, 3, sizeof(cl_mem), (void*)&spotLightStructs);
-    uint argIndex= 4;
-    for(int i=0; i<spotLightDepthImgs.count(); i++) {
+    error |= clSetKernelArg(_kernel, 4, sizeof(cl_mem), (void*)&dirLightStructs);
+    uint argIndex= 5;
+    for(int i=0; i<_spotLightCount; i++) {
         error |= clSetKernelArg(_kernel, argIndex, sizeof(cl_mem), (void*)&spotLightDepthImgs[i]);
+        argIndex++;
+    }
+    for(int i=0; i<_dirLightCount; i++) {
+        error |= clSetKernelArg(_kernel, argIndex, sizeof(cl_mem), (void*)&dirLightDepthImgs[i]);
         argIndex++;
     }
     error |= clSetKernelArg(_kernel, argIndex, sizeof(cl_mem), (void*)&_buffer);

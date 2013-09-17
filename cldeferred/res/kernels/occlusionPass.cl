@@ -2,6 +2,7 @@
 
 #include "cl_camera.h"
 #include "cl_spotlight.h"
+#include "cl_dirlight.h"
 
 // Variance Shadow Map calculation:
 // http://http.developer.nvidia.com/GPUGems3/gpugems3_ch08.html
@@ -34,18 +35,34 @@ float2 depthBlurSample(read_only image2d_t depths, const int radius, const float
     for(int offsetY= -radius; offsetY <= radius; offsetY++)
         for(int offsetX= -radius; offsetX <= radius; offsetX++)
             moment += read_image2f(depths, sampler, coord + (float2)(offsetX/size.x,offsetY/size.y));
-    moment /= (2*radius+1) * (2*radius+1);
+    moment /= POW2(2*radius+1);
 
     return moment;
 }
 
 
-float visibility(read_only image2d_t lightDepths, const float4 worldPos, const float16 lightVPMatrix)
+float visibility(read_only image2d_t lightDepth, const float4 worldPos, const float16 lightVPMatrix)
 {
     const float4 lightClipPos= multMatVec(lightVPMatrix, worldPos);
     const float4 lightBiasedNDC= (lightClipPos / lightClipPos.w) * 0.5f + 0.5f;
-    const float2 lightDepthMoment= depthBlurSample(lightDepths, 2, lightBiasedNDC.xy);
+    const float2 lightDepthMoment= depthBlurSample(lightDepth, 2, lightBiasedNDC.xy);
     return varianceShadowMap(lightDepthMoment, lightBiasedNDC.z);
+}
+
+float visibilitySpot(read_only image2d_t lightDepth, const float4 worldPos, const float16 lightVPMatrix)
+{
+    const float4 lightClipPos= multMatVec(lightVPMatrix, worldPos);
+    const float4 lightBiasedNDC= (lightClipPos / lightClipPos.w) * 0.5f + 0.5f;
+
+    float visibility= 0;
+
+    float2 lightXY= lightBiasedNDC.xy * 2.0f - 1.0f;
+    if(POW2(lightXY.x) + POW2(lightXY.y) < 1.0f) {
+        const float2 lightDepthMoment= depthBlurSample(lightDepth, 2, lightBiasedNDC.xy);
+        visibility= varianceShadowMap(lightDepthMoment, lightBiasedNDC.z);
+    }
+
+    return visibility;
 }
 
 //
@@ -61,8 +78,11 @@ void occlusionPass(
     read_only image2d_t cameraDepth,
     int lightsWithShadows,              // Total number of lights that have shadows
     constant cl_spotlight* spotLights,
+    constant cl_dirlight* dirLights,
     /** DEPTH_PARAMS **/
     // DEF_DEPTH_PARAM(spotLights, 0),
+    // ...
+    // DEF_DEPTH_PARAM(dirLights, 0),
     // ...
     write_only global uchar* occlusionBuffer
 )
@@ -81,13 +101,15 @@ void occlusionPass(
 
     global uchar* dst= occlusionBuffer + (pos.x + pos.y * size.x) * lightsWithShadows;
 
-    #define VISIBILITY(lights,N) \
+    #define VISIBILITY(lights,N,visFunc) \
         if(lights[N].hasShadows) { \
-            *dst= packOcclusion(1.0f - visibility(lights##N##depth, worldPos, lights[N].viewProjMatrix)); \
+            *dst= packOcclusion(1.0f - visFunc(lights##N##depth, worldPos, lights[N].viewProjMatrix)); \
             dst++; \
         }
 
     /** VISIBILITIES **/
-    // VISIBILITY(spotLights, 0)
+    // VISIBILITY(spotLights, 0, visibilitySpot)
+    // ...
+    // VISIBILITY(dirLights, 0, visibility)
     // ...
 }

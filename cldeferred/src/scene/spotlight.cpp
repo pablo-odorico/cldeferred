@@ -2,8 +2,9 @@
 #include "debug.h"
 
 SpotLight::SpotLight()
+    : Light()
 {
-    setParams(45, 1, 10);
+    setParams(30, 1, 10);
 }
 
 void SpotLight::setParams(float cutOff, float exponent, float linearAtenuation, float nearValue)
@@ -20,7 +21,7 @@ void SpotLight::setParams(float cutOff, float exponent, float linearAtenuation, 
         aspectRatio= 1.0f;
     }
 
-    _lightCamera.setPerspective(_cutOff, aspectRatio, nearValue, 1.0f/_linearAtenuation);
+    _lightCamera.setPerspective(2 * _cutOff, aspectRatio, nearValue, 1.0f/_linearAtenuation);
 }
 
 void SpotLight::updateStructCL(cl_command_queue queue, cl_mem buffer, size_t index)

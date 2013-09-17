@@ -15,22 +15,26 @@ public:
     bool update(cl_command_queue queue,
                 cl_mem cameraStruct,
                 cl_mem cameraDepthImg, int lightsWithShadows,
-                cl_mem spotLightStructs,
-                QVector<cl_mem> spotLightDepthImgs,
+                cl_mem spotLightStructs, cl_mem dirLightStructs,
+                QVector<cl_mem> spotLightDepthImgs, QVector<cl_mem> dirLightDepthImgs,
                 QSize screenSize);
 
     cl_mem buffer();
 
-    size_t bufferBytes() const { return _size.width() * _size.height() * _spotLightCount; }
+    size_t bufferBytes() const {
+        return _size.width() * _size.height() * (_spotLightCount + _dirLightCount);
+    }
 
 private:
-    bool updateKernel(int spotLightCount);
+    bool updateKernel(int spotLightCount, int dirLightCount);
     bool updateBuffer();
 
     bool _initialized;
     QString _source;
 
+    // Kernel and parameters used to generate the kernel source
     int _spotLightCount;
+    int _dirLightCount;
     cl_kernel _kernel;
 
     // CL context and device, used to compile the kernel

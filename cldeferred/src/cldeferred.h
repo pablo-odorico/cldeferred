@@ -81,6 +81,7 @@ private:
 
     // Misc        
     bool enableAA;
+    float dirLightAngle;
 
     QVector<cl_mem> acquiredBuffers;
 };

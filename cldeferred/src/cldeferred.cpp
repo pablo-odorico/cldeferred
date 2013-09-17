@@ -11,7 +11,7 @@ CLDeferred::CLDeferred()
     : CLGLWindow()
     , firstPassProgram(0), outputProgram(0)
     , fpsFrameCount(0), fpsLastTime(0)
-    , enableAA(true)
+    , enableAA(true), dirLightAngle(90.0f)
 {
 }
 
@@ -73,13 +73,22 @@ void CLDeferred::finalizeInit()
     //scene.camera().lookAt(QVector3D(-8, .5f, -8), QVector3D(0, 0, 0));
     scene.camera().lookAt(QVector3D(-5.28565, 5.13663, -11.9598), QVector3D(-5.28565, 5.13663, -11.9598)+QVector3D(0.0942199, -0.670006, 0.736353));
     scene.camera().setMoveSpeed(5);
+/*
+    DirLight* dirLight= new DirLight();
+    dirLight->lookAt(QVector3D(0, 40, 0), QVector3D(0, 0, 0));
+    dirLight->enableShadows(true);
+    dirLight->setupShadowMap(clCtx(), clDevice(), QSize(512,512));
+    dirLight->setParams(50, 50, 10.0f, 200.0f);
+    scene.lightManager().addDirLight(dirLight);
+*/
 
     SpotLight* spotLight= new SpotLight();
     spotLight->lookAt(QVector3D(10, 10, 10), QVector3D(0, 0, 0));
     spotLight->enableShadows(true);
     spotLight->setupShadowMap(clCtx(), clDevice(), QSize(512,512));
-    spotLight->setParams(30, 1, 1/30.0f, 1.0f);
+    spotLight->setParams(15, 1, 1/50.0f, 1.0f);
     scene.lightManager().addSpotLight(spotLight);
+
 /*
     SpotLight* spotLight2= new SpotLight();
     spotLight2->lookAt(QVector3D(-10, 10, -10), QVector3D(0, 0, 0));
@@ -143,7 +152,18 @@ void CLDeferred::renderGL()
     static float a= 0;
     a += 0.1f;
     SpotLight* ssl1= scene.lightManager().spotLight(0);
-    ssl1->lookAt(QVector3D(10,10+2*sinf(a),10), QVector3D(0,0,0));
+    if(ssl1)
+        ssl1->lookAt(QVector3D(10,10+2*sinf(a),10), QVector3D(0,0,0));
+
+/*
+    DirLight* light= scene.lightManager().dirLight(0);
+    if(light) {
+        const float dist= light->position().length();
+        const float aRad= dirLightAngle * (M_PI / 180.0f);
+        const QVector3D pos(dist * cosf(aRad), dist * sinf(aRad), 0);
+        light->lookAt(pos, QVector3D(0,0,0));
+    }
+    */
 
     // Update OpenCL structs
     scene.updateStructsCL(clQueue());
@@ -178,11 +198,13 @@ void CLDeferred::renderGL()
     drawOutput();
     times << sceneTime.nsecsElapsed();
 
+    /*
     static int frame= 0;
     frame++;
     if(frame==55) {
         saveScreenshot();
     }
+    */
 
     const qint64 fpsElapsed= now - fpsLastTime;
     if(fpsElapsed > 3e9) {
@@ -275,15 +297,12 @@ void CLDeferred::updateOcclusionBuffer()
         return;
     firstTime= false;
 
-    // Use those shadow maps to update the occlusion buffer
     cl_mem camStruct= scene.camera().structCL();
     cl_mem camDepth= gBuffer.colorBuffers().at(2);
-    cl_mem spotLightStructs= lm.spotStructs();
-    QVector<cl_mem> spotLightDepthImgs= lm.spotDepths();
 
     bool ok= occlusionBuffer.update(
                 clQueue(), camStruct, camDepth, lm.lightsWithShadows(),
-                spotLightStructs, spotLightDepthImgs,
+                lm.spotStructs(), lm.dirStructs(), lm.spotDepths(), lm.dirDepths(),
                 gBuffer.size());
     if(!ok)
         debugFatal("Error updating occlusion buffer.");
@@ -415,6 +434,8 @@ void CLDeferred::keyPressEvent(QKeyEvent *event)
     const int key= event->key();
     if(key == Qt::Key_P) saveScreenshot();
     if(key == Qt::Key_M) enableAA= !enableAA;
+    if(key == Qt::Key_Right) dirLightAngle= qMin(dirLightAngle + 1.0f, 179.0f);
+    if(key == Qt::Key_Left) dirLightAngle= qMax(dirLightAngle - 1.0f, 1.0f);
 }
 
 void CLDeferred::saveScreenshot(QString prefix, QString ext)

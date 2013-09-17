@@ -33,7 +33,8 @@ SOURCES += \
     src/scene/scene.cpp \
     src/scene/spotlight.cpp \
     src/utils/clutils.cpp \
-    src/utils/glutils.cpp
+    src/utils/glutils.cpp \
+    src/scene/dirlight.cpp
 
 HEADERS += \
     src/fbo.h \
@@ -52,7 +53,9 @@ HEADERS += \
     src/scene/scene.h \
     src/scene/spotlight.h \
     src/utils/clutils.h \
-    src/utils/glutils.h
+    src/utils/glutils.h \
+    res/kernels/cl_dirlight.h \
+    src/scene/dirlight.h
 
 OTHER_FILES += \
     TODO.txt \

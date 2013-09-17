@@ -1,19 +1,22 @@
-#ifndef SPOTLIGHT_H
-#define SPOTLIGHT_H
+#ifndef DIRLIGHT_H
+#define DIRLIGHT_H
 
 #include "light.h"
-#include "cl_spotlight.h"
+#include "cl_dirlight.h"
 
-class SpotLight : public Light
+// Directional Light
+
+class DirLight : public Light
 {
 public:
-    SpotLight();
+    DirLight();
 
     // Spot parameters
-    void setParams(float cutOff, float exponent, float linearAtenuation, float nearValue= 0.1f);
-    float cuttOff() const { return _cutOff; }
-    float exponent() const { return _exponent; }
-    float linearAtenuation() const { return _linearAtenuation; }
+    void setParams(float areaWidth, float areaHeight, float near= 0.1f, float far=100.0f);
+    float areaWidth() const { return _areaWidth; }
+    float areaHeight() const { return _areaHeight; }
+    float near() const { return _near; }
+    float far() const { return _far; }
 
     // Spot direction parameters
     QVector3D position() const { return _lightCamera.position(); }
@@ -35,9 +38,12 @@ public:
     void updateStructCL(cl_command_queue queue, cl_mem buffer, size_t index);
 
 private:
-    float _cutOff;           // Field of view of the light camera, in degrees
-    float _exponent;         // Cut off exponent
-    float _linearAtenuation; // Max light distance is 1/_linearAtenuation
+    // Area light in world units
+    float _areaWidth;
+    float _areaHeight;
+    // Clipping params
+    float _near;
+    float _far;
 };
 
-#endif // SPOTLIGHT_H
+#endif // DIRLIGHT_H
