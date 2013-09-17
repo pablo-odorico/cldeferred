@@ -65,6 +65,7 @@ float visibilitySpot(read_only image2d_t lightDepth, const float4 worldPos, cons
     return visibility;
 }
 
+
 //
 // Occlusions Pass Kernel
 //

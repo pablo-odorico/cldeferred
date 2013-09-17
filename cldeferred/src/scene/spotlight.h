@@ -10,9 +10,9 @@ public:
     SpotLight();
 
     // Spot parameters
-    void setParams(float cutOff, float exponent, float linearAtenuation, float nearValue= 0.1f);
-    float cuttOff() const { return _cutOff; }
-    float exponent() const { return _exponent; }
+    void setParams(float cutOff, float fadeDegrees, float linearAtenuation, float nearValue= 0.1f);
+    float cutOff() const { return _cutOff; }
+    float fadeDegrees() const { return _fadeDegrees; }
     float linearAtenuation() const { return _linearAtenuation; }
 
     // Spot direction parameters
@@ -36,7 +36,7 @@ public:
 
 private:
     float _cutOff;           // Field of view of the light camera, in degrees
-    float _exponent;         // Cut off exponent
+    float _fadeDegrees;      // Degrees from the cutoff angle before the spot starts to fade
     float _linearAtenuation; // Max light distance is 1/_linearAtenuation
 };
 

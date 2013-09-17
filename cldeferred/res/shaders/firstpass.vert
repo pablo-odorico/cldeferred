@@ -10,7 +10,7 @@ layout (location = 1) in vec4 inNormal;
 layout (location = 3) in vec2 inTexCoord;
 
 out vec2 texCoord;
-out vec3 worldNormal;
+noperspective out vec3 worldNormal;
 
 void main()
 {

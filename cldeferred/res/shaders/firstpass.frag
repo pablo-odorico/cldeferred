@@ -9,7 +9,7 @@ uniform sampler2D qt_Texture0;
 
 // Inputs from the vertex shader
 in vec2 texCoord;
-in vec3 worldNormal;
+noperspective in vec3 worldNormal;
 
 // Output buffers
 layout (location = 0) out vec4 outDiffuseMat; // COLOR0: Diffuse texture sample + Material Id

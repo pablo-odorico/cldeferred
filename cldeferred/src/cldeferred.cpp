@@ -86,17 +86,19 @@ void CLDeferred::finalizeInit()
     spotLight->lookAt(QVector3D(10, 10, 10), QVector3D(0, 0, 0));
     spotLight->enableShadows(true);
     spotLight->setupShadowMap(clCtx(), clDevice(), QSize(512,512));
-    spotLight->setParams(15, 1, 1/50.0f, 1.0f);
+    spotLight->setParams(15, 3, 1/50.0f, 1.0f);
+    //spotLight->setDiffuseColor(Qt::red);
     scene.lightManager().addSpotLight(spotLight);
 
-/*
+
     SpotLight* spotLight2= new SpotLight();
-    spotLight2->lookAt(QVector3D(-10, 10, -10), QVector3D(0, 0, 0));
+    spotLight2->lookAt(QVector3D(0, 10, 0), QVector3D(0, 0, 0));
     spotLight2->enableShadows(true);
-    spotLight2->setupShadowMap(clCtx(), clDevice(), QSize(256,256));
-    spotLight2->setParams(30, 1, 1/30.0f, 1.0f);
+    spotLight2->setupShadowMap(clCtx(), clDevice(), QSize(512,512));
+    spotLight2->setParams(30, 5, 1/30.0f, 0.5f);
+    //spotLight2->setDiffuseColor(Qt::blue);
     scene.lightManager().addSpotLight(spotLight2);
-*/
+
     startRenderTimer(30);
     sceneTime.start();
     lastRenderTime= sceneTime.nsecsElapsed();
@@ -154,7 +156,10 @@ void CLDeferred::renderGL()
     SpotLight* ssl1= scene.lightManager().spotLight(0);
     if(ssl1)
         ssl1->lookAt(QVector3D(10,10+2*sinf(a),10), QVector3D(0,0,0));
-
+/*
+    SpotLight* ssl2= scene.lightManager().spotLight(1);
+    ssl2->lookAt(scene.camera().position(), scene.camera().position()+scene.camera().lookVector());
+*/
 /*
     DirLight* light= scene.lightManager().dirLight(0);
     if(light) {
@@ -331,8 +336,10 @@ void CLDeferred::deferredPass()
     cl_mem gbDepth= gBufferChannels[2];
     cl_mem oBuffer= occlusionBuffer.buffer();
     cl_mem cameraStruct= scene.camera().structCL();
-    cl_mem spotLightStructs= scene.lightManager().spotStructs();
     int    spotLightCount= scene.lightManager().spotLightCount();
+    cl_mem spotLightStructs= scene.lightManager().spotStructs();
+    int    dirLightCount= scene.lightManager().dirLightCount();
+    cl_mem dirLightStructs= scene.lightManager().dirStructs();
     int    lightsWithShadows= scene.lightManager().lightsWithShadows();
 
     // Launch kernel
@@ -341,10 +348,13 @@ void CLDeferred::deferredPass()
     error |= clSetKernelArg(deferredPassKernel, 2, sizeof(cl_mem), (void*)&gbDepth);
     error |= clSetKernelArg(deferredPassKernel, 3, sizeof(cl_mem), (void*)&oBuffer);
     error |= clSetKernelArg(deferredPassKernel, 4, sizeof(cl_mem), (void*)&outputImage);
+    // materials
     error |= clSetKernelArg(deferredPassKernel, 5, sizeof(cl_mem), (void*)&cameraStruct);
-    error |= clSetKernelArg(deferredPassKernel, 6, sizeof(cl_mem), (void*)&spotLightStructs);
-    error |= clSetKernelArg(deferredPassKernel, 7, sizeof(int),    (void*)&spotLightCount);
-    error |= clSetKernelArg(deferredPassKernel, 8, sizeof(int),    (void*)&lightsWithShadows);
+    error |= clSetKernelArg(deferredPassKernel, 6, sizeof(int),    (void*)&spotLightCount);
+    error |= clSetKernelArg(deferredPassKernel, 7, sizeof(cl_mem), (void*)&spotLightStructs);
+    error |= clSetKernelArg(deferredPassKernel, 8, sizeof(int),    (void*)&dirLightCount);
+    error |= clSetKernelArg(deferredPassKernel, 9, sizeof(cl_mem), (void*)&dirLightStructs);
+    error |= clSetKernelArg(deferredPassKernel,10, sizeof(int),    (void*)&lightsWithShadows);
     error |= clEnqueueNDRangeKernel(clQueue(), deferredPassKernel, 2, NULL,
                                     ndRangeSize, workGroupSize, 0, NULL, NULL);
     checkCLError(error, "outputKernel");
@@ -436,6 +446,10 @@ void CLDeferred::keyPressEvent(QKeyEvent *event)
     if(key == Qt::Key_M) enableAA= !enableAA;
     if(key == Qt::Key_Right) dirLightAngle= qMin(dirLightAngle + 1.0f, 179.0f);
     if(key == Qt::Key_Left) dirLightAngle= qMax(dirLightAngle - 1.0f, 1.0f);
+    if(key == Qt::Key_L) scene.lightManager().spotLight(0)->enableShadows(true);
+    if(key == Qt::Key_K) scene.lightManager().spotLight(0)->enableShadows(false);
+    if(key == Qt::Key_I) scene.lightManager().spotLight(1)->enableShadows(true);
+    if(key == Qt::Key_O) scene.lightManager().spotLight(1)->enableShadows(false);
 }
 
 void CLDeferred::saveScreenshot(QString prefix, QString ext)

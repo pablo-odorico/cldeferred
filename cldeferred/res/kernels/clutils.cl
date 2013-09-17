@@ -86,4 +86,9 @@ float4 getClipPosFromDepth(
     return clipPos;
 }
 
+float3 reflect(float3 V, float3 N)
+{
+        return V - 2.0f * dot(V, N) * N;
+}
+
 #endif // CLUTILS_CL

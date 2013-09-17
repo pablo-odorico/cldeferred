@@ -7,6 +7,7 @@
     #include <CL/cl_platform.h>
 
 #else
+#ifdef CL_VERSION_1_0
 
     // If included from OpenCL code, define types to match the native ones
     #define cl_float    float
@@ -16,7 +17,11 @@
     #define cl_float8   float8
     #define cl_float16  float16
     // TODO add more
+#else
 
+#error This file should be included either from C++ or an OpenCL compiler.
+
+#endif
 #endif
 
 #endif // CLTYPES_H
