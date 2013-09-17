@@ -201,6 +201,10 @@ bool CLUtils::loadKernel(cl_context context, cl_kernel* kernel,
         return false;
     // Compile program for all the GPUs in the context
     error= clBuildProgram(program, 0, NULL, compileOptions, NULL, NULL);
+
+    /*error= clBuildProgram(program, 0, NULL,
+                          "-I../res/kernels/ -Werror -cl-single-precision-constant -cl-fast-relaxed-math",
+    NULL, NULL);*/
     if(checkCLError(error, "loadKernel: clBuildProgram")) {
         checkProgramBuild(program, device);
         return false;

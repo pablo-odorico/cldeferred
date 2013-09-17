@@ -15,9 +15,9 @@ float linstep(float low, float high, float v)
 float varianceShadowMap(const float2 moments, float compare)
 {
     const float p = smoothstep(compare-0.001f, compare, moments.x);
-    const float variance = max(moments.y - moments.x*moments.x, -0.001);
+    const float variance = max(moments.y - POW2(moments.x), -0.001);
     const float d = compare - moments.x;
-    const float p_max = linstep(0.2f, 1.0f, variance / (variance + d*d));
+    const float p_max = linstep(0.2f, 1.0f, variance / (variance + POW2(d)));
     return clamp(max(p, p_max), 0.0f, 1.0f);
 }
 
@@ -113,4 +113,5 @@ void occlusionPass(
     // ...
     // VISIBILITY(dirLights, 0, visibility)
     // ...
+
 }

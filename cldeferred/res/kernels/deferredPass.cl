@@ -59,7 +59,7 @@ void deferredPass(
 
     float3 color= (float3)(0,0,0);
 
-    for(int i=0; i<spotLightCount; i++) {        
+    for(int i=0; i<spotLightCount; i++) {
         cl_spotlight light= spotLights[i];
 
         float visibility= 1.0f;
@@ -68,14 +68,15 @@ void deferredPass(
             occlusionPtr++;
         }     
 
-        const float3 L= normalize(light.position - worldPos);
+        const float3 L= fast_normalize(light.position - worldPos);
+
         const float angle= acos(max(dot(-light.lookVector, L), 0.0f));
         const float spotEffect= smoothstep(light.cutOffMax, light.cutOffMin, angle);
 
         const float3 NdotL= max(dot(normal, L), 0.0f);
 
         float3 V= camera->position - worldPos;
-        const float dist= length(V);
+        const float dist= fast_length(V);
         V /= dist;
         const float spec= max(dot(reflect(-L, normal), V), 0.0f);
 
@@ -85,7 +86,6 @@ void deferredPass(
 
         color += lAmbient;
         color += (lSpecular + lDiffuse) * spotEffect * visibility; // TODO atenuation
-
     }
 
     // Write output
@@ -96,4 +96,7 @@ void deferredPass(
     const float fxaaLuma= dot(color, (float3)(0.299f, 0.587f, 0.114f));
 
     write_imagef(output, pos, (float4)(color, fxaaLuma));
+
 }
+
+

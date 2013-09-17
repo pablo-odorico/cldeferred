@@ -3,7 +3,7 @@
 
 #include "cltypes.h"
 
-typedef struct __attribute__ ((packed))
+typedef struct // __attribute__ ((packed))
 {
     cl_float3 ambient;
     cl_float3 diffuse;
