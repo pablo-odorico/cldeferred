@@ -57,8 +57,8 @@ private:
 
     // Geometry buffer
     FBOCL gBuffer;
-    // COLOR0: Diffuse texture sample + Specular power
-    static const GLenum diffuseSpecFormat= GL_RGBA;
+    // COLOR0: Diffuse texture sample + Material ID
+    static const GLenum diffuseMatFormat= GL_RGBA;
     // COLOR1: Normals in world coords
     static const GLenum normalsFormat= GL_RG16F;
     // COLOR2: Depth

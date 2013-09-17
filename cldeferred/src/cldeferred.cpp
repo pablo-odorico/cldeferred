@@ -2,7 +2,7 @@
 #include <cassert>
 #include "debug.h"
 
-const GLenum CLDeferred::diffuseSpecFormat;
+const GLenum CLDeferred::diffuseMatFormat;
 const GLenum CLDeferred::normalsFormat;
 const GLenum CLDeferred::depthFormat;
 const GLenum CLDeferred::depthTestFormat;
@@ -113,7 +113,7 @@ void CLDeferred::resizeGL(QSize size)
     scene.camera().setPerspective(60.0f, (float)size.width()/size.height(), 0.1f, 100.0f);
 
     // Resize G-Buffer
-    QList<GLenum> colorFormats= QList<GLenum>() << diffuseSpecFormat << normalsFormat << depthFormat;
+    QList<GLenum> colorFormats= QList<GLenum>() << diffuseMatFormat << normalsFormat << depthFormat;
     ok= gBuffer.resize(clCtx(), size, colorFormats, depthTestFormat);
     if(!ok)
         debugFatal("Error initializing G-Buffer FBO.");
@@ -326,7 +326,7 @@ void CLDeferred::deferredPass()
     ndRangeSize[0]= roundUp(gBuffer.width() , workGroupSize[0]);
     ndRangeSize[1]= roundUp(gBuffer.height(), workGroupSize[1]);
 
-    cl_mem gbDiffuseSpec= gBufferChannels[0];
+    cl_mem gbDiffuseMat= gBufferChannels[0];
     cl_mem gbNormals= gBufferChannels[1];
     cl_mem gbDepth= gBufferChannels[2];
     cl_mem oBuffer= occlusionBuffer.buffer();
@@ -336,7 +336,7 @@ void CLDeferred::deferredPass()
     int    lightsWithShadows= scene.lightManager().lightsWithShadows();
 
     // Launch kernel
-    error  = clSetKernelArg(deferredPassKernel, 0, sizeof(cl_mem), (void*)&gbDiffuseSpec);
+    error  = clSetKernelArg(deferredPassKernel, 0, sizeof(cl_mem), (void*)&gbDiffuseMat);
     error |= clSetKernelArg(deferredPassKernel, 1, sizeof(cl_mem), (void*)&gbNormals);
     error |= clSetKernelArg(deferredPassKernel, 2, sizeof(cl_mem), (void*)&gbDepth);
     error |= clSetKernelArg(deferredPassKernel, 3, sizeof(cl_mem), (void*)&oBuffer);

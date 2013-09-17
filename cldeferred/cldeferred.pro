@@ -55,7 +55,8 @@ HEADERS += \
     src/utils/clutils.h \
     src/utils/glutils.h \
     res/kernels/cl_dirlight.h \
-    src/scene/dirlight.h
+    src/scene/dirlight.h \
+    res/kernels/cl_material.h
 
 OTHER_FILES += \
     TODO.txt \

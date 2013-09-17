@@ -2,6 +2,7 @@
 
 uniform mat4 mvpMatrix;
 uniform mat4 modelITMatrix;
+uniform int materialId; // Must be >=0 and <256
 
 // Inputs in default Qt3D locations
 layout (location = 0) in vec4 inPosition;

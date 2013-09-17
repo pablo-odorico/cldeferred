@@ -2,6 +2,7 @@
 
 uniform mat4 mvpMatrix;
 uniform mat4 modelITMatrix;
+uniform int materialId; // Must be >=0 and <256
 
 // Default Qt3D uniforms
 uniform sampler2D qt_Texture0;
@@ -11,18 +12,19 @@ in vec2 texCoord;
 in vec3 worldNormal;
 
 // Output buffers
-layout (location = 0) out vec4 outDiffuseSpec; // COLOR0: Diffuse texture sample + Specular power
-layout (location = 1) out vec2 outNormal;      // COLOR1: Normalized normal in world coords
-layout (location = 2) out float outDepth;      // COLOR2: Depth
+layout (location = 0) out vec4 outDiffuseMat; // COLOR0: Diffuse texture sample + Material Id
+layout (location = 1) out vec2 outNormal;     // COLOR1: Normalized normal in world coords
+layout (location = 2) out float outDepth;     // COLOR2: Depth
 
 void main()
 {    
     vec3 diffuse = texture(qt_Texture0, texCoord).rgb;
-    float spec = 1.0f;
 
-    outDiffuseSpec.rgb = diffuse;
-    outDiffuseSpec.a = spec;
+    outDiffuseMat.rgb = diffuse;
+    outDiffuseMat.a = materialId;
+
     outNormal = normalize(worldNormal).xy;
+
     outDepth = gl_FragCoord.z;
 }
 
