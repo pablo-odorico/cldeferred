@@ -12,7 +12,7 @@ kernel void depthDownsample(
     const float2 dstNormPos= (float2)((float)dstPos.x/dstSize.x, (float)dstPos.y/dstSize.y);
 
     float2 srcPos= (float2)(dstNormPos.x * srcSize.x, dstNormPos.y * srcSize.y);
-    // Offset the position to sample the expected 4 texels
+    // Offset the position to sample and average 4 source texels
     srcPos += (float2)(1.0f, 1.0f);
 
     const sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;

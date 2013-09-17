@@ -70,20 +70,21 @@ void CLDeferred::finalizeInit()
 
     if(!scene.loadScene("models/untitled/untitled2.obj"))
         debugFatal("Could not load scene!");
-    scene.camera().lookAt(QVector3D(-8, .5f, -8), QVector3D(0, 0, 0));
+    //scene.camera().lookAt(QVector3D(-8, .5f, -8), QVector3D(0, 0, 0));
+    scene.camera().lookAt(QVector3D(-5.28565, 5.13663, -11.9598), QVector3D(-5.28565, 5.13663, -11.9598)+QVector3D(0.0942199, -0.670006, 0.736353));
     scene.camera().setMoveSpeed(5);
 
     SpotLight* spotLight= new SpotLight();
     spotLight->lookAt(QVector3D(10, 10, 10), QVector3D(0, 0, 0));
     spotLight->enableShadows(true);
-    spotLight->setupShadowMap(clCtx(), clDevice(), QSize(256,256));
+    spotLight->setupShadowMap(clCtx(), clDevice(), QSize(512,512));
     spotLight->setParams(30, 1, 1/30.0f, 1.0f);
     scene.lightManager().addSpotLight(spotLight);
 /*
     SpotLight* spotLight2= new SpotLight();
     spotLight2->lookAt(QVector3D(-10, 10, -10), QVector3D(0, 0, 0));
     spotLight2->enableShadows(true);
-    spotLight2->setupShadowMap(clCtx(), QSize(512,512));
+    spotLight2->setupShadowMap(clCtx(), clDevice(), QSize(256,256));
     spotLight2->setParams(30, 1, 1/30.0f, 1.0f);
     scene.lightManager().addSpotLight(spotLight2);
 */
@@ -100,7 +101,7 @@ void CLDeferred::resizeGL(QSize size)
     bool ok;
 
     // Set camera projection
-    scene.camera().setPerspective(60.0f, (float)size.width()/size.height(), 0.1f, 5000.0f);
+    scene.camera().setPerspective(60.0f, (float)size.width()/size.height(), 0.1f, 100.0f);
 
     // Resize G-Buffer
     QList<GLenum> colorFormats= QList<GLenum>() << diffuseSpecFormat << normalsFormat << depthFormat;
@@ -421,5 +422,5 @@ void CLDeferred::saveScreenshot(QString prefix, QString ext)
     gBuffer.colorAttachImage(0).save(prefix + "_diffuse." + ext);
     gBuffer.colorAttachImage(1).save(prefix + "_normals." + ext);
     gBuffer.depthAttachImage().save(prefix + "_depth." + ext);
-    QPixmap::grabWindow(winId()).save(prefix + "_output." + ext);
+    screen()->grabWindow(winId()).save(prefix + "_output." + ext);
 }

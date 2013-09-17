@@ -39,6 +39,7 @@ float2 depthBlurSample(read_only image2d_t depths, const int radius, const float
     return moment;
 }
 
+
 float visibility(read_only image2d_t lightDepths, const float4 worldPos, const float16 lightVPMatrix)
 {
     const float4 lightClipPos= multMatVec(lightVPMatrix, worldPos);
