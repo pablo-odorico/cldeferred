@@ -12,6 +12,7 @@ CLDeferred::CLDeferred()
     , firstPassProgram(0), outputProgram(0)
     , fpsFrameCount(0), fpsLastTime(0)
     , enableAA(true), dirLightAngle(90.0f)
+    , exposure(1.0f), maxLight(1.0f)
 {
 }
 
@@ -73,36 +74,39 @@ void CLDeferred::finalizeInit()
     //scene.camera().lookAt(QVector3D(-8, .5f, -8), QVector3D(0, 0, 0));
     scene.camera().lookAt(QVector3D(-5.28565, 5.13663, -11.9598), QVector3D(-5.28565, 5.13663, -11.9598)+QVector3D(0.0942199, -0.670006, 0.736353));
     scene.camera().setMoveSpeed(5);
-/*
+
     DirLight* dirLight= new DirLight();
     dirLight->lookAt(QVector3D(0, 40, 0), QVector3D(0, 0, 0));
     dirLight->enableShadows(true);
     dirLight->setupShadowMap(clCtx(), clDevice(), QSize(512,512));
     dirLight->setParams(50, 50, 10.0f, 200.0f);
+    dirLight->setAmbientColor(QColor(30,30,30));
+    dirLight->setDiffuseColor(QColor(200,200,200));
     scene.lightManager().addDirLight(dirLight);
-*/
+
 
     SpotLight* spotLight= new SpotLight();
-    spotLight->lookAt(QVector3D(10, 10, 10), QVector3D(0, 0, 0));
+    //spotLight->lookAt(QVector3D(10, 10, 10), QVector3D(0, 0, 0));
     spotLight->enableShadows(true);
     spotLight->setupShadowMap(clCtx(), clDevice(), QSize(512,512));
-    spotLight->setParams(15, 3, 1/50.0f, 1.0f);
-    //spotLight->setDiffuseColor(Qt::red);
+    spotLight->setParams(15, 3, 0.003f, 1.0f);
+    spotLight->setDiffuseColor(QColor(200,200,200));
     scene.lightManager().addSpotLight(spotLight);
 
-
+/*
     SpotLight* spotLight2= new SpotLight();
     spotLight2->lookAt(QVector3D(0, 10, 0), QVector3D(0, 0, 0));
     spotLight2->enableShadows(true);
     spotLight2->setupShadowMap(clCtx(), clDevice(), QSize(512,512));
-    spotLight2->setParams(30, 5, 1/30.0f, 0.5f);
+    spotLight2->setParams(30, 5, 0.01f, 0.5f);
     //spotLight2->setDiffuseColor(Qt::blue);
     scene.lightManager().addSpotLight(spotLight2);
-
+*/
     startRenderTimer(50);
     sceneTime.start();
     lastRenderTime= sceneTime.nsecsElapsed();
     fpsLastTime= sceneTime.nsecsElapsed();
+
 }
 
 void CLDeferred::resizeGL(QSize size)
@@ -151,16 +155,19 @@ void CLDeferred::renderGL()
     // Move camera
     scene.camera().move((now - lastRenderTime)/1000.0f);
 
+
     static float a= 0;
     a += 0.05f;
     SpotLight* ssl1= scene.lightManager().spotLight(0);
     if(ssl1)
         ssl1->lookAt(QVector3D(10,10+2*sinf(a),10), QVector3D(0,0,0));
+
 /*
     SpotLight* ssl2= scene.lightManager().spotLight(1);
-    ssl2->lookAt(scene.camera().position(), scene.camera().position()+scene.camera().lookVector());
+    const QVector3D pos= scene.camera().position()+1*scene.camera().lookVector();
+    ssl2->lookAt(pos, pos+scene.camera().lookVector());
 */
-/*
+
     DirLight* light= scene.lightManager().dirLight(0);
     if(light) {
         const float dist= light->position().length();
@@ -168,7 +175,6 @@ void CLDeferred::renderGL()
         const QVector3D pos(dist * cosf(aRad), dist * sinf(aRad), 0);
         light->lookAt(pos, QVector3D(0,0,0));
     }
-    */
 
     // Update OpenCL structs
     scene.updateStructsCL(clQueue());
@@ -355,6 +361,8 @@ void CLDeferred::deferredPass()
     error |= clSetKernelArg(deferredPassKernel, 8, sizeof(int),    (void*)&dirLightCount);
     error |= clSetKernelArg(deferredPassKernel, 9, sizeof(cl_mem), (void*)&dirLightStructs);
     error |= clSetKernelArg(deferredPassKernel,10, sizeof(int),    (void*)&lightsWithShadows);
+    error |= clSetKernelArg(deferredPassKernel,11, sizeof(float), (void*)&exposure);
+    error |= clSetKernelArg(deferredPassKernel,12, sizeof(float), (void*)&maxLight);
     error |= clEnqueueNDRangeKernel(clQueue(), deferredPassKernel, 2, NULL,
                                     ndRangeSize, workGroupSize, 0, NULL, NULL);
     checkCLError(error, "outputKernel");
@@ -450,8 +458,10 @@ void CLDeferred::keyPressEvent(QKeyEvent *event)
     if(key == Qt::Key_K) scene.lightManager().spotLight(0)->enableShadows(false);
     if(key == Qt::Key_I) scene.lightManager().spotLight(1)->enableShadows(true);
     if(key == Qt::Key_O) scene.lightManager().spotLight(1)->enableShadows(false);
-    if(key == Qt::Key_Y) startRenderTimer(30);
-    if(key == Qt::Key_U) startRenderTimer(55);
+    if(key == Qt::Key_Y) maxLight += 0.1f;
+    if(key == Qt::Key_U) maxLight -= 0.1f;
+    if(key == Qt::Key_Up) exposure += 0.2f;
+    if(key == Qt::Key_Down) exposure -= 0.2f;
 }
 
 void CLDeferred::saveScreenshot(QString prefix, QString ext)

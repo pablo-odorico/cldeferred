@@ -19,7 +19,7 @@ typedef struct // __attribute__ ((packed))
     float cutOffMax; // Cutoff angle in radians
 
     float exponent;
-    float linearAtenuation;
+    float attenuation;
 
     bool hasShadows;
 

@@ -82,6 +82,8 @@ private:
     // Misc        
     bool enableAA;
     float dirLightAngle;
+    float exposure;
+    float maxLight;
 
     QVector<cl_mem> acquiredBuffers;
 };

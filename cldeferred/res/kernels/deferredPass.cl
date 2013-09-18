@@ -8,24 +8,54 @@
 // Image sampler
 const sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
 
+float3 toneMap(float3 inCol, float exposure, float maxLight)
+{
+    float3 outCol;
+
+    //outCol = inCol;
+    //outCol *= exposure * (exposure/maxLight + 1.0f) / (exposure + 1.0f);
+
+    //outCol = inCol / (inCol + 1.0f);
+
+    float A = 0.15;
+    float B = 0.50;
+    float C = 0.10;
+    float D = 0.20;
+    float E = 0.02;
+    float F = 0.30;
+    inCol *= exposure;
+    outCol= ((inCol*(A*inCol+C*B)+D*E)/(inCol*(A*inCol+B)+D*F))-E/F;
+
+    outCol /= ((maxLight*(A*maxLight+C*B)+D*E)/(maxLight*(A*maxLight+B)+D*F))-E/F;
+
+//    outCol=inCol;
+
+    return clamp(outCol, (float3)(0,0,0), (float3)(1,1,1));
+}
+
 //
 // Deferred pass kernel
 //
 
 kernel
 void deferredPass(
+    // G-Buffer and output buffer
     read_only  image2d_t gbDiffuseMat,
     read_only  image2d_t gbNormals,
     read_only  image2d_t gbDepth,
     read_only global uchar* occlusionBuffer,
     write_only image2d_t output,
+    // Scene: Camera, Lights and Materials
     // constant cl_material* materials,
     constant cl_camera* camera,
     int spotLightCount,
     constant cl_spotlight* spotLights,
     int dirLightCount,
     constant cl_dirlight* dirLights,
-    int lightsWithShadows
+    int lightsWithShadows,
+    // HDR
+    float exposure,
+    float maxLight
 )
 {
     // Get global position
@@ -43,7 +73,7 @@ void deferredPass(
     const uchar matId= clamp((int)(diffuseMat.w * 255.0f), 0, 255);
     cl_material mat;//= materials[matId];
     mat.diffuse= (float3)(1,1,1);
-    mat.ambient= (float3)(0,0,0);
+    mat.ambient= (float3)(1,1,1);
     mat.specular= (float3)(1,1,1);
     mat.shininess= 200;
 
@@ -68,28 +98,56 @@ void deferredPass(
             occlusionPtr++;
         }     
 
-        const float3 L= fast_normalize(light.position - worldPos);
+        float3 L= light.position - worldPos;
+        const float dist= fast_length(L);
+        L /= dist;
 
         const float angle= acos(max(dot(-light.lookVector, L), 0.0f));
         const float spotEffect= smoothstep(light.cutOffMax, light.cutOffMin, angle);
 
         const float3 NdotL= max(dot(normal, L), 0.0f);
 
-        float3 V= camera->position - worldPos;
-        const float dist= fast_length(V);
-        V /= dist;
+        float3 V= fast_normalize(camera->position - worldPos);
         const float spec= max(dot(reflect(-L, normal), V), 0.0f);
 
         const float3 lAmbient= light.ambient * mat.ambient;
         const float3 lDiffuse= light.diffuse * mat.diffuse * diffuse * NdotL;
-        const float3 lSpecular= light.specular * mat.specular * pow(spec, mat.shininess);
+        const float3 lSpecular= light.specular * mat.specular * native_powr(spec, mat.shininess);
+
+
+        const float attenuation= 1.0f / (light.attenuation * POW2(dist));
 
         color += lAmbient;
-        color += (lSpecular + lDiffuse) * spotEffect * visibility; // TODO atenuation
+        color += (lSpecular + lDiffuse) * spotEffect * visibility * attenuation;
     }
 
-    // Write output
-    color= clamp(color, (float3)(0,0,0), (float3)(1,1,1));
+    for(int i=0; i<dirLightCount; i++) {
+        cl_dirlight light= dirLights[i];
+
+        float visibility= 1.0f;
+        if(light.hasShadows) {
+            visibility = 1.0f - unpackOcclusion(*occlusionPtr);
+            occlusionPtr++;
+        }
+
+        float3 L= -light.lookVector;
+        const float3 NdotL= max(dot(normal, L), 0.0f);
+
+        float3 V= fast_normalize(camera->position - worldPos);
+        const float spec= max(dot(reflect(-L, normal), V), 0.0f);
+
+        const float3 lAmbient= light.ambient * mat.ambient;
+        const float3 lDiffuse= light.diffuse * mat.diffuse * diffuse * NdotL;
+        const float3 lSpecular= light.specular * mat.specular * native_powr(spec, mat.shininess);
+
+        color += lAmbient;
+        color += (lSpecular + lDiffuse) * visibility;
+    }
+
+    // Tone mapping for HDR
+    color= toneMap(color, exposure, maxLight);
+
+    color= pow(color, 2.2f);
 
     // FXAA:
     // Pre-compute and store the Luma value in the Alpha Channel

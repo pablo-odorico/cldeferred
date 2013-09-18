@@ -6,7 +6,7 @@
 Light::Light() :
     _shadowMapping(false),
     _shadowMappingInit(false),
-    _ambientColor(50,50,50), _diffuseColor(Qt::white), _specColor(Qt::white),
+    _ambientColor(Qt::black), _diffuseColor(Qt::white), _specColor(Qt::white),
     _filteredDepth(0)
 {
 }

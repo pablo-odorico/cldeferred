@@ -7,11 +7,11 @@ SpotLight::SpotLight()
     setParams(30, 3, 1, 10);
 }
 
-void SpotLight::setParams(float cutOff, float fadeDegrees, float linearAtenuation, float nearValue)
+void SpotLight::setParams(float cutOff, float fadeDegrees, float atenuation, float near, float far)
 {
     _cutOff= cutOff;
     _fadeDegrees= qBound(0.001f, fadeDegrees, cutOff);
-    _linearAtenuation= linearAtenuation;
+    _atenuation= atenuation;
 
     float aspectRatio;
     if(_depthFbo.width() and _depthFbo.height()) {
@@ -21,7 +21,7 @@ void SpotLight::setParams(float cutOff, float fadeDegrees, float linearAtenuatio
         aspectRatio= 1.0f;
     }
 
-    _lightCamera.setPerspective(2 * _cutOff, aspectRatio, nearValue, 1.0f/_linearAtenuation);
+    _lightCamera.setPerspective(2 * _cutOff, aspectRatio, near, far);
 }
 
 void SpotLight::updateStructCL(cl_command_queue queue, cl_mem buffer, size_t index)
@@ -55,7 +55,7 @@ void SpotLight::updateStructCL(cl_command_queue queue, cl_mem buffer, size_t ind
     clStruct.cutOffMax= _cutOff * (M_PI/180.0f);
     clStruct.cutOffMin= (_cutOff-_fadeDegrees) * (M_PI/180.0f);
 
-    clStruct.linearAtenuation= _linearAtenuation;
+    clStruct.attenuation= _atenuation;
 
     clStruct.hasShadows= _shadowMapping;
 
