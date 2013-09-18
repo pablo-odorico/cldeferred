@@ -99,7 +99,7 @@ void CLDeferred::finalizeInit()
     //spotLight2->setDiffuseColor(Qt::blue);
     scene.lightManager().addSpotLight(spotLight2);
 
-    startRenderTimer(30);
+    startRenderTimer(50);
     sceneTime.start();
     lastRenderTime= sceneTime.nsecsElapsed();
     fpsLastTime= sceneTime.nsecsElapsed();
@@ -152,7 +152,7 @@ void CLDeferred::renderGL()
     scene.camera().move((now - lastRenderTime)/1000.0f);
 
     static float a= 0;
-    a += 0.1f;
+    a += 0.05f;
     SpotLight* ssl1= scene.lightManager().spotLight(0);
     if(ssl1)
         ssl1->lookAt(QVector3D(10,10+2*sinf(a),10), QVector3D(0,0,0));
@@ -450,6 +450,8 @@ void CLDeferred::keyPressEvent(QKeyEvent *event)
     if(key == Qt::Key_K) scene.lightManager().spotLight(0)->enableShadows(false);
     if(key == Qt::Key_I) scene.lightManager().spotLight(1)->enableShadows(true);
     if(key == Qt::Key_O) scene.lightManager().spotLight(1)->enableShadows(false);
+    if(key == Qt::Key_Y) startRenderTimer(30);
+    if(key == Qt::Key_U) startRenderTimer(55);
 }
 
 void CLDeferred::saveScreenshot(QString prefix, QString ext)

@@ -119,7 +119,7 @@ void CLGLWindow::renderNow()
 
     _glContext->makeCurrent(this);
 
-    if (needsInitialize)
+    if(needsInitialize)
         initialize();
 
     if(isExposed()) {
