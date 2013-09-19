@@ -27,7 +27,7 @@ bool Exposure::init(cl_context context, cl_device_id device, QSize downSize, int
 
     // Compile kernel and set arguments
     bool ok= CLUtils::loadKernel(context, &_downKernel, device, ":/kernels/lumaDownsample.cl",
-                                 "lumaDownsample", "-Werror");
+                                 "lumaDownsample", "-D LUMA_IN_ALPHA -Werror");
     if(!ok) {
         debugWarning("Could not compile kernel.");
         return false;
