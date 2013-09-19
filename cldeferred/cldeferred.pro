@@ -37,7 +37,8 @@ SOURCES += \
     src/scene/dirlight.cpp \
     src/utils/analytics.cpp \
     src/exposurethread.cpp \
-    src/exposure.cpp
+    src/exposure.cpp \
+    src/bloom.cpp
 
 HEADERS += \
     src/fbo.h \
@@ -62,7 +63,8 @@ HEADERS += \
     res/kernels/cl_material.h \
     src/utils/analytics.h \
     src/exposurethread.h \
-    src/exposure.h
+    src/exposure.h \
+    src/bloom.h
 
 OTHER_FILES += \
     TODO.txt \
@@ -77,7 +79,8 @@ OTHER_FILES += \
     res/shaders/outputQuad.vert \
     res/kernels/fxaa.cl \
     res/kernels/depthDownsample.cl \
-    res/kernels/lumaDownsample.cl
+    res/kernels/lumaDownsample.cl \
+    res/kernels/bloomBlend.cl
 
 RESOURCES += \
     res/shaders.qrc \

@@ -5,17 +5,13 @@
 #include "cl_dirlight.h"
 #include "cl_material.h"
 
-#define GAMMA 2.2f
-
 // Image sampler
 const sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
 
-float3 toneMap(float3 inCol, float exposure, float maxLight)
+// Tone-mapping, output values over 1.0f are considered "bright" (bloom effect)
+float3 toneMap(float3 inColor, float exposure, float maxLight)
 {
-    float3 outCol;
-
-    //outCol = inCol / (inCol + 1.0f);
-    //outCol=inCol;
+    float3 outColor;
 
     float A = 0.15;
     float B = 0.50;
@@ -23,12 +19,12 @@ float3 toneMap(float3 inCol, float exposure, float maxLight)
     float D = 0.20;
     float E = 0.02;
     float F = 0.30;
-    inCol *= exposure;
-    outCol= ((inCol*(A*inCol+C*B)+D*E)/(inCol*(A*inCol+B)+D*F))-E/F;
+    inColor *= exposure;
+    outColor= ((inColor*(A*inColor+C*B)+D*E)/(inColor*(A*inColor+B)+D*F))-E/F;
 
-    outCol /= ((maxLight*(A*maxLight+C*B)+D*E)/(maxLight*(A*maxLight+B)+D*F))-E/F;
+    outColor /= ((maxLight*(A*maxLight+C*B)+D*E)/(maxLight*(A*maxLight+B)+D*F))-E/F;
 
-    return clamp(outCol, (float3)(0), (float3)(1));
+    return outColor;
 }
 
 //
@@ -42,7 +38,9 @@ void deferredPass(
     read_only  image2d_t gbNormals,
     read_only  image2d_t gbDepth,
     read_only global uchar* occlusionBuffer,
-    write_only image2d_t output,
+    // Two LINEAR output images for bloom effect
+    write_only image2d_t dstVisible,
+    write_only image2d_t dstBright,
     // Scene: Camera, Lights and Materials
     // constant cl_material* materials,
     constant cl_camera* camera,
@@ -143,17 +141,15 @@ void deferredPass(
         color += lightColor * diffuse;
     }
 
-    // Tone mapping for HDR
+    // Tone mapping for HDR, values over 1.0f are "bright"
     color= toneMap(color, exposure, maxLight);
 
-    // Gamma-correct color
-    color= native_powr(color, 1.0f/GAMMA);
-
-    // Pre-compute the NON LINEAR luma value in the Alpha Channel (for FXAA)
-    const float fxaaLuma= dot(color, (float3)(0.299f, 0.587f, 0.114f));
-
-    write_imagef(output, pos, (float4)(color, fxaaLuma));
-
+    // Extract and store LINEAR visible component
+    const float3 visibleColor= min(color, (float3)(1.0f));
+    write_imagef(dstVisible, pos, (float4)(visibleColor, 1.0f));
+    // Extract and store LINEAR bright component
+    const float3 brightColor= max(color - 1.0f, (float3)(0.0f));
+    write_imagef(dstBright, pos, (float4)(brightColor, 1.0f));
 }
 
 

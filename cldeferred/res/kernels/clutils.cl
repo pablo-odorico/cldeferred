@@ -8,6 +8,12 @@
 #define POW2(x) ((x)*(x))
 
 //
+// Global constants
+//
+
+#define GAMMA 2.2f
+
+//
 // Float to uchar occlusion packing/unpacking
 //
 

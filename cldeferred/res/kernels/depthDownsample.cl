@@ -19,5 +19,4 @@ kernel void depthDownsample(
     const float4 srcColor= read_imagef(src, sampler, srcPos);
 
     write_imagef(dst, dstPos, srcColor);
-
 }

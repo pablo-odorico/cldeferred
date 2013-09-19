@@ -47,7 +47,7 @@ bool Exposure::init(cl_context context, cl_device_id device, QSize downSize, int
     }
 
     _initialized= true;
-    return false;
+    return true;
 }
 
 void Exposure::update(cl_command_queue queue, cl_mem image)

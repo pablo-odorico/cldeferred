@@ -11,7 +11,7 @@ CLDeferred::CLDeferred()
     : CLGLWindow()
     , firstPassProgram(0), outputProgram(0)
     , fpsFrameCount(0), fpsLastTime(0)
-    , enableAA(true), dirLightAngle(90.0f)    
+    , enableAA(true), dirLightAngle(90.0f)
 {
 }
 
@@ -55,13 +55,14 @@ void CLDeferred::initializeGL()
 
 void CLDeferred::initializeCL()
 {
+    // Load deferred pass kernel
     if(!loadKernel(clCtx(), &deferredPassKernel, clDevice(),
                    ":/kernels/deferredPass.cl", "deferredPass",
                    "-I../res/kernels/ -Werror")) {
         debugFatal("Error loading kernel.");
     }
 
-    // Load the FXAA setting the pre-computed luma flag
+    // Load FXAA kernel with the pre-computed luma flag set
     if(!loadKernel(clCtx(), &fxaaKernel, clDevice(),
                    ":/kernels/fxaa.cl", "fxaa",
                    "-D FXAA_ALPHALUMA -I../res/kernels/ -Werror")) {
@@ -112,9 +113,13 @@ void CLDeferred::finalizeInit()
     lastRenderTime= sceneTime.nsecsElapsed();
     fpsLastTime= sceneTime.nsecsElapsed();
 
-    exposure.init(clCtx(), clDevice());
+    if(!exposure.init(clCtx(), clDevice()))
+        debugFatal("Could not init exposure.");
     exposure.setAdjustSpeed(3.0f / targetFPS); // Appox, works OK for 50hz
     exposure.setUpdatePeriod(2);
+
+    if(!bloom.init(clCtx(), clDevice()))
+        debugFatal("Could not init bloom.");
 }
 
 void CLDeferred::resizeGL(QSize size)
@@ -136,6 +141,11 @@ void CLDeferred::resizeGL(QSize size)
     ok= occlusionBuffer.resize(clCtx(), clDevice(), size);
     if(!ok)
         debugFatal("Error initializing occlusion buffer.");
+
+    // Resize bloom images
+    ok= bloom.resize(size);
+    if(!ok)
+        debugFatal("Could not resize bloom images.");
 
     // Resize and map Output Texture
     cl_int error;
@@ -202,8 +212,12 @@ void CLDeferred::renderGL()
     updateOcclusionBuffer();
     times << sceneTime.nsecsElapsed();
 
-    // 2nd pass
+    // Deferred
     deferredPass();
+    times << sceneTime.nsecsElapsed();
+
+    // Bloom blending
+    bloomPass();
     times << sceneTime.nsecsElapsed();
 
     // Antialiasing
@@ -221,13 +235,6 @@ void CLDeferred::renderGL()
     drawOutput();
     times << sceneTime.nsecsElapsed();
 
-    /*
-    static int frame= 0;
-    frame++;
-    if(frame==55) {
-        saveScreenshot();
-    }
-    */
 
     const qint64 fpsElapsed= now - fpsLastTime;
     if(fpsElapsed > 3e9) {
@@ -236,20 +243,22 @@ void CLDeferred::renderGL()
         const float elapsedShad= (times[i] - times[i-1]) / 1e6f; i++;
         const float elapsedAcqi= (times[i] - times[i-1]) / 1e6f; i++;
         const float elapsedOccl= (times[i] - times[i-1]) / 1e6f; i++;
-        const float elapsed2nd = (times[i] - times[i-1]) / 1e6f; i++;
+        const float elapsedDefe= (times[i] - times[i-1]) / 1e6f; i++;
+        const float elapsedBloo= (times[i] - times[i-1]) / 1e6f; i++;
         const float elapsedAA  = (times[i] - times[i-1]) / 1e6f; i++;
         const float elapsedExpo= (times[i] - times[i-1]) / 1e6f; i++;
         const float elapsedRele= (times[i] - times[i-1]) / 1e6f; i++;
         const float elapsedDraw= (times[i] - times[i-1]) / 1e6f; i++;
         const float totalTime= elapsed1st + elapsedShad + elapsedAcqi + elapsedOccl
-                + elapsed2nd + elapsedAA + elapsedExpo + elapsedRele + elapsedDraw;
+                + elapsedDefe + elapsedBloo + elapsedAA + elapsedExpo + elapsedRele
+                + elapsedDraw;
 
         qDebug(" ");
         qDebug("FPS   : %.01f Hz. (Max. %.01f Hz.)", fpsFrameCount/(fpsElapsed/1e9d), 1000/totalTime);
-        qDebug("Times : G-Buffer | Shadow   | CL Aquire | Occlusion | Deferred  | FXAA     | Exposure | CL Release | Draw quad | TOTAL");
-        qDebug("        %2.02f ms. | %2.02f ms. | %2.02f ms.  | %2.02f ms.  | %2.02f ms.  | %2.02f ms. | %2.02f ms. | %2.02f ms.   | %2.02f ms.  | %.02f ms.",
-               elapsed1st, elapsedShad, elapsedAcqi, elapsedOccl, elapsed2nd, elapsedAA, elapsedExpo,
-               elapsedRele, elapsedDraw, totalTime);
+        qDebug("Times : G-Buffer | Shadow   | CL Aquire | Occlusion | Deferred  | Bloom    | FXAA     | Exposure | CL Release | Draw quad | TOTAL");
+        qDebug("        %2.02f ms. | %2.02f ms. | %2.02f ms.  | %2.02f ms.  | %2.02f ms.  | %2.02f ms. | %2.02f ms. | %2.02f ms. | %2.02f ms.   | %2.02f ms.  | %.02f ms.",
+               elapsed1st, elapsedShad, elapsedAcqi, elapsedOccl, elapsedDefe, elapsedBloo,
+               elapsedAA, elapsedExpo, elapsedRele, elapsedDraw, totalTime);
 
         fpsLastTime= now;
         fpsFrameCount= 0;
@@ -359,34 +368,44 @@ void CLDeferred::deferredPass()
     cl_mem gbDiffuseMat= gBufferChannels[0];
     cl_mem gbNormals= gBufferChannels[1];
     cl_mem gbDepth= gBufferChannels[2];
-    cl_mem oBuffer= occlusionBuffer.buffer();
+    cl_mem occlBuffer= occlusionBuffer.buffer();
     cl_mem cameraStruct= scene.camera().structCL();
     int    spotLightCount= scene.lightManager().spotLightCount();
     cl_mem spotLightStructs= scene.lightManager().spotStructs();
     int    dirLightCount= scene.lightManager().dirLightCount();
     cl_mem dirLightStructs= scene.lightManager().dirStructs();
-    int    lightsWithShadows= scene.lightManager().lightsWithShadows();
+    int    lightsWithShadows= scene.lightManager().lightsWithShadows();   
 
     // Launch kernel
     error  = clSetKernelArg(deferredPassKernel, 0, sizeof(cl_mem), (void*)&gbDiffuseMat);
     error |= clSetKernelArg(deferredPassKernel, 1, sizeof(cl_mem), (void*)&gbNormals);
     error |= clSetKernelArg(deferredPassKernel, 2, sizeof(cl_mem), (void*)&gbDepth);
-    error |= clSetKernelArg(deferredPassKernel, 3, sizeof(cl_mem), (void*)&oBuffer);
-    error |= clSetKernelArg(deferredPassKernel, 4, sizeof(cl_mem), (void*)&outputImage);
+    error |= clSetKernelArg(deferredPassKernel, 3, sizeof(cl_mem), (void*)&occlBuffer);
+    error |= clSetKernelArg(deferredPassKernel, 4, sizeof(cl_mem), (void*)&bloom.visibleImage());
+    error |= clSetKernelArg(deferredPassKernel, 5, sizeof(cl_mem), (void*)&bloom.brightImage());
     // materials
-    error |= clSetKernelArg(deferredPassKernel, 5, sizeof(cl_mem), (void*)&cameraStruct);
-    error |= clSetKernelArg(deferredPassKernel, 6, sizeof(int),    (void*)&spotLightCount);
-    error |= clSetKernelArg(deferredPassKernel, 7, sizeof(cl_mem), (void*)&spotLightStructs);
-    error |= clSetKernelArg(deferredPassKernel, 8, sizeof(int),    (void*)&dirLightCount);
-    error |= clSetKernelArg(deferredPassKernel, 9, sizeof(cl_mem), (void*)&dirLightStructs);
-    error |= clSetKernelArg(deferredPassKernel,10, sizeof(int),    (void*)&lightsWithShadows);
+    error |= clSetKernelArg(deferredPassKernel, 6, sizeof(cl_mem), (void*)&cameraStruct);
+    error |= clSetKernelArg(deferredPassKernel, 7, sizeof(int),    (void*)&spotLightCount);
+    error |= clSetKernelArg(deferredPassKernel, 8, sizeof(cl_mem), (void*)&spotLightStructs);
+    error |= clSetKernelArg(deferredPassKernel, 9, sizeof(int),    (void*)&dirLightCount);
+    error |= clSetKernelArg(deferredPassKernel,10, sizeof(cl_mem), (void*)&dirLightStructs);
+    error |= clSetKernelArg(deferredPassKernel,11, sizeof(int),    (void*)&lightsWithShadows);
     float expo= exposure.exposure();
-    error |= clSetKernelArg(deferredPassKernel,11, sizeof(float), (void*)&expo);
+    error |= clSetKernelArg(deferredPassKernel,12, sizeof(float), (void*)&expo);
     float maxLight= 1.0f;
-    error |= clSetKernelArg(deferredPassKernel,12, sizeof(float), (void*)&maxLight);
+    error |= clSetKernelArg(deferredPassKernel,13, sizeof(float), (void*)&maxLight);
     error |= clEnqueueNDRangeKernel(clQueue(), deferredPassKernel, 2, NULL,
                                     ndRangeSize, workGroupSize, 0, NULL, NULL);
     checkCLError(error, "outputKernel");
+
+    // Sync
+    checkCLError(clFinish(clQueue()), "clFinish");
+}
+
+void CLDeferred::bloomPass()
+{
+    if(!bloom.update(clQueue(), outputImage))
+        debugFatal("Could not update bloom images.");
 
     // Sync
     checkCLError(clFinish(clQueue()), "clFinish");
@@ -435,7 +454,7 @@ void CLDeferred::drawOutput()
 
     outputProgram->release();
 }
-
+;
 
 
 //
@@ -479,10 +498,8 @@ void CLDeferred::keyPressEvent(QKeyEvent *event)
     if(key == Qt::Key_K) scene.lightManager().spotLight(0)->enableShadows(false);
     if(key == Qt::Key_I) scene.lightManager().spotLight(1)->enableShadows(true);
     if(key == Qt::Key_O) scene.lightManager().spotLight(1)->enableShadows(false);
- //   if(key == Qt::Key_Y) d=!d;
-/*    if(key == Qt::Key_U) maxLight *= 1.2f;
-    if(key == Qt::Key_Up) exposure *= 2.0f;
-    if(key == Qt::Key_Down) exposure /= 2.0f;*/
+    if(key == Qt::Key_Up) bloom.setBrightBlend(bloom.brightBlend() + 0.1f);
+    if(key == Qt::Key_Down) bloom.setBrightBlend(bloom.brightBlend() - 0.1f);
 }
 
 void CLDeferred::saveScreenshot(QString prefix, QString ext)

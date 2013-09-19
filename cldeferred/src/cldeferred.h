@@ -6,6 +6,7 @@
 #include "scene.h"
 #include "occlusionbuffer.h"
 #include "exposure.h"
+#include "bloom.h"
 
 #include <QtGui>
 
@@ -37,6 +38,7 @@ private:
     void acquireCLObjects();
     void updateOcclusionBuffer();
     void deferredPass();
+    void bloomPass();
     void antialiasPass();
     void updateExposure();
     void releaseCLObjects();
@@ -84,10 +86,11 @@ private:
     // Misc        
     bool enableAA;
     float dirLightAngle;
-
-    // HDR and exposure
-    Exposure exposure;
     QVector<cl_mem> acquiredBuffers;
+
+    // HDR, bloom and exposure
+    Exposure exposure;
+    Bloom bloom;
 };
 
 #endif // CLDEFERRED_H
