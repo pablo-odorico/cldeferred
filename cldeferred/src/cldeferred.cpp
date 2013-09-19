@@ -80,7 +80,6 @@ void CLDeferred::finalizeInit()
     dirLight->enableShadows(true);
     dirLight->setupShadowMap(clCtx(), clDevice(), QSize(512,512));
     dirLight->setParams(50, 50, 10.0f, 200.0f);
-    dirLight->setAmbientColor(QColor(30,30,30));
     dirLight->setDiffuseColor(QColor(200,200,200));
     scene.lightManager().addDirLight(dirLight);
 
@@ -89,7 +88,7 @@ void CLDeferred::finalizeInit()
     //spotLight->lookAt(QVector3D(10, 10, 10), QVector3D(0, 0, 0));
     spotLight->enableShadows(true);
     spotLight->setupShadowMap(clCtx(), clDevice(), QSize(512,512));
-    spotLight->setParams(15, 3, 0.003f, 1.0f);
+    spotLight->setParams(15, 3, 0.001f, 1.0f);
     spotLight->setDiffuseColor(QColor(200,200,200));
     scene.lightManager().addSpotLight(spotLight);
 

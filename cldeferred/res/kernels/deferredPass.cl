@@ -70,7 +70,7 @@ void deferredPass(
 
     // Load data from G-Buffer
     const float4 diffuseMat= read_imagef(gbDiffuseMat, sampler, pos);
-    const float3 diffuse= native_powr(diffuseMat.xyz, 1.0f/GAMMA);
+    const float3 diffuse= native_powr(diffuseMat.xyz, GAMMA);
 
     const uchar matId= clamp((int)(diffuseMat.w * 255.0f), 0, 255);
     cl_material mat;//= materials[matId];
@@ -150,7 +150,7 @@ void deferredPass(
     color= toneMap(color, exposure, maxLight);
 
     // Gamma-correct color
-    color= native_powr(color, GAMMA);
+    color= native_powr(color, 1.0f/GAMMA);
 
     // Pre-compute the NON LINEAR luma value in the Alpha Channel (for FXAA)
     const float fxaaLuma= dot(color, (float3)(0.299f, 0.587f, 0.114f));
