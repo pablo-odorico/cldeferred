@@ -5,6 +5,8 @@
 #include "cl_dirlight.h"
 #include "cl_material.h"
 
+#define GAMMA 2.2f
+
 // Image sampler
 const sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
 
@@ -68,7 +70,7 @@ void deferredPass(
 
     // Load data from G-Buffer
     const float4 diffuseMat= read_imagef(gbDiffuseMat, sampler, pos);
-    const float3 diffuse= diffuseMat.xyz;
+    const float3 diffuse= native_powr(diffuseMat.xyz, 1.0f/GAMMA);
 
     const uchar matId= clamp((int)(diffuseMat.w * 255.0f), 0, 255);
     cl_material mat;//= materials[matId];
@@ -96,7 +98,7 @@ void deferredPass(
         if(light.hasShadows) {
             visibility = 1.0f - unpackOcclusion(*occlusionPtr);
             occlusionPtr++;
-        }     
+        }
 
         float3 L= light.position - worldPos;
         const float dist= fast_length(L);
@@ -147,10 +149,10 @@ void deferredPass(
     // Tone mapping for HDR
     color= toneMap(color, exposure, maxLight);
 
-    color= pow(color, 2.2f);
+    // Gamma-correct color
+    color= native_powr(color, GAMMA);
 
-    // FXAA:
-    // Pre-compute and store the Luma value in the Alpha Channel
+    // Pre-compute the NON LINEAR luma value in the Alpha Channel (for FXAA)
     const float fxaaLuma= dot(color, (float3)(0.299f, 0.587f, 0.114f));
 
     write_imagef(output, pos, (float4)(color, fxaaLuma));

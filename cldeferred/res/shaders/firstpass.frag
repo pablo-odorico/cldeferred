@@ -17,8 +17,8 @@ layout (location = 1) out vec2 outNormal;     // COLOR1: Normalized normal in wo
 layout (location = 2) out float outDepth;     // COLOR2: Depth
 
 void main()
-{    
-    vec3 diffuse = pow(texture(qt_Texture0, texCoord).rgb, vec3(1/2.2,1/2.2,1/2.2));
+{
+    vec3 diffuse = texture(qt_Texture0, texCoord).rgb;
 
     outDiffuseMat.rgb = diffuse;
     outDiffuseMat.a = materialId;
