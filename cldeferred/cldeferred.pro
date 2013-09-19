@@ -35,7 +35,9 @@ SOURCES += \
     src/utils/clutils.cpp \
     src/utils/glutils.cpp \
     src/scene/dirlight.cpp \
-    src/utils/analytics.cpp
+    src/utils/analytics.cpp \
+    src/exposurethread.cpp \
+    src/exposure.cpp
 
 HEADERS += \
     src/fbo.h \
@@ -58,7 +60,9 @@ HEADERS += \
     res/kernels/cl_dirlight.h \
     src/scene/dirlight.h \
     res/kernels/cl_material.h \
-    src/utils/analytics.h
+    src/utils/analytics.h \
+    src/exposurethread.h \
+    src/exposure.h
 
 OTHER_FILES += \
     TODO.txt \
@@ -72,7 +76,8 @@ OTHER_FILES += \
     res/shaders/outputQuad.frag \
     res/shaders/outputQuad.vert \
     res/kernels/fxaa.cl \
-    res/kernels/depthDownsample.cl
+    res/kernels/depthDownsample.cl \
+    res/kernels/lumaDownsample.cl
 
 RESOURCES += \
     res/shaders.qrc \

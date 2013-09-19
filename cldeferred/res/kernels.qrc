@@ -4,5 +4,6 @@
         <file>kernels/occlusionPass.cl</file>
         <file>kernels/fxaa.cl</file>
         <file>kernels/depthDownsample.cl</file>
+        <file>kernels/lumaDownsample.cl</file>
     </qresource>
 </RCC>

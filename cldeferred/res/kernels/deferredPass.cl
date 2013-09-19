@@ -14,10 +14,8 @@ float3 toneMap(float3 inCol, float exposure, float maxLight)
 {
     float3 outCol;
 
-    //outCol = inCol;
-    //outCol *= exposure * (exposure/maxLight + 1.0f) / (exposure + 1.0f);
-
     //outCol = inCol / (inCol + 1.0f);
+    //outCol=inCol;
 
     float A = 0.15;
     float B = 0.50;
@@ -30,9 +28,7 @@ float3 toneMap(float3 inCol, float exposure, float maxLight)
 
     outCol /= ((maxLight*(A*maxLight+C*B)+D*E)/(maxLight*(A*maxLight+B)+D*F))-E/F;
 
-//    outCol=inCol;
-
-    return clamp(outCol, (float3)(0,0,0), (float3)(1,1,1));
+    return clamp(outCol, (float3)(0), (float3)(1));
 }
 
 //
@@ -74,9 +70,9 @@ void deferredPass(
 
     const uchar matId= clamp((int)(diffuseMat.w * 255.0f), 0, 255);
     cl_material mat;//= materials[matId];
-    mat.diffuse= (float3)(1,1,1);
-    mat.ambient= (float3)(1,1,1);
-    mat.specular= (float3)(1,1,1);
+    mat.diffuse= (float3)(1);
+    mat.ambient= (float3)(1);
+    mat.specular= (float3)(10);
     mat.shininess= 200;
 
     float3 normal= read_imagef(gbNormals, sampler, pos).xyz;
@@ -113,14 +109,15 @@ void deferredPass(
         const float spec= max(dot(reflect(-L, normal), V), 0.0f);
 
         const float3 lAmbient= light.ambient * mat.ambient;
-        const float3 lDiffuse= light.diffuse * mat.diffuse * diffuse * NdotL;
+        const float3 lDiffuse= light.diffuse * mat.diffuse * NdotL;
         const float3 lSpecular= light.specular * mat.specular * native_powr(spec, mat.shininess);
-
 
         const float attenuation= 1.0f / (light.attenuation * POW2(dist));
 
-        color += lAmbient;
-        color += (lSpecular + lDiffuse) * spotEffect * visibility * attenuation;
+        float3 lightColor= lAmbient;
+        lightColor += (lSpecular + lDiffuse) * spotEffect * visibility * attenuation;
+        color += lightColor * diffuse;
+
     }
 
     for(int i=0; i<dirLightCount; i++) {
@@ -139,11 +136,11 @@ void deferredPass(
         const float spec= max(dot(reflect(-L, normal), V), 0.0f);
 
         const float3 lAmbient= light.ambient * mat.ambient;
-        const float3 lDiffuse= light.diffuse * mat.diffuse * diffuse * NdotL;
+        const float3 lDiffuse= light.diffuse * mat.diffuse * NdotL;
         const float3 lSpecular= light.specular * mat.specular * native_powr(spec, mat.shininess);
 
-        color += lAmbient;
-        color += (lSpecular + lDiffuse) * visibility;
+        const float3 lightColor= lAmbient + (lSpecular + lDiffuse) * visibility;
+        color += lightColor * diffuse;
     }
 
     // Tone mapping for HDR

@@ -5,6 +5,7 @@
 #include "fbocl.h"
 #include "scene.h"
 #include "occlusionbuffer.h"
+#include "exposure.h"
 
 #include <QtGui>
 
@@ -12,7 +13,7 @@ class CLDeferred : public CLGLWindow
 {
 public:
     CLDeferred();
-    virtual ~CLDeferred() { }
+    virtual ~CLDeferred();
 
     void initializeGL();
     void initializeCL();
@@ -37,6 +38,7 @@ private:
     void updateOcclusionBuffer();
     void deferredPass();
     void antialiasPass();
+    void updateExposure();
     void releaseCLObjects();
     // Final stage (OpenGL)
     void drawOutput();
@@ -82,9 +84,9 @@ private:
     // Misc        
     bool enableAA;
     float dirLightAngle;
-    float exposure;
-    float maxLight;
 
+    // HDR and exposure
+    Exposure exposure;
     QVector<cl_mem> acquiredBuffers;
 };
 

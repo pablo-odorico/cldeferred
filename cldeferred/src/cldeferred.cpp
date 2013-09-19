@@ -11,10 +11,14 @@ CLDeferred::CLDeferred()
     : CLGLWindow()
     , firstPassProgram(0), outputProgram(0)
     , fpsFrameCount(0), fpsLastTime(0)
-    , enableAA(true), dirLightAngle(90.0f)
-    , exposure(1.0f), maxLight(1.0f)
+    , enableAA(true), dirLightAngle(90.0f)    
 {
 }
+
+CLDeferred::~CLDeferred()
+{
+}
+
 
 void CLDeferred::initializeGL()
 {
@@ -80,7 +84,8 @@ void CLDeferred::finalizeInit()
     dirLight->enableShadows(true);
     dirLight->setupShadowMap(clCtx(), clDevice(), QSize(512,512));
     dirLight->setParams(50, 50, 10.0f, 200.0f);
-    dirLight->setDiffuseColor(QColor(200,200,200));
+    //dirLight->setDiffuseColor(QColor(200,200,200));
+    dirLight->setAmbientColor(QColor(10,10,10));
     scene.lightManager().addDirLight(dirLight);
 
 
@@ -88,8 +93,8 @@ void CLDeferred::finalizeInit()
     //spotLight->lookAt(QVector3D(10, 10, 10), QVector3D(0, 0, 0));
     spotLight->enableShadows(true);
     spotLight->setupShadowMap(clCtx(), clDevice(), QSize(512,512));
-    spotLight->setParams(15, 3, 0.001f, 1.0f);
-    spotLight->setDiffuseColor(QColor(200,200,200));
+    spotLight->setParams(15, 3, 0.0015f, 1.0f);
+    //spotLight->setDiffuseColor(QColor(200,200,200));
     scene.lightManager().addSpotLight(spotLight);
 
 /*
@@ -101,11 +106,15 @@ void CLDeferred::finalizeInit()
     //spotLight2->setDiffuseColor(Qt::blue);
     scene.lightManager().addSpotLight(spotLight2);
 */
-    startRenderTimer(50);
+    const int targetFPS= 50;
+    startRenderTimer(targetFPS);
     sceneTime.start();
     lastRenderTime= sceneTime.nsecsElapsed();
     fpsLastTime= sceneTime.nsecsElapsed();
 
+    exposure.init(clCtx(), clDevice());
+    exposure.setAdjustSpeed(3.0f / targetFPS); // Appox, works OK for 50hz
+    exposure.setUpdatePeriod(2);
 }
 
 void CLDeferred::resizeGL(QSize size)
@@ -201,6 +210,10 @@ void CLDeferred::renderGL()
     antialiasPass();
     times << sceneTime.nsecsElapsed();
 
+    // Exposure compensation
+    updateExposure();
+    times << sceneTime.nsecsElapsed();
+
     releaseCLObjects();
     times << sceneTime.nsecsElapsed();
 
@@ -225,17 +238,18 @@ void CLDeferred::renderGL()
         const float elapsedOccl= (times[i] - times[i-1]) / 1e6f; i++;
         const float elapsed2nd = (times[i] - times[i-1]) / 1e6f; i++;
         const float elapsedAA  = (times[i] - times[i-1]) / 1e6f; i++;
+        const float elapsedExpo= (times[i] - times[i-1]) / 1e6f; i++;
         const float elapsedRele= (times[i] - times[i-1]) / 1e6f; i++;
         const float elapsedDraw= (times[i] - times[i-1]) / 1e6f; i++;
         const float totalTime= elapsed1st + elapsedShad + elapsedAcqi + elapsedOccl
-                + elapsed2nd + elapsedAA + elapsedRele + elapsedDraw;
+                + elapsed2nd + elapsedAA + elapsedExpo + elapsedRele + elapsedDraw;
 
         qDebug(" ");
         qDebug("FPS   : %.01f Hz. (Max. %.01f Hz.)", fpsFrameCount/(fpsElapsed/1e9d), 1000/totalTime);
-        qDebug("Times : G-Buffer | Shadow   | CL Aquire | Occlusion | Deferred  | FXAA     | CL Release | Draw quad | TOTAL");
-        qDebug("        %2.02f ms. | %2.02f ms. | %2.02f ms.  | %2.02f ms.  | %2.02f ms.  | %2.02f ms. | %2.02f ms.   | %2.02f ms.  | %.02f ms.",
-               elapsed1st, elapsedShad, elapsedAcqi, elapsedOccl, elapsed2nd, elapsedAA, elapsedRele,
-               elapsedDraw, totalTime);
+        qDebug("Times : G-Buffer | Shadow   | CL Aquire | Occlusion | Deferred  | FXAA     | Exposure | CL Release | Draw quad | TOTAL");
+        qDebug("        %2.02f ms. | %2.02f ms. | %2.02f ms.  | %2.02f ms.  | %2.02f ms.  | %2.02f ms. | %2.02f ms. | %2.02f ms.   | %2.02f ms.  | %.02f ms.",
+               elapsed1st, elapsedShad, elapsedAcqi, elapsedOccl, elapsed2nd, elapsedAA, elapsedExpo,
+               elapsedRele, elapsedDraw, totalTime);
 
         fpsLastTime= now;
         fpsFrameCount= 0;
@@ -281,6 +295,12 @@ void CLDeferred::acquireCLObjects()
 
     // Sync
     checkCLError(clFinish(clQueue()), "clFinish");
+}
+
+void CLDeferred::updateExposure()
+{
+    // Always use outputImage (AA won't afect the exposure)
+    exposure.update(clQueue(), outputImage);
 }
 
 void CLDeferred::releaseCLObjects()
@@ -360,7 +380,9 @@ void CLDeferred::deferredPass()
     error |= clSetKernelArg(deferredPassKernel, 8, sizeof(int),    (void*)&dirLightCount);
     error |= clSetKernelArg(deferredPassKernel, 9, sizeof(cl_mem), (void*)&dirLightStructs);
     error |= clSetKernelArg(deferredPassKernel,10, sizeof(int),    (void*)&lightsWithShadows);
-    error |= clSetKernelArg(deferredPassKernel,11, sizeof(float), (void*)&exposure);
+    float expo= exposure.exposure();
+    error |= clSetKernelArg(deferredPassKernel,11, sizeof(float), (void*)&expo);
+    float maxLight= 1.0f;
     error |= clSetKernelArg(deferredPassKernel,12, sizeof(float), (void*)&maxLight);
     error |= clEnqueueNDRangeKernel(clQueue(), deferredPassKernel, 2, NULL,
                                     ndRangeSize, workGroupSize, 0, NULL, NULL);
@@ -457,10 +479,10 @@ void CLDeferred::keyPressEvent(QKeyEvent *event)
     if(key == Qt::Key_K) scene.lightManager().spotLight(0)->enableShadows(false);
     if(key == Qt::Key_I) scene.lightManager().spotLight(1)->enableShadows(true);
     if(key == Qt::Key_O) scene.lightManager().spotLight(1)->enableShadows(false);
-    if(key == Qt::Key_Y) maxLight += 0.1f;
-    if(key == Qt::Key_U) maxLight -= 0.1f;
-    if(key == Qt::Key_Up) exposure += 0.2f;
-    if(key == Qt::Key_Down) exposure -= 0.2f;
+ //   if(key == Qt::Key_Y) d=!d;
+/*    if(key == Qt::Key_U) maxLight *= 1.2f;
+    if(key == Qt::Key_Up) exposure *= 2.0f;
+    if(key == Qt::Key_Down) exposure /= 2.0f;*/
 }
 
 void CLDeferred::saveScreenshot(QString prefix, QString ext)
