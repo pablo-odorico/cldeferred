@@ -19,7 +19,7 @@ public:
                 QVector<cl_mem> spotLightDepthImgs, QVector<cl_mem> dirLightDepthImgs,
                 QSize screenSize);
 
-    cl_mem buffer();
+    cl_mem& buffer();
 
     size_t bufferBytes() const {
         return _size.width() * _size.height() * (_spotLightCount + _dirLightCount);

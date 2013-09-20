@@ -124,6 +124,7 @@ bool CLUtils::checkCLErrorFunc(cl_int error, const char* msg, const char* file, 
     return true;
 }
 
+/*
 int CLUtils::roundUp(int count, int multiple)
 {
     int r = count % multiple;
@@ -132,6 +133,7 @@ int CLUtils::roundUp(int count, int multiple)
     else
         return count + multiple - r;
 }
+*/
 
 float CLUtils::eventElapsed(cl_event event)
 {

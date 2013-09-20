@@ -65,25 +65,18 @@ void Exposure::update(cl_command_queue queue, cl_mem image)
     }
     _updateCounter= 0;
 
-    // Execute kernel
-    size_t workGroupSize[2] = { 16, 16 };
-    size_t ndRangeSize[2];
-    ndRangeSize[0]= CLUtils::roundUp(_downSize.width() , workGroupSize[0]);
-    ndRangeSize[1]= CLUtils::roundUp(_downSize.height(), workGroupSize[1]);
-
-    cl_int error;
-    error  = clSetKernelArg(_downKernel, 0, sizeof(cl_mem), (void*)&image);
-    error |= clSetKernelArg(_downKernel, 1, sizeof(cl_mem), (void*)&_clLumaData);
-    error |= clSetKernelArg(_downKernel, 2, sizeof(int)   , (void*)&_downSize.rwidth());
-    error |= clSetKernelArg(_downKernel, 3, sizeof(int)   , (void*)&_downSize.rheight());
-    error |= clEnqueueNDRangeKernel(queue, _downKernel, 2, NULL, ndRangeSize, workGroupSize, 0, NULL, NULL);
-    if(checkCLError(error, "_downKernel"))
+    int ai= 0;
+    clKernelArg(_downKernel, ai++, image);
+    clKernelArg(_downKernel, ai++, _clLumaData);
+    clKernelArg(_downKernel, ai++, _downSize.rwidth());
+    clKernelArg(_downKernel, ai++, _downSize.rheight());
+    if(!clLaunchKernel(_downKernel, queue, _downSize))
         return;
 
     // Download data and wait for the execution to be done
     // This will sync the queue
-    cl_event event;
-    error= clEnqueueReadBuffer(queue, _clLumaData, CL_TRUE, 0, lumaDataBytes(), _lumaData, 0, NULL, &event);
+    cl_int error= clEnqueueReadBuffer(queue, _clLumaData, CL_TRUE, 0,
+                                      lumaDataBytes(), _lumaData, 0, NULL, NULL);
     if(checkCLError(error, "clEnqueueReadBuffer"))
         return;
 

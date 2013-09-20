@@ -1,3 +1,12 @@
+//
+// Bloom blending of the "visible" and filtered "bright" images
+//
+// Configuration defines:
+// - GAMMA_CORRECT: If set, the final tone-mapped color is gamma corrected to
+//   the define's value.
+// - LUMA_IN_ALPHA: If set, the luma of the final color is calculated and stored
+//   on the alpha channel of the image.
+
 #include "clutils.cl"
 
 kernel void bloomBlend(
@@ -23,14 +32,20 @@ kernel void bloomBlend(
     // Blend visible and bright images
     float3 color= visibleColor + brightBlend * brightColor;
 
+#ifdef GAMMA_CORRECT
     // Gamma-correct color
-    color= native_powr(color, 1.0f/GAMMA);
+    color= native_powr(color, 1.0f/GAMMA_CORRECT);
+#endif
 
     // Clamp color
     color= clamp(color, (float3)(0), (float3)(1));
 
+#ifdef LUMA_IN_ALPHA
     // Pre-compute the NON LINEAR luma value in the Alpha Channel (for FXAA)
-    const float fxaaLuma= dot(color, (float3)(0.299f, 0.587f, 0.114f));
+    const float luma= dot(color, (float3)(0.299f, 0.587f, 0.114f));
+#else
+    const float luma= 1.0f;
+#endif
 
-    write_imagef(dst, pos, (float4)(color, fxaaLuma));
+    write_imagef(dst, pos, (float4)(color, luma));
 }

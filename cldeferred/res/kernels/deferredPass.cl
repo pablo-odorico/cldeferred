@@ -1,3 +1,11 @@
+//
+// Deferred rendering pass
+//
+// Configuration defines:
+// - GAMMA_CORRECT: If set, the diffuse value of the textures is gamma corrected
+//   to the define's value.
+
+
 #include "clutils.cl"
 
 #include "cl_camera.h"
@@ -51,7 +59,7 @@ void deferredPass(
     int lightsWithShadows,
     // HDR
     float exposure,
-    float maxLight
+    float brightThres
 )
 {
     // Get global position
@@ -64,7 +72,11 @@ void deferredPass(
 
     // Load data from G-Buffer
     const float4 diffuseMat= read_imagef(gbDiffuseMat, sampler, pos);
-    const float3 diffuse= native_powr(diffuseMat.xyz, GAMMA);
+#ifdef GAMMA_CORRECT
+    const float3 diffuse= native_powr(diffuseMat.xyz, GAMMA_CORRECT);
+#else
+    const float3 diffuse= diffuseMat.xyz;
+#endif
 
     const uchar matId= clamp((int)(diffuseMat.w * 255.0f), 0, 255);
     cl_material mat;//= materials[matId];
@@ -142,7 +154,7 @@ void deferredPass(
     }
 
     // Tone mapping for HDR, values over 1.0f are "bright"
-    color= toneMap(color, exposure, maxLight);
+    color= toneMap(color, exposure, brightThres);
 
     // Extract and store LINEAR visible component
     const float3 visibleColor= min(color, (float3)(1.0f));

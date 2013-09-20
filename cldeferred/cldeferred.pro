@@ -14,7 +14,7 @@ RCC_DIR = obj
 
 LIBS += -lGLU -lGLEW -lOpenCL -lQt53D
 
-INCLUDEPATH += src/ src/scene/ src/utils/
+INCLUDEPATH += src/ src/scene/ src/stages/ src/utils/
 # Include path for shared kernel structs
 INCLUDEPATH += res/kernels/
 
@@ -24,7 +24,6 @@ SOURCES += \
     src/clglwindow.cpp \
     src/cldeferred.cpp \
     src/fbocl.cpp \
-    src/occlusionbuffer.cpp \
     src/scene/camera.cpp \
     src/scene/cameracl.cpp \
     src/utils/debug.cpp \
@@ -36,9 +35,10 @@ SOURCES += \
     src/utils/glutils.cpp \
     src/scene/dirlight.cpp \
     src/utils/analytics.cpp \
-    src/exposurethread.cpp \
-    src/exposure.cpp \
-    src/bloom.cpp
+    src/stages/bloom.cpp \
+    src/stages/exposure.cpp \
+    src/stages/exposurethread.cpp \
+    src/stages/occlusionbuffer.cpp
 
 HEADERS += \
     src/fbo.h \
@@ -48,7 +48,6 @@ HEADERS += \
     res/kernels/cltypes.h \
     res/kernels/cl_camera.h \
     res/kernels/cl_spotlight.h \
-    src/occlusionbuffer.h \
     src/scene/camera.h \
     src/scene/cameracl.h \
     src/utils/debug.h \
@@ -62,9 +61,10 @@ HEADERS += \
     src/scene/dirlight.h \
     res/kernels/cl_material.h \
     src/utils/analytics.h \
-    src/exposurethread.h \
-    src/exposure.h \
-    src/bloom.h
+    src/stages/bloom.h \
+    src/stages/exposure.h \
+    src/stages/exposurethread.h \
+    src/stages/occlusionbuffer.h
 
 OTHER_FILES += \
     TODO.txt \
@@ -78,9 +78,9 @@ OTHER_FILES += \
     res/shaders/outputQuad.frag \
     res/shaders/outputQuad.vert \
     res/kernels/fxaa.cl \
-    res/kernels/depthDownsample.cl \
     res/kernels/lumaDownsample.cl \
-    res/kernels/bloomBlend.cl
+    res/kernels/bloomBlend.cl \
+    res/kernels/downHalfFilter.cl
 
 RESOURCES += \
     res/shaders.qrc \

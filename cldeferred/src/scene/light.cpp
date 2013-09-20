@@ -42,7 +42,7 @@ bool Light::setupShadowMap(cl_context context, cl_device_id device, QSize shadow
     static cl_kernel kernel= 0;
     if(!kernel) {
         if(!CLUtils::loadKernel(context, &kernel, device,
-                       ":/kernels/depthDownsample.cl", "depthDownsample",
+                       ":/kernels/downHalfFilter.cl", "downHalfFilter",
                        "-I../res/kernels/ -Werror")) {
             debugFatal("Error loading kernel.");
             return false;
@@ -88,20 +88,10 @@ bool Light::updateShadowMap(const Scene& scene, cl_command_queue queue)
         return false;
 
     cl_mem depthImage= _depthFbo.colorBuffers().at(0);
-    cl_int error;
 
-
-    size_t workGroupSize[2] = { 16, 16 };
-    size_t ndRangeSize[2];
-    ndRangeSize[0]= CLUtils::roundUp(_depthFbo.width() , workGroupSize[0]);
-    ndRangeSize[1]= CLUtils::roundUp(_depthFbo.height(), workGroupSize[1]);
-
-
-    error  = clSetKernelArg(_downsampleKernel, 0, sizeof(cl_mem), (void*)&depthImage);
-    error |= clSetKernelArg(_downsampleKernel, 1, sizeof(cl_mem), (void*)&_filteredDepth);
-    error |= clEnqueueNDRangeKernel(queue, _downsampleKernel, 2, NULL,
-                                    ndRangeSize, workGroupSize, 0, NULL, NULL);
-    if(checkCLError(error, "Downsample kernel"))
+    clKernelArg(_downsampleKernel, 0, depthImage);
+    clKernelArg(_downsampleKernel, 1, _filteredDepth);
+    if(!clLaunchKernel(_downsampleKernel, queue, _depthFbo.size()))
         return false;
 
     if(!_depthFbo.releaseColorBuffers(queue))

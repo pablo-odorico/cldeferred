@@ -3,8 +3,8 @@
         <file>kernels/deferredPass.cl</file>
         <file>kernels/occlusionPass.cl</file>
         <file>kernels/fxaa.cl</file>
-        <file>kernels/depthDownsample.cl</file>
         <file>kernels/lumaDownsample.cl</file>
         <file>kernels/bloomBlend.cl</file>
+        <file>kernels/downHalfFilter.cl</file>
     </qresource>
 </RCC>

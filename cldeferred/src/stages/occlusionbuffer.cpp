@@ -105,40 +105,23 @@ bool OcclusionBuffer::update(cl_command_queue queue,
         return false;
     }
 
-    cl_int error;
+    // Set kernel args and launch it
+    int ai= 0;
+    clKernelArg(_kernel, ai++, cameraStruct);
+    clKernelArg(_kernel, ai++, cameraDepthImg);
+    clKernelArg(_kernel, ai++, lightsWithShadows);
+    clKernelArg(_kernel, ai++, spotLightStructs);
+    clKernelArg(_kernel, ai++, dirLightStructs);
+    for(int i=0; i<_spotLightCount; i++)
+        clKernelArg(_kernel, ai++, spotLightDepthImgs[i]);
+    for(int i=0; i<_dirLightCount; i++)
+        clKernelArg(_kernel, ai++, dirLightDepthImgs[i]);
+    clKernelArg(_kernel, ai++, _buffer);
 
-    // Work group and NDRange
-    size_t workGroupSize[2] = { 16, 16 };
-    size_t ndRangeSize[2];
-    ndRangeSize[0]= CLUtils::roundUp(screenSize.width() , workGroupSize[0]);
-    ndRangeSize[1]= CLUtils::roundUp(screenSize.height(), workGroupSize[1]);
-
-    // Set kernel parameters
-    error  = clSetKernelArg(_kernel, 0, sizeof(cl_mem), (void*)&cameraStruct);
-    error |= clSetKernelArg(_kernel, 1, sizeof(cl_mem), (void*)&cameraDepthImg);
-    error |= clSetKernelArg(_kernel, 2, sizeof(int)   , (void*)&lightsWithShadows);
-    error |= clSetKernelArg(_kernel, 3, sizeof(cl_mem), (void*)&spotLightStructs);
-    error |= clSetKernelArg(_kernel, 4, sizeof(cl_mem), (void*)&dirLightStructs);
-    uint argIndex= 5;
-    for(int i=0; i<_spotLightCount; i++) {
-        error |= clSetKernelArg(_kernel, argIndex, sizeof(cl_mem), (void*)&spotLightDepthImgs[i]);
-        argIndex++;
-    }
-    for(int i=0; i<_dirLightCount; i++) {
-        error |= clSetKernelArg(_kernel, argIndex, sizeof(cl_mem), (void*)&dirLightDepthImgs[i]);
-        argIndex++;
-    }
-    error |= clSetKernelArg(_kernel, argIndex, sizeof(cl_mem), (void*)&_buffer);
-
-    // Launch kernel
-    error |= clEnqueueNDRangeKernel(queue, _kernel, 2, NULL, ndRangeSize, workGroupSize, 0, NULL, NULL);
-    if(checkCLError(error, "OcclusionBuffer kernel"))
-        return false;
-
-    return true;
+    return clLaunchKernel(_kernel, queue, screenSize);
 }
 
-cl_mem OcclusionBuffer::buffer()
+cl_mem &OcclusionBuffer::buffer()
 {
     assert(_initialized);
     assert(_lastBufferBytes);

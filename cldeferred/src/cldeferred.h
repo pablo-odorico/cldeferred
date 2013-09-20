@@ -50,7 +50,7 @@ private:
     // Light occlusion buffer, used to calculate shadows
     OcclusionBuffer occlusionBuffer;
     // CL Kernel for the 2nd pass
-    cl_kernel deferredPassKernel;
+    cl_kernel deferredKernel;
     // CL Kernel for antialiasing the output texture
     cl_kernel fxaaKernel;
     // GL Program used to render outputTex

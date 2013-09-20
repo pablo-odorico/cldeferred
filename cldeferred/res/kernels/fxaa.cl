@@ -4,6 +4,9 @@
 // OpenCL adaptation by Pablo Odorico <pablo.odorico@gmail.com>
 // September 2013
 //
+// Configuration defines:
+// - LUMA_IN_ALPHA: If set, the luma of the sampled colors is read from the alpha
+//   channel, otherwise it is calculated from the sample's RGB channels.
 
 //
 // Quality controls set to the default parameters
@@ -29,7 +32,7 @@ inline
 float luma(float4 sample)
 {
 // If luma is precomputed in sample.w return it, else compute it
-#ifdef FXAA_ALPHALUMA
+#ifdef LUMA_IN_ALPHA
     return sample.w;
 #else
     return dot(sample.xyz, (float3)(0.299f, 0.587f, 0.114f));

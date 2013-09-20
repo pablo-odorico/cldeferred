@@ -1,4 +1,9 @@
-kernel void depthDownsample(
+//
+// Downsamples src image into dst which should be exactly half the size of src
+// Each dst pixel is set to the average of four src texles
+//
+
+kernel void downHalfFilter(
     read_only  image2d_t src,
     write_only image2d_t dst
 ) {
