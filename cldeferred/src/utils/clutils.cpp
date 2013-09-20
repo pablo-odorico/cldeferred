@@ -19,14 +19,6 @@ bool CLUtils::setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_dev
     if(checkCLError(clError, "clGetPlatformIDs"))
         return false;
 
-    // Select default GPU
-    cl_device_id devs[2];
-    clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 2, devs, NULL);
-    device= devs[1];
-//    clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-    if(checkCLError(clError, "clGetDeviceIDs"))
-        return false;
-
     // Create context with OpenGL support
     cl_context_properties props[] =  {
         CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
@@ -34,8 +26,13 @@ bool CLUtils::setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_dev
         CL_CONTEXT_PLATFORM, (cl_context_properties)platform,
         0
     };
-    context= clCreateContext(props, 1, &device, NULL, NULL, &clError);
 
+    clError= clGetGLContextInfoKHR(props, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR,
+                                 sizeof(device), &device, NULL);
+    if(checkCLError(clError, "clGetGLContextInfoKHR"))
+        return false;
+
+    context= clCreateContext(props, 1, &device, NULL, NULL, &clError);
     if(checkCLError(clError, "clCreateContext"))
         return false;
 
@@ -211,7 +208,7 @@ bool CLUtils::loadKernel(cl_context context, cl_kernel* kernel,
     NULL, NULL);
     checkProgramBuild(program, device);
 */
-    if(checkCLError(error, "loadKernel: clBuildProgram")) {        
+    if(checkCLError(error, "loadKernel: clBuildProgram")) {
         checkProgramBuild(program, device);
         return false;
     }
