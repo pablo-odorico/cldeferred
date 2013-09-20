@@ -13,7 +13,10 @@ kernel void bloomBlend(
     // All images must be the same size
     // LINEAR Visible and filtered bright bloom images
     read_only  image2d_t srcVisible,
-    read_only  image2d_t srcBright,
+    read_only  image2d_t srcBright0,
+    read_only  image2d_t srcBright1,
+    read_only  image2d_t srcBright2,
+    read_only  image2d_t srcBright3,
     // Gamma-corrected blended output (can be 8 bits)
     write_only image2d_t dst,
     float brightBlend
@@ -25,12 +28,33 @@ kernel void bloomBlend(
         return;
 
     const sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
+    const float2 normPos= (float2)((float)pos.x/size.x, (float)pos.y/size.y);
 
     const float3 visibleColor= read_image3f(srcVisible, sampler, pos);
-    const float3 brightColor = read_image3f(srcBright , sampler, pos);
 
+
+    const sampler_t sampler2= CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
+
+    float3 brightColor= (float3)(0);
+
+#define RAD 20
+/*
+    for(int y=-RAD; y<=RAD; y+=2)
+    for(int x=-RAD; x<=RAD; x+=2)
+    {
+        const float w= 1.0f - sqrt(POW2(x/(float)RAD)+POW2(y/(float)RAD));
+        brightColor += max(w,0.0f) * read_image3f(srcBright0, sampler, pos+(int2)(x,y));
+    }
+    brightColor /= (RAD*2 + 1)*(RAD*2 + 1);
+*/
+    brightColor += read_image3f(srcBright0, sampler2, normPos);
+/*    brightColor += read_image3f(srcBright1, sampler2, normPos);
+    brightColor += read_image3f(srcBright2, sampler2, normPos);
+    brightColor += read_image3f(srcBright3, sampler2, normPos);
+    brightColor /= 4.0f;
+*/
     // Blend visible and bright images
-    float3 color= visibleColor + brightBlend * brightColor;
+    float3 color= visibleColor+ brightBlend * brightColor;
 
 #ifdef GAMMA_CORRECT
     // Gamma-correct color

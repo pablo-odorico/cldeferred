@@ -30,6 +30,7 @@ float3 toneMap(float3 inColor, float exposure, float maxLight)
     inColor *= exposure;
     outColor= ((inColor*(A*inColor+C*B)+D*E)/(inColor*(A*inColor+B)+D*F))-E/F;
 
+    //maxLight *= exposure;
     outColor /= ((maxLight*(A*maxLight+C*B)+D*E)/(maxLight*(A*maxLight+B)+D*F))-E/F;
 
     return outColor;
@@ -159,6 +160,7 @@ void deferredPass(
     // Extract and store LINEAR visible component
     const float3 visibleColor= min(color, (float3)(1.0f));
     write_imagef(dstVisible, pos, (float4)(visibleColor, 1.0f));
+
     // Extract and store LINEAR bright component
     const float3 brightColor= max(color - 1.0f, (float3)(0.0f));
     write_imagef(dstBright, pos, (float4)(brightColor, 1.0f));

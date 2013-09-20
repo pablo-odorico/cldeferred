@@ -14,11 +14,12 @@ kernel void lumaDownsample(
     const sampler_t sampler= CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
     const float4 srcColor= read_imagef(src, sampler, srcNormPos);
 
-#ifdef LUMA_IN_ALPHA
-    const float luma= srcColor.w;
-#else
-    const float luma= dot(srcColor.xyz, (float3)(0.299f, 0.587f, 0.114f));
-#endif
+
+//#ifdef LUMA_IN_ALPHA
+//    const float luma= srcColor.w;
+//#else
+    const float luma= pow(dot(srcColor.xyz, (float3)(0.299f, 0.587f, 0.114f)),1.0/2.2f);
+//#endif
 
     dst[dstPos.x + dstPos.y * dstWidth]= clamp((int)(luma * 255.0f), 0, 255);
 }

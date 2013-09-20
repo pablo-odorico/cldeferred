@@ -36,6 +36,7 @@ private:
     cl_context _context;
     cl_kernel _blendKernel;
     cl_kernel _downKernel;
+    cl_kernel _upKernel;
 
     // Visible image (linear color values below _brightThres)
     cl_mem _visibleImage;
@@ -47,7 +48,7 @@ private:
     QSize brightSize(int level);
 
     // Number of bright images (_brightLevels-1 downsamples)
-    static const int _brightLevels= 4;
+    static const int _brightLevels= 3;
 };
 
 #endif // BLOOM_H

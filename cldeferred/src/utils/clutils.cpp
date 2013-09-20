@@ -27,9 +27,19 @@ bool CLUtils::setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_dev
         0
     };
 
+/*
     clError= clGetGLContextInfoKHR(props, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR,
                                  sizeof(device), &device, NULL);
     if(checkCLError(clError, "clGetGLContextInfoKHR"))
+        return false;
+*/
+
+    // Select default GPU
+    cl_device_id devs[2];
+    clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 2, devs, NULL);
+    device= devs[1];
+//    clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
+    if(checkCLError(clError, "clGetDeviceIDs"))
         return false;
 
     context= clCreateContext(props, 1, &device, NULL, NULL, &clError);

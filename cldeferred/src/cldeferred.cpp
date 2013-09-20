@@ -309,7 +309,7 @@ void CLDeferred::acquireCLObjects()
 void CLDeferred::updateExposure()
 {
     // Always use outputImage (AA won't afect the exposure)
-    exposure.update(clQueue(), outputImage);
+    exposure.update(clQueue(), bloom.visibleImage());//outputImage);
 }
 
 void CLDeferred::releaseCLObjects()
@@ -480,6 +480,9 @@ void CLDeferred::keyPressEvent(QKeyEvent *event)
     if(key == Qt::Key_O) scene.lightManager().spotLight(1)->enableShadows(false);
     if(key == Qt::Key_Up) bloom.setBrightThreshold(bloom.brightThreshold() + 0.1f);
     if(key == Qt::Key_Down) bloom.setBrightThreshold(bloom.brightThreshold() - 0.1f);
+    if(key == Qt::Key_T) bloom.setBrightBlend(bloom.brightBlend() + 0.1f);
+    if(key == Qt::Key_G) bloom.setBrightBlend(bloom.brightBlend() - 0.1f);
+
 }
 
 void CLDeferred::saveScreenshot(QString prefix, QString ext)

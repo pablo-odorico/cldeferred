@@ -3,7 +3,7 @@
 
 Bloom::Bloom() :
     _initialized(false), _visibleImage(0),
-    _brightBlend(0.5f), _brightThres(1.0f)
+    _brightBlend(1.0f), _brightThres(0.5f)
 {
 }
 
@@ -21,11 +21,17 @@ bool Bloom::init(cl_context context, cl_device_id device)
     if(!ok)
         return false;
 
-
     // Load the downsample kernel
     ok= CLUtils::loadKernel(_context, &_downKernel, device,
             ":/kernels/downHalfFilter.cl", "downHalfFilter",
-            "-Werror");
+            "-D RAD=2 -Werror");
+    if(!ok)
+        return false;
+
+    ok= CLUtils::loadKernel(_context, &_upKernel, device,
+            ":/kernels/downHalfFilter.cl", "downHalfFilter",
+            "-D RAD=0 -Werror");
+
 
     _initialized= ok;
     return ok;
@@ -66,17 +72,57 @@ bool Bloom::update(cl_command_queue queue, cl_mem outputImage)
 {
     assert(_initialized);
 
+    // Downsample the brightImage
+    for(int i=0; i<_brightLevels-1; i++) {
+        const QSize size1= brightSize(i);
+        const QSize size2= brightSize(i+1);
+        cl_int2 srcSize= { size1.width(), size1.height() };
+        cl_int2 dstSize= { size2.width(), size2.height() };
+        int ai= 0;
+        //clKernelArg(_downKernel, ai++, srcSize);
+        //clKernelArg(_downKernel, ai++, dstSize);
+        clKernelArg(_downKernel, ai++, _brightImages[i]);
+        clKernelArg(_downKernel, ai++, _brightImages[i+1]);
+        if(!clLaunchKernel(_downKernel, queue, size2))
+            return false;
+    }
+
+    for(int i=_brightLevels-1; i>0; i--) {
+        const QSize size1= brightSize(i);
+        const QSize size2= brightSize(i-1);
+        cl_int2 srcSize= { size1.width(), size1.height() };
+        cl_int2 dstSize= { size2.width(), size2.height() };
+        int ai= 0;
+        //clKernelArg(_downKernel, ai++, srcSize);
+        //clKernelArg(_downKernel, ai++, dstSize);
+        clKernelArg(_upKernel, ai++, _brightImages[i]);
+        clKernelArg(_upKernel, ai++, _brightImages[i-1]);
+        if(!clLaunchKernel(_upKernel, queue, size2))
+            return false;
+    }
+
+    //assert(_brightLevels == 4);
+
     int ai= 0;
     clKernelArg(_blendKernel, ai++, _visibleImage);
     clKernelArg(_blendKernel, ai++, _brightImages[0]);
+    clKernelArg(_blendKernel, ai++, _brightImages[1]);
+    clKernelArg(_blendKernel, ai++, _brightImages[2]);
+    clKernelArg(_blendKernel, ai++, _brightImages[2]);
     clKernelArg(_blendKernel, ai++, outputImage);
     clKernelArg(_blendKernel, ai++, _brightBlend);
     return clLaunchKernel(_blendKernel, queue, _size);
+
 }
 
 QSize Bloom::brightSize(int level)
 {
     assert(level <= _brightLevels);
-    const QSize baseSize= CLUtils::roundUp(_size, 1 << _brightLevels);
+
+    // The first level will have the same size as the visibleImage
+    if(!level)
+        return _size;
+
+    const QSize baseSize= CLUtils::roundUp(_size, 1 << (_brightLevels-1));
     return baseSize / (1 << level);
 }
