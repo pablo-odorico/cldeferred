@@ -1,4 +1,4 @@
-// This classed is based on GPL code by Qt
+// This classe is based on GPL code by Qt
 
 #ifndef CLGLWINDOW_H
 #define CLGLWINDOW_H

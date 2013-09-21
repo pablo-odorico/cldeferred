@@ -54,5 +54,5 @@ void DirLight::updateStructCL(cl_command_queue queue, cl_mem buffer, size_t inde
     cl_int error;
     error= clEnqueueWriteBuffer(queue, buffer, CL_FALSE, index * sizeof(cl_dirlight),
                                 sizeof(cl_dirlight), &clStruct, 0, NULL, NULL);
-    checkCLError(error, "clEnqueueWriteBuffer");
+    clCheckError(error, "clEnqueueWriteBuffer");
 }

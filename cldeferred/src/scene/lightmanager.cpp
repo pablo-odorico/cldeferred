@@ -18,12 +18,12 @@ bool LightManager::init(cl_context context)
 
     const size_t spotStructsSize= maxLights * sizeof(cl_spotlight);    
     _spotStructs= clCreateBuffer(context, CL_MEM_READ_ONLY, spotStructsSize, NULL, &error);
-    if(checkCLError(error, "clCreateBuffer spotLights"))
+    if(clCheckError(error, "clCreateBuffer spotLights"))
         return false;
 
     const size_t dirStructsSize= maxLights * sizeof(cl_dirlight);
     _dirStructs= clCreateBuffer(context, CL_MEM_READ_ONLY, dirStructsSize, NULL, &error);
-    if(checkCLError(error, "clCreateBuffer dirLights"))
+    if(clCheckError(error, "clCreateBuffer dirLights"))
         return false;
 
     _initialized= true;

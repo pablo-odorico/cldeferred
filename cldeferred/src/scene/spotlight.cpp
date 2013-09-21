@@ -62,5 +62,5 @@ void SpotLight::updateStructCL(cl_command_queue queue, cl_mem buffer, size_t ind
     cl_int error;
     error= clEnqueueWriteBuffer(queue, buffer, CL_FALSE, index * sizeof(cl_spotlight),
                                 sizeof(cl_spotlight), &clStruct, 0, NULL, NULL);
-    checkCLError(error, "clEnqueueWriteBuffer");
+    clCheckError(error, "clEnqueueWriteBuffer");
 }

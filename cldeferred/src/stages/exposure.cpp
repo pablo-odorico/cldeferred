@@ -26,9 +26,11 @@ bool Exposure::init(cl_context context, cl_device_id device, QSize downSize, int
     _downSize= downSize;
 
     // Compile kernel and set arguments
-    bool ok= CLUtils::loadKernel(context, &_downKernel, device, ":/kernels/lumaDownsample.cl",
-                                 "lumaDownsample", "-D LUMA_IN_ALPHA -Werror");
-    if(!ok) {
+    CLUtils::KernelDefines downDefines;
+    downDefines["LUMA_IN_ALPHA"]= "1";
+    _downKernel= CLUtils::loadKernelPath(context, device, ":/kernels/lumaDownsample.cl",
+            "lumaDownsample", downDefines);
+    if(!_downKernel) {
         debugWarning("Could not compile kernel.");
         return false;
     }
@@ -41,7 +43,7 @@ bool Exposure::init(cl_context context, cl_device_id device, QSize downSize, int
 
     cl_int error;
     _clLumaData= clCreateBuffer(context, CL_MEM_WRITE_ONLY, lumaDataBytes(), NULL, &error);
-    if(checkCLError(error, "clCreateBuffer")) {
+    if(clCheckError(error, "clCreateBuffer")) {
         free(_lumaData);
         return false;
     }
@@ -77,7 +79,7 @@ void Exposure::update(cl_command_queue queue, cl_mem image)
     // This will sync the queue
     cl_int error= clEnqueueReadBuffer(queue, _clLumaData, CL_TRUE, 0,
                                       lumaDataBytes(), _lumaData, 0, NULL, NULL);
-    if(checkCLError(error, "clEnqueueReadBuffer"))
+    if(clCheckError(error, "clEnqueueReadBuffer"))
         return;
 
     // Enqueue update

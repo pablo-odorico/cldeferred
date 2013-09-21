@@ -37,7 +37,7 @@ void CLGLWindow::initialize()
     _glPainter->setStandardEffect(QGL::LitModulateTexture2D);
 
     // OpenCL init
-    bool ok= setupOpenCLGL(_clContext, _clQueue, _clDevice);
+    bool ok= setupOpenCLGL(&_clContext, &_clQueue, &_clDevice);
     if(!ok) {
         qWarning() << "Could not initialize OpenCL";
         exit(EXIT_FAILURE);

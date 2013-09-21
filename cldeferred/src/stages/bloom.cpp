@@ -12,29 +12,34 @@ bool Bloom::init(cl_context context, cl_device_id device)
     assert(!_initialized);
 
     _context= context;
-    bool ok;
 
-    // Load the bloom blend kernel    
-    ok= CLUtils::loadKernel(_context, &_blendKernel, device,
-           ":/kernels/bloomBlend.cl", "bloomBlend",
-            "-D GAMMA_CORRECT=2.2f -D LUMA_IN_ALPHA -I../res/kernels/ -Werror");
-    if(!ok)
+    // Load the bloom blend kernel
+    CLUtils::KernelDefines blendDefines;
+    blendDefines["GAMMA_CORRECT"]= "2.2f";
+    blendDefines["LUMA_IN_ALPHA"]= "1";
+    _blendKernel= CLUtils::loadKernelPath(_context, device, ":/kernels/bloomBlend.cl",
+            "bloomBlend", blendDefines, QStringList("../res/kernels/"));
+    if(!_blendKernel)
         return false;
 
     // Load the downsample kernel
-    ok= CLUtils::loadKernel(_context, &_downKernel, device,
-            ":/kernels/downHalfFilter.cl", "downHalfFilter",
-            "-D RAD=2 -Werror");
-    if(!ok)
+    CLUtils::KernelDefines downDefines;
+    downDefines["RAD"]= "2";
+    _downKernel= CLUtils::loadKernelPath(_context, device, ":/kernels/downHalfFilter.cl",
+            "downHalfFilter", downDefines);
+    if(!_downKernel)
         return false;
 
-    ok= CLUtils::loadKernel(_context, &_upKernel, device,
-            ":/kernels/downHalfFilter.cl", "downHalfFilter",
-            "-D RAD=0 -Werror");
+    // Load the upsample kernel
+    CLUtils::KernelDefines upDefines;
+    upDefines["RAD"]= "0";
+    _upKernel= CLUtils::loadKernelPath(_context, device, ":/kernels/downHalfFilter.cl",
+            "downHalfFilter", upDefines);
+    if(!_upKernel)
+        return false;
 
-
-    _initialized= ok;
-    return ok;
+    _initialized= true;
+    return true;
 }
 
 bool Bloom::resize(QSize size)
@@ -43,25 +48,25 @@ bool Bloom::resize(QSize size)
     _size= size;
 
     cl_int error;
-    cl_image_format bloomFormat;
-    CLUtils::gl2clFormat(GL_RGBA16F, bloomFormat);
+    cl_image_format bloomFormat= CLUtils::gl2clFormat(GL_RGBA16F);
 
+    // Create/resize the visible image
     if(_visibleImage)
-        checkCLError(clReleaseMemObject(_visibleImage), "clReleaseMemObject");
+        clCheckError(clReleaseMemObject(_visibleImage), "clReleaseMemObject");
     _visibleImage= clCreateImage2D(_context, CL_MEM_READ_WRITE, &bloomFormat,
                                    size.width(), size.height(), 0, 0, &error);
-    if(checkCLError(error, "clCreateImage2D"))
+    if(clCheckError(error, "clCreateImage2D"))
         return false;
 
-
+    // Create/resize the bright image and it's downsamples
     foreach(cl_mem mem, _brightImages)
-        checkCLError(clReleaseMemObject(mem), "clReleaseMemObject");
+        clCheckError(clReleaseMemObject(mem), "clReleaseMemObject");
     _brightImages.resize(_brightLevels);
 
     for(int i=0; i<_brightLevels; i++) {
         _brightImages[i]= clCreateImage2D(_context, CL_MEM_READ_WRITE, &bloomFormat,
             brightSize(i).width(), brightSize(i).height(), 0, 0, &error);
-        if(checkCLError(error, "clCreateImage2D"))
+        if(clCheckError(error, "clCreateImage2D"))
             return false;
     }
 

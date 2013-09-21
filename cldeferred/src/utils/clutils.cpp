@@ -1,22 +1,17 @@
 #include "clutils.h"
-
-#include <iostream>
-#include <fstream>
 #include "debug.h"
 
 // X11 OpenGL functions
 #include <GL/glx.h>
 
-using namespace std;
-
-bool CLUtils::setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_device_id &device)
+bool CLUtils::setupOpenCLGL(cl_context* context, cl_command_queue* queue, cl_device_id* device)
 {
-    cl_int clError;
+    cl_int error;
 
     // Get platform info
     cl_platform_id platform;
-    clError= clGetPlatformIDs(1, &platform, NULL);
-    if(checkCLError(clError, "clGetPlatformIDs"))
+    error= clGetPlatformIDs(1, &platform, NULL);
+    if(clCheckError(error, "clGetPlatformIDs"))
         return false;
 
     // Create context with OpenGL support
@@ -27,37 +22,210 @@ bool CLUtils::setupOpenCLGL(cl_context& context, cl_command_queue& queue, cl_dev
         0
     };
 
-/*
-    clError= clGetGLContextInfoKHR(props, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR,
-                                 sizeof(device), &device, NULL);
-    if(checkCLError(clError, "clGetGLContextInfoKHR"))
+    error= clGetGLContextInfoKHR(props, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR,
+                                 sizeof(*device), device, NULL);
+    if(clCheckError(error, "clGetGLContextInfoKHR"))
         return false;
-*/
 
+/*
     // Select default GPU
     cl_device_id devs[2];
-    clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 2, devs, NULL);
-    device= devs[1];
+    error= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 2, devs, NULL);
+    *device= devs[1];
 //    clError= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
-    if(checkCLError(clError, "clGetDeviceIDs"))
+    if(checkCLError(error, "clGetDeviceIDs"))
         return false;
-
-    context= clCreateContext(props, 1, &device, NULL, NULL, &clError);
-    if(checkCLError(clError, "clCreateContext"))
+*/
+    *context= clCreateContext(props, 1, device, NULL, NULL, &error);
+    if(clCheckError(error, "clCreateContext"))
         return false;
 
     // Create command queue for the selected GPU
-    queue= clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &clError);
-    if(checkCLError(clError, "clCreateCommandQueue"))
+    *queue= clCreateCommandQueue(*context, *device, CL_QUEUE_PROFILING_ENABLE, &error);
+    if(clCheckError(error, "clCreateCommandQueue"))
         return false;
 
     return true;
 }
 
-const char* CLUtils::clErrorToString(cl_int err)
+
+cl_kernel CLUtils::loadKernelPath(
+    cl_context context, cl_device_id device, QString programPath, QString kernelName,
+    CLUtils::KernelDefines defines, QStringList includePaths, QString compileOptions)
+{
+    QFile file(programPath);
+    if(!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        debugWarning("Could not open path %s.", qPrintable(programPath));
+        return 0;
+    }
+    const QByteArray programText= file.readAll();
+    return loadKernelText(context, device, programText, kernelName, defines,
+                          includePaths, compileOptions);
+}
+
+cl_kernel CLUtils::loadKernelText(
+    cl_context context, cl_device_id device, QByteArray programText, QString kernelName,
+    CLUtils::KernelDefines defines, QStringList includePaths, QString compileOptions)
+{
+    cl_int error;
+
+    // Create program
+    char* programData= programText.data();
+    size_t programLenght= programText.length();
+    cl_program program;
+    program= clCreateProgramWithSource(context, 1, (const char **)&programData,
+                                       (const size_t *)&programLenght, &error);
+    if(clCheckError(error, "Create program for kernel " + kernelName))
+        return 0;
+
+    // Build compile options
+    compileOptions += " -Werror";
+    foreach(QString path, includePaths)
+        compileOptions += " -I" + path;
+    QMapIterator<QString,QString> i(defines);
+    while(i.hasNext()) {
+        i.next();
+        const QString name= i.key();
+        const QString value= i.value();
+        compileOptions += " -D " + name + "=" + (value.isEmpty() ? "1" : value);
+    }
+
+    // Compile program
+    // setenv("CUDA_CACHE_DISABLE", "1", 1);
+    error= clBuildProgram(program, 1, &device, compileOptions.toLatin1(), 0, 0);
+
+    cl_build_status build_status;
+    clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_STATUS, sizeof(cl_build_status), &build_status, NULL);
+
+    if(clCheckError(error, "Building program for kernel " + kernelName)) {
+        size_t logSize;
+        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &logSize);
+        logSize++;
+        QByteArray logText(logSize, Qt::Uninitialized);
+        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, logSize, logText.data(), NULL);
+
+        qDebug("%s********************************************************%s", debugColor(RED), debugColor(DEFAULT));
+        qDebug("%s", qPrintable(logText));
+        qDebug("%s********************************************************%s", debugColor(RED), debugColor(DEFAULT));
+
+        clReleaseProgram(program);
+        return 0;
+    }
+
+    // Create a kernel from the program (a program may contain many kernels)
+    cl_kernel kernel= clCreateKernel(program, kernelName.toLatin1(), &error);
+    if(clCheckError(error, "Creating kernel " + kernelName)) {
+        clReleaseProgram(program);
+        return 0;
+    }
+
+    clReleaseProgram(program);
+    return kernel;
+}
+
+
+
+QSharedPointer<size_t> CLUtils::defaultWorkGroupFunc()
+{
+    QSharedPointer<size_t> ret(new size_t[2]);
+    ret.data()[0]= defaultWorkGroupSize().width();
+    ret.data()[1]= defaultWorkGroupSize().width();
+    return ret;
+}
+
+QSharedPointer<size_t> CLUtils::ndRangeFunc(QSize dataSize, QSize workGroup)
+{
+    if(!workGroup.width() or !workGroup.height())
+        workGroup= defaultWorkGroupSize();
+    QSharedPointer<size_t> ret(new size_t[2]);
+    ret.data()[0]= roundUp(dataSize.width() , workGroup.width());
+    ret.data()[1]= roundUp(dataSize.height() , workGroup.height());
+    return ret;
+}
+
+bool CLUtils::checkErrorFunc(cl_int error, QString msg, const char* file, const int line)
+{
+    if(error == CL_SUCCESS)
+        return false;
+
+    qDebug("%s!! %s:%d:%s OpenCL error '%s': %s.", debugColor(RED), file, line,
+           debugColor(DEFAULT), qPrintable(clErrorString(error)), qPrintable(msg));
+    return true;
+}
+
+float CLUtils::eventElapsed(cl_event event)
+{
+    cl_int error;
+
+    cl_ulong startTime;
+    cl_ulong endTime;
+    error  = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_SUBMIT, sizeof(cl_ulong), &startTime, NULL);
+    error |= clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &endTime, NULL);
+    clCheckError(error, "clGetEventProfilingInfo");
+
+    return (endTime - startTime) * 1.0e-6f; // in ms.
+}
+
+
+cl_image_format CLUtils::gl2clFormat(GLenum glFormat, bool* error)
+{
+    cl_image_format clFormat;
+
+    if(error) *error= false;
+
+    switch(glFormat) {
+    // Some of the format mappings listed in the standard
+    case GL_RGBA:
+    case GL_RGBA8:
+        clFormat.image_channel_order    = CL_RGBA;
+        clFormat.image_channel_data_type= CL_UNORM_INT8;
+        break;
+    case GL_BGRA:
+        clFormat.image_channel_order    = CL_BGRA;
+        clFormat.image_channel_data_type= CL_UNORM_INT8;
+        break;
+    case GL_RGBA16:
+        clFormat.image_channel_order    = CL_RGBA;
+        clFormat.image_channel_data_type= CL_UNORM_INT16;
+        break;
+    case GL_RGBA16F:
+        clFormat.image_channel_order    = CL_RGBA;
+        clFormat.image_channel_data_type= CL_HALF_FLOAT;
+        break;
+
+    // OpenCL 1.2 formats
+    case GL_DEPTH_COMPONENT16:
+        clFormat.image_channel_order    = CL_DEPTH;
+        clFormat.image_channel_data_type= CL_UNORM_INT16;
+        break;
+    case GL_DEPTH_COMPONENT32F:
+        clFormat.image_channel_order    = CL_DEPTH;
+        clFormat.image_channel_data_type= CL_FLOAT;
+        break;
+
+    // Format mappings not listed in the standard
+    case GL_RG16F:
+        clFormat.image_channel_order    = CL_RG;
+        clFormat.image_channel_data_type= CL_HALF_FLOAT;
+        break;
+    case GL_RG32F:
+        clFormat.image_channel_order    = CL_RG;
+        clFormat.image_channel_data_type= CL_FLOAT;
+        break;
+
+    // Unknown format
+    default:
+        debugWarning("Could not convert format %X.", glFormat);
+        if(error) *error= true;
+    }
+
+    return clFormat;
+}
+
+QString CLUtils::clErrorString(cl_int error)
 {
     // OpenCL 1.2 enums
-    switch (err) {
+    switch (error) {
     case CL_SUCCESS:                            return "Success!";
     case CL_DEVICE_NOT_FOUND:                   return "Device not found.";
     case CL_DEVICE_NOT_AVAILABLE:               return "Device not available";
@@ -120,179 +288,4 @@ const char* CLUtils::clErrorToString(cl_int err)
     default: return "Unknown";
     }
 }
-
-bool CLUtils::checkCLErrorFunc(cl_int error, const char* msg, const char* file, const int line)
-{
-    if(error == CL_SUCCESS)
-        return false;
-
-    qDebug("%s!! %s:%d:%s OpenCL error '%s' %s.", debugColor(RED), file,
-           line, debugColor(DEFAULT), clErrorToString(error), msg);
-    return true;
-}
-
-/*
-int CLUtils::roundUp(int count, int multiple)
-{
-    int r = count % multiple;
-    if(!r)
-        return count;
-    else
-        return count + multiple - r;
-}
-*/
-
-float CLUtils::eventElapsed(cl_event event)
-{
-    cl_int error;
-
-    cl_ulong start_time, end_time;
-    error = clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_time, NULL);
-    error |= clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_time, NULL);
-    checkCLError(error, "eventElapsed: clGetEventProfilingInfo");
-
-    return float(end_time - start_time) * 1.0e-6f; // in ms.
-}
-
-bool CLUtils::loadProgramText(const char* path, QByteArray& source)
-{
-    QFile file(path);
-    if(!file.open(QIODevice::ReadOnly | QIODevice::Text))
-        return false;
-
-    source= file.readAll();
-    return true;
-}
-
-void CLUtils::checkProgramBuild(cl_program program, cl_device_id device)
-{
-    cl_int clError;
-    cl_build_status build_status;
-    clError = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_STATUS,
-                    sizeof(cl_build_status), &build_status, NULL);
-    checkCLError(clError, "checkProgramBuild: clGetProgramBuildInfo");
-
-
-    char *build_log;
-    size_t ret_val_size;
-    clError = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG,
-                    0, NULL, &ret_val_size);
-    checkCLError(clError, "checkProgramBuild: clGetProgramBuildInfo");
-
-    build_log = new char[ret_val_size+1];
-    clError = clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG,
-                    ret_val_size, build_log, NULL);
-    checkCLError(clError, "checkProgramBuild: clGetProgramBuildInfo");
-
-    // end of string character
-    build_log[ret_val_size] = '\0';
-
-    //if (build_status != CL_BUILD_SUCCESS) {
-        //cerr << "Error building program:" << endl;
-        cerr << build_log << endl;
-    //}
-
-}
-
-bool CLUtils::loadKernel(cl_context context, cl_kernel* kernel,
-                         cl_device_id device, QString programText, const char* kernelName,
-                         const char* compileOptions)
-{
-    // Create program
-    cl_int error;
-    cl_program program;
-    QByteArray programTextData= programText.toLatin1();
-    char* programData= programTextData.data();
-    size_t programLenght= programTextData.length();
-    program= clCreateProgramWithSource(context, 1, (const char **)&programData,
-                                       (const size_t *)&programLenght, &error);
-    if(checkCLError(error, "loadKernel: clCreateProgramWithSource"))
-        return false;
-    // Compile program for all the GPUs in the context
-    error= clBuildProgram(program, 0, NULL, compileOptions, NULL, NULL);
-/*
-    setenv("CUDA_CACHE_DISABLE", "1", 1);
-    error= clBuildProgram(program, 0, NULL,
-                          // -cl-nv-maxrregcount=32
-                          "-cl-nv-verbose -I../res/kernels/ -Werror -cl-single-precision-constant -cl-fast-relaxed-math",
-    NULL, NULL);
-    checkProgramBuild(program, device);
-*/
-    if(checkCLError(error, "loadKernel: clBuildProgram")) {
-        checkProgramBuild(program, device);
-        return false;
-    }
-
-    // Create a kernel from the program (a program may contain many kernels)
-    *kernel= clCreateKernel(program, kernelName, &error);
-    if(checkCLError(error, "loadKernel: clCreateKernel"))
-        return false;
-
-    clReleaseProgram(program);
-
-    return true;
-}
-
-bool CLUtils::loadKernel(cl_context context, cl_kernel* kernel,
-                                 cl_device_id device, const char* path, const char* kernelName,
-                                 const char* compileOptions)
-{
-    // Load program text into a string
-    QByteArray programText;
-    if(!loadProgramText(path, programText)) {
-        cerr << "Error loading program text." << endl;
-        return false;
-    }
-    return loadKernel(context, kernel, device, QString(programText), kernelName, compileOptions);
-}
-
-
-bool CLUtils::gl2clFormat(GLenum glFormat, cl_image_format& clFormat)
-{
-    switch(glFormat) {
-    // Some of the format mappings listed in the standard
-    case GL_RGBA:
-    case GL_RGBA8:
-        clFormat.image_channel_order= CL_RGBA;
-        clFormat.image_channel_data_type= CL_UNORM_INT8;
-        break;
-    case GL_BGRA:
-        clFormat.image_channel_order= CL_BGRA;
-        clFormat.image_channel_data_type= CL_UNORM_INT8;
-        break;
-    case GL_RGBA16:
-        clFormat.image_channel_order= CL_RGBA;
-        clFormat.image_channel_data_type= CL_UNORM_INT16;
-        break;
-    case GL_RGBA16F:
-        clFormat.image_channel_order= CL_RGBA;
-        clFormat.image_channel_data_type= CL_HALF_FLOAT;
-        break;
-    case GL_DEPTH_COMPONENT16:
-        clFormat.image_channel_order= CL_DEPTH;
-        clFormat.image_channel_data_type= CL_UNORM_INT16;
-        break;
-    case GL_DEPTH_COMPONENT32F:
-        clFormat.image_channel_order= CL_DEPTH;
-        clFormat.image_channel_data_type= CL_FLOAT;
-        break;
-
-    // Format mappings not listed in the standard
-    case GL_RG16F:
-        clFormat.image_channel_order= CL_RG;
-        clFormat.image_channel_data_type= CL_HALF_FLOAT;
-        break;
-    case GL_RG32F:
-        clFormat.image_channel_order= CL_RG;
-        clFormat.image_channel_data_type= CL_FLOAT;
-        break;
-
-    // Unknown format
-    default:
-        cerr << "CLUtilFunctions::gl2clFormat: Could not convert format " << glFormat << endl;
-        return false;
-    }
-    return true;
-}
-
 

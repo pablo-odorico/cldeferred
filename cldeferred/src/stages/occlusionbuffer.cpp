@@ -34,7 +34,7 @@ bool OcclusionBuffer::updateKernel(int spotLightCount, int dirLightCount)
     const bool firstTime= _spotLightCount==-1 or _dirLightCount==-1;
     if(!firstTime) {
         const cl_int error= clReleaseKernel(_kernel);
-        checkCLError(error, "clReleaseKernel");
+        clCheckError(error, "clReleaseKernel");
     }
     _spotLightCount= spotLightCount;
     _dirLightCount= dirLightCount;
@@ -55,10 +55,12 @@ bool OcclusionBuffer::updateKernel(int spotLightCount, int dirLightCount)
         occlusions += "VISIBILITY(spotLights, " + QString::number(i) + ", visibilitySpot) \n";
     for(int i=0; i<_dirLightCount; i++)
         occlusions += "VISIBILITY(dirLights, " + QString::number(i) + ", visibility) \n";
-    sourceCopy.replace("/** VISIBILITIES **/", occlusions);    
+    sourceCopy.replace("/** VISIBILITIES **/", occlusions);
 
-    return CLUtils::loadKernel(_context, &_kernel, _device, sourceCopy,
-                               "occlusionPass", "-I../res/kernels/ -Werror");
+    _kernel= CLUtils::loadKernelText(_context, _device, sourceCopy.toLatin1(), "occlusionPass",
+            CLUtils::KernelDefines(), QStringList("../res/kernels/"));
+
+    return _kernel != 0;
 }
 
 bool OcclusionBuffer::updateBuffer()
@@ -70,12 +72,12 @@ bool OcclusionBuffer::updateBuffer()
 
     if(_lastBufferBytes) {
         error= clReleaseMemObject(_buffer);
-        checkCLError(error, "clReleaseMemObject");
+        clCheckError(error, "clReleaseMemObject");
     }
 
     // Allocate occlusion buffer
     _buffer= clCreateBuffer(_context, CL_MEM_READ_WRITE, bufferBytes(), NULL, &error);
-    if(checkCLError(error, "clCreateBuffer"))
+    if(clCheckError(error, "clCreateBuffer"))
         return false;
 
     _lastBufferBytes= bufferBytes();

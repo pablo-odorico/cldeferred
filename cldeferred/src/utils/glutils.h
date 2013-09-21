@@ -1,15 +1,19 @@
-#ifndef GLUTILFUNCTIONS_H
-#define GLUTILFUNCTIONS_H
+#ifndef GLUTILS_H
+#define GLUTILS_H
 
 #include <GL/glew.h>
+#include <QString>
 
+//
+// Convenience macros
+//
 #define checkGLError(msg) GLUtils::checkGLErrorFunc((msg), __FILE__, __LINE__)
 
 class GLUtils
 {
 public:
     static
-    bool checkGLErrorFunc(const char* msg, const char* file, const int line);
+    bool checkGLErrorFunc(QString msg, const char* file, const int line);
 };
 
-#endif // GLUTILFUNCTIONS_H
+#endif // GLUTILS_H

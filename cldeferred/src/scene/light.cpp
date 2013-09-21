@@ -24,26 +24,22 @@ bool Light::setupShadowMap(cl_context context, cl_device_id device, QSize shadow
 
     // Init/resize filtered depth image
     if(_filteredDepth)
-        checkCLError(clReleaseMemObject(_filteredDepth), "clReleaseMemObject");
-    cl_image_format format;
-    if(!CLUtils::gl2clFormat(storedDepthFormat, format)) {
-        debugWarning("Could not map depth format to OpenCL.");
-        return false;
-    }
+        clCheckError(clReleaseMemObject(_filteredDepth), "clReleaseMemObject");
+    cl_image_format format= CLUtils::gl2clFormat(storedDepthFormat);
     cl_int error;
     _filteredDepth= clCreateImage2D(context, CL_MEM_READ_WRITE, &format,
                                     shadowMapSize.width(), shadowMapSize.height(), 0,
                                     0, &error);
-    if(checkCLError(error, "clCreateImage2D"))
+    if(clCheckError(error, "clCreateImage2D"))
         return false;
 
 
     // Load FXAA kernel
     static cl_kernel kernel= 0;
     if(!kernel) {
-        if(!CLUtils::loadKernel(context, &kernel, device,
-                       ":/kernels/downHalfFilter.cl", "downHalfFilter",
-                       "-I../res/kernels/ -Werror")) {
+        kernel= CLUtils::loadKernelPath(context, device, ":/kernels/downHalfFilter.cl",
+                "downHalfFilter", CLUtils::KernelDefines(), QStringList("../res/kernels/"));
+        if(!kernel) {
             debugFatal("Error loading kernel.");
             return false;
         }
@@ -51,7 +47,7 @@ bool Light::setupShadowMap(cl_context context, cl_device_id device, QSize shadow
     _downsampleKernel= kernel;
 
 
-    _shadowMappingInit= true;         
+    _shadowMappingInit= true;
     return true;
 }
 

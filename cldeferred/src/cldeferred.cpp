@@ -56,18 +56,19 @@ void CLDeferred::initializeGL()
 void CLDeferred::initializeCL()
 {
     // Load deferred pass kernel
-    if(!loadKernel(clCtx(), &deferredKernel, clDevice(),
-                   ":/kernels/deferredPass.cl", "deferredPass",
-                   "-D GAMMA_CORRECT=2.2f -I../res/kernels/ -Werror")) {
+    KernelDefines deferredDefines;
+    deferredDefines["GAMMA_CORRECT"]= "2.2f";
+    deferredKernel= loadKernelPath(clCtx(), clDevice(), ":/kernels/deferredPass.cl",
+            "deferredPass", deferredDefines, QStringList("../res/kernels/"));
+    if(!deferredKernel)
         debugFatal("Error loading kernel.");
-    }
 
     // Load FXAA kernel with the pre-computed luma flag set
-    if(!loadKernel(clCtx(), &fxaaKernel, clDevice(),
-                   ":/kernels/fxaa.cl", "fxaa",
-                   "-D LUMA_IN_ALPHA -I../res/kernels/ -Werror")) {
+    KernelDefines fxaaDefines;
+    fxaaDefines["LUMA_IN_ALPHA"]= "1";
+    fxaaKernel= loadKernelPath(clCtx(), clDevice(), ":/kernels/fxaa.cl", "fxaa", fxaaDefines);
+    if(!fxaaKernel)
         debugFatal("Error loading kernel.");
-    }
 }
 
 void CLDeferred::finalizeInit()
@@ -154,14 +155,14 @@ void CLDeferred::resizeGL(QSize size)
     outputTex.bind();
     outputImage= clCreateFromGLTexture2D(
         clCtx(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, outputTex.textureId(), &error);
-    if(checkCLError(error, "clCreateFromGLTexture2D"))
+    if(clCheckError(error, "clCreateFromGLTexture2D"))
         debugFatal("Could not map output texture.");
 
     outputTexAA.setSize(size);
     outputTexAA.bind();
     outputImageAA= clCreateFromGLTexture2D(
         clCtx(), CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, outputTexAA.textureId(), &error);
-    if(checkCLError(error, "clCreateFromGLTexture2D"))
+    if(clCheckError(error, "clCreateFromGLTexture2D"))
         debugFatal("Could not map output texture AA.");
 }
 
@@ -299,11 +300,11 @@ void CLDeferred::acquireCLObjects()
     cl_int error;
     error= clEnqueueAcquireGLObjects(clQueue(), acquiredBuffers.count(),
                                      acquiredBuffers.data(), 0, 0, 0);
-    if(checkCLError(error, "clEnqueueAcquireGLObjects"))
+    if(clCheckError(error, "clEnqueueAcquireGLObjects"))
         debugFatal("Could not acquire buffers.");
 
     // Sync
-    checkCLError(clFinish(clQueue()), "clFinish");
+    clCheckError(clFinish(clQueue()), "clFinish");
 }
 
 void CLDeferred::updateExposure()
@@ -317,11 +318,11 @@ void CLDeferred::releaseCLObjects()
     cl_int error;
     error= clEnqueueReleaseGLObjects(clQueue(), acquiredBuffers.count(),
                                      acquiredBuffers.data(), 0, 0, 0);
-    if(checkCLError(error, "clEnqueueReleaseGLObjects"))
+    if(clCheckError(error, "clEnqueueReleaseGLObjects"))
         debugFatal("Could not release buffers.");
 
     // Sync
-    checkCLError(clFinish(clQueue()), "clFinish");
+    clCheckError(clFinish(clQueue()), "clFinish");
 }
 
 
@@ -346,11 +347,11 @@ void CLDeferred::updateOcclusionBuffer()
     if(!ok)
         debugFatal("Error updating occlusion buffer.");
 
-    checkCLError(clFinish(clQueue()), "clFinish");
+    clCheckError(clFinish(clQueue()), "clFinish");
 }
 
 void CLDeferred::deferredPass()
-{    
+{
     QVector<cl_mem> gBufferChannels= gBuffer.colorBuffers();
     if(gBufferChannels.count() != 3) {
         debugFatal("Wrong number of gbuffer channels %d", gBufferChannels.count());
@@ -365,7 +366,7 @@ void CLDeferred::deferredPass()
     cl_mem spotLightStructs= scene.lightManager().spotStructs();
     int    dirLightCount= scene.lightManager().dirLightCount();
     cl_mem dirLightStructs= scene.lightManager().dirStructs();
-    int    lightsWithShadows= scene.lightManager().lightsWithShadows();   
+    int    lightsWithShadows= scene.lightManager().lightsWithShadows();
     float  expo= exposure.exposure();
     float  brightThreshold= bloom.brightThreshold();
 
@@ -388,7 +389,7 @@ void CLDeferred::deferredPass()
     clLaunchKernel(deferredKernel, clQueue(), gBuffer.size());
 
     // Sync
-    checkCLError(clFinish(clQueue()), "clFinish");
+    clCheckError(clFinish(clQueue()), "clFinish");
 }
 
 void CLDeferred::bloomPass()
@@ -397,7 +398,7 @@ void CLDeferred::bloomPass()
         debugFatal("Could not update bloom images.");
 
     // Sync
-    checkCLError(clFinish(clQueue()), "clFinish");
+    clCheckError(clFinish(clQueue()), "clFinish");
 }
 
 void CLDeferred::antialiasPass()
@@ -410,7 +411,7 @@ void CLDeferred::antialiasPass()
     clLaunchKernel(fxaaKernel, clQueue(), gBuffer.size());
 
     // Sync
-    checkCLError(clFinish(clQueue()), "clFinish");
+    clCheckError(clFinish(clQueue()), "clFinish");
 }
 
 void CLDeferred::drawOutput()

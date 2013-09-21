@@ -19,7 +19,7 @@ bool FBOCL::resize(cl_context context, QSize size, QList<GLenum> colorFormats,
         _colorBuffers[i]= clCreateFromGLRenderbuffer(context, CL_MEM_READ_ONLY,
                                                      _colorAttachs[i].bufferId,
                                                      &error);
-        checkCLError(error, "clCreateFromGLRenderbuffer color attach");
+        clCheckError(error, "clCreateFromGLRenderbuffer color attach");
     }
 
     // Map depth buffer
@@ -38,7 +38,7 @@ bool FBOCL::acquireColorBuffers(cl_command_queue queue)
 
     cl_int error;
     error= clEnqueueAcquireGLObjects(queue, _colorBuffers.count(), _colorBuffers.data(), 0, 0, 0);
-    return !checkCLError(error, "clEnqueueAcquireGLObjects");
+    return !clCheckError(error, "clEnqueueAcquireGLObjects");
 }
 
 QVector<cl_mem> FBOCL::colorBuffers()
@@ -54,17 +54,17 @@ bool FBOCL::releaseColorBuffers(cl_command_queue queue)
 
     cl_int error;
     error= clEnqueueReleaseGLObjects(queue, _colorBuffers.count(), _colorBuffers.data(), 0, 0, 0);
-    return !checkCLError(error, "clEnqueueReleaseGLObjects");
+    return !clCheckError(error, "clEnqueueReleaseGLObjects");
 }
 
 
 /*
     error= clEnqueueAcquireGLObjects(clQueue, 1, &_depthBuffer, 0, 0, 0);
-    if(checkCLError(error, "FBOCL::enqueueAcquireBuffers: clEnqueueAcquireGLObjects depth"))
+    if(checkCLError(error, "clEnqueueAcquireGLObjects depth"))
         return false;
 */
 /*
     error= clEnqueueReleaseGLObjects(clQueue, 1, &_depthBuffer, 0, 0, 0);
-    if(checkCLError(error, "FBOCL::enqueueReleaseBuffers: clEnqueueReleaseGLObjects depth"))
+    if(checkCLError(error, "clEnqueueReleaseGLObjects depth"))
         return false;
 */

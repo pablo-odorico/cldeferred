@@ -13,7 +13,7 @@ bool CameraCL::init(cl_context context)
 
     cl_int error;
     _clMem= clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_camera), NULL, &error);
-    if(checkCLError(error, "CameraCL::init: clCreateBuffer"))
+    if(clCheckError(error, "clCreateBuffer"))
         return false;
 
     _initialized= true;
@@ -53,7 +53,7 @@ void CameraCL::updateStructCL(cl_command_queue queue)
     error= clEnqueueWriteBuffer(queue, _clMem, CL_FALSE, 0, sizeof(cl_camera),
                              &clStruct, 0, NULL, NULL);
 
-    checkCLError(error, "Enqueue write struct");
+    clCheckError(error, "Enqueue write struct");
 }
 
 cl_mem CameraCL::structCL()
