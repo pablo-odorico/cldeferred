@@ -5,7 +5,7 @@ QT += core gui opengl
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 QMAKE_CXXFLAGS_RELEASE = -march=native -O3 -fPIC
-QMAKE_CXXFLAGS_WARN_ON += -Wno-reorder -Wno-cpp
+QMAKE_CXXFLAGS_WARN_ON += -Wno-reorder -Wno-cpp -Wno-deprecated-declarations
 
 DESTDIR = bin
 OBJECTS_DIR = obj

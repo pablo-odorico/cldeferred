@@ -82,7 +82,7 @@ cl_kernel CLUtils::loadKernelText(
     compileOptions += " -Werror";
     foreach(QString path, includePaths)
         compileOptions += " -I" + path;
-    QMapIterator<QString,QString> i(defines);
+    QHashIterator<QString,QString> i(defines);
     while(i.hasNext()) {
         i.next();
         const QString name= i.key();
@@ -151,6 +151,86 @@ bool CLUtils::checkErrorFunc(cl_int error, QString msg, const char* file, const 
     qDebug("%s!! %s:%d:%s OpenCL error '%s': %s.", debugColor(RED), file, line,
            debugColor(DEFAULT), qPrintable(clErrorString(error)), qPrintable(msg));
     return true;
+}
+
+inline uint qHash(const QSize& size, uint)
+{
+    return qHash((qint64)size.width() + ((qint64)(size.height()) << 32));
+}
+
+QImage CLUtils::toImage(cl_context context, cl_device_id device, cl_command_queue queue,
+                        cl_mem image, bool saveAlpha)
+{
+    cl_int error;
+
+    // Get image parameteres
+    cl_image_format format;
+    size_t width;
+    size_t height;
+    size_t pitch;
+
+    error  = clGetImageInfo(image, CL_IMAGE_FORMAT, sizeof(cl_image_format), &format, 0);
+    error |= clGetImageInfo(image, CL_IMAGE_WIDTH, sizeof(size_t), &width, 0);
+    error |= clGetImageInfo(image, CL_IMAGE_HEIGHT, sizeof(size_t), &height, 0);
+    error |= clGetImageInfo(image, CL_IMAGE_ROW_PITCH, sizeof(size_t), &pitch, 0);
+    if(clCheckError(error, "clGetImageInfo"))
+        return QImage();
+
+    // If a "conversion image" of that size is not allocated, create one.
+    QSize size(width, height);
+    static QHash<QSize, cl_mem> convImages;
+
+    if(!convImages.contains(size)) {
+        debugMsg("Creating a new conversion buffer for size %d x %d.", (int)width, (int)height);
+        cl_image_format format;
+        format.image_channel_order= CL_BGRA;
+        format.image_channel_data_type= CL_UNORM_INT8;
+        convImages[size]= clCreateImage2D(context, CL_MEM_WRITE_ONLY,
+                &format, width, height, 0, 0, &error);
+        if(clCheckError(error, "Creating conversion image")) {
+            convImages.remove(size);
+            return QImage();
+        }
+
+    }
+    cl_mem& convImage= convImages[size];
+    size_t origin[3]= { 0, 0, 0 };
+    size_t region[3]= { width, height, 1 };
+
+    // If the conversion kernel is not allocated, create it.
+    static cl_kernel convKernel= 0;
+    if(!convKernel) {
+        debugMsg("Creating conversion kernel.");
+        const char* convKernelText= \
+        "kernel void conv(read_only image2d_t src, write_only image2d_t dst) { "
+        "  int2 p= (int2)(get_global_id(0), get_global_id(1));                 "
+        "  int2 size= get_image_dim(dst);                                      "
+        "  if(p.x >= size.x || p.y >= size.y) return;                          "
+        "  sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;"
+        "  write_imagef(dst, p, read_imagef(src, sampler, (int2)(p.x,size.y-1-p.y)));"
+        "}";
+
+        convKernel= loadKernelText(context, device, convKernelText, "conv");
+        if(!convKernel)
+            return QImage();
+    }
+
+    // Run conversion kernel
+    clKernelArg(convKernel, 0, image);
+    clKernelArg(convKernel, 1, convImage);
+    if(!clLaunchKernel(convKernel, queue, size))
+        return QImage();
+
+    // Download the conversion image into a new QImage. The read operation is blocking.
+    QImage ret(width, height, saveAlpha ? QImage::Format_ARGB32 : QImage::Format_RGB32);
+
+    error= clEnqueueReadImage(queue, convImage, CL_TRUE, origin, region, width * 4,
+                              0, (void*)ret.bits(), 0,0,0);
+    if(clCheckError(error, "Image download"))
+        return QImage();
+
+    debugMsg("Done converting to QImage.");
+    return ret;
 }
 
 float CLUtils::eventElapsed(cl_event event)

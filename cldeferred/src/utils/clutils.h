@@ -5,6 +5,7 @@
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
 #include <QtCore>
+#include <QImage>
 
 //
 // Convenience macros
@@ -44,7 +45,7 @@ public:
     //
     // Kernel management
     //
-    typedef QMap<QString,QString> KernelDefines;
+    typedef QHash<QString,QString> KernelDefines;
 
     // Loads a kernel from a path. Returns 0 (a null pointer) on error.
     static cl_kernel loadKernelPath(
@@ -71,6 +72,13 @@ public:
         return (value + (multiple - 1)) & ~(multiple - 1); }
     static QSize roundUp(QSize value, int multiple) {
         return QSize(roundUp(value.width(), multiple), roundUp(value.height(), multiple)); }
+
+    //
+    // QImage interop for debugging
+    // This function is NOT thread-safe.
+    //
+    static QImage toImage(cl_context context, cl_device_id device, cl_command_queue queue,
+                          cl_mem image, bool saveAlpha=false);
 
     //
     // Misc
