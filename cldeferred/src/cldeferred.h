@@ -5,7 +5,7 @@
 #include "fbocl.h"
 #include "scene.h"
 #include "occlusionbuffer.h"
-#include "exposure.h"
+#include "autoexposure.h"
 #include "bloom.h"
 
 #include <QtGui>
@@ -83,13 +83,13 @@ private:
     int fpsFrameCount;
     qint64 fpsLastTime;
 
-    // Misc        
+    // Misc
     bool enableAA;
     float dirLightAngle;
     QVector<cl_mem> acquiredBuffers;
 
     // HDR, bloom and exposure
-    Exposure exposure;
+    AutoExposure autoExposure;
     Bloom bloom;
 };
 

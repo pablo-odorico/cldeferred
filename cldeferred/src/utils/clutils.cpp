@@ -182,11 +182,8 @@ QImage CLUtils::toImage(cl_context context, cl_device_id device, cl_command_queu
 
     if(!convImages.contains(size)) {
         debugMsg("Creating a new conversion buffer for size %d x %d.", (int)width, (int)height);
-        cl_image_format format;
-        format.image_channel_order= CL_BGRA;
-        format.image_channel_data_type= CL_UNORM_INT8;
-        convImages[size]= clCreateImage2D(context, CL_MEM_WRITE_ONLY,
-                &format, width, height, 0, 0, &error);
+        convImages[size]= clCreateImage2D(context, CL_MEM_WRITE_ONLY, clFormatGL(GL_BGRA),
+                                          width, height, 0, 0, &error);
         if(clCheckError(error, "Creating conversion image")) {
             convImages.remove(size);
             return QImage();
@@ -247,6 +244,17 @@ float CLUtils::eventElapsed(cl_event event)
 }
 
 
+QSharedPointer<cl_image_format> CLUtils::clFormatGLFunc(GLenum glFormat)
+{
+    bool error;
+    cl_image_format format= gl2clFormat(glFormat, &error);
+    if(error)
+        return QSharedPointer<cl_image_format>(0);
+    QSharedPointer<cl_image_format> ret(new cl_image_format);
+    *ret.data()= format;
+    return ret;
+}
+
 cl_image_format CLUtils::gl2clFormat(GLenum glFormat, bool* error)
 {
     cl_image_format clFormat;
@@ -284,6 +292,18 @@ cl_image_format CLUtils::gl2clFormat(GLenum glFormat, bool* error)
         break;
 
     // Format mappings not listed in the standard
+    case GL_R:
+        clFormat.image_channel_order    = CL_R;
+        clFormat.image_channel_data_type= CL_UNORM_INT8;
+        break;
+    case GL_R16F:
+        clFormat.image_channel_order    = CL_R;
+        clFormat.image_channel_data_type= CL_HALF_FLOAT;
+        break;
+    case GL_R32F:
+        clFormat.image_channel_order    = CL_R;
+        clFormat.image_channel_data_type= CL_FLOAT;
+        break;
     case GL_RG16F:
         clFormat.image_channel_order    = CL_RG;
         clFormat.image_channel_data_type= CL_HALF_FLOAT;

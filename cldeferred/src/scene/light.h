@@ -18,8 +18,10 @@ public:
 
     // Shadow mapping
     // 1. Enable
-    void enableShadows(bool value) { _shadowMapping= value; }
     bool hasShadows() { return _shadowMapping; }
+    void enableShadows(bool value) { _shadowMapping= value; }
+    void toggleShadows() { _shadowMapping= !_shadowMapping; }
+
     // 2. Setup
     bool setupShadowMap(
             cl_context context, cl_device_id device, QSize shadowMapSize= QSize(512, 512),

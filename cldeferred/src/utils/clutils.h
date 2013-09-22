@@ -34,6 +34,10 @@
 #define clLaunchKernel(kernel,queue,size) \
     (!clCheckError(clEnqueueNDRangeKernel(queue,kernel,2,NULL,clNDRange(size),clWorkGroup(),0,NULL,NULL), #kernel))
 
+// Returns a cl_image_format pointer from a GL Format, to be used in a safe manner in
+// clCreateImage* and related functions
+#define clFormatGL(glFormat) CLUtils::clFormatGLFunc(glFormat).data()
+
 class CLUtils
 {
 public:
@@ -92,7 +96,10 @@ public:
     //
     // Enum conversion
     //
+
     static cl_image_format gl2clFormat(GLenum glFormat, bool* error=0);
+    // Use the clFormatGL macro (convenient for clCreateImage calls)
+    static QSharedPointer<cl_image_format> clFormatGLFunc(GLenum glFormat);
     static QString clErrorString(cl_int error);
 };
 

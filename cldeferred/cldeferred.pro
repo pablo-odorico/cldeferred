@@ -36,9 +36,9 @@ SOURCES += \
     src/scene/dirlight.cpp \
     src/utils/analytics.cpp \
     src/stages/bloom.cpp \
-    src/stages/exposure.cpp \
     src/stages/exposurethread.cpp \
-    src/stages/occlusionbuffer.cpp
+    src/stages/occlusionbuffer.cpp \
+    src/stages/autoexposure.cpp
 
 HEADERS += \
     src/fbo.h \
@@ -62,9 +62,9 @@ HEADERS += \
     res/kernels/cl_material.h \
     src/utils/analytics.h \
     src/stages/bloom.h \
-    src/stages/exposure.h \
     src/stages/exposurethread.h \
-    src/stages/occlusionbuffer.h
+    src/stages/occlusionbuffer.h \
+    src/stages/autoexposure.h
 
 OTHER_FILES += \
     TODO.txt \

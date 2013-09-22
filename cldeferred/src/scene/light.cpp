@@ -25,9 +25,8 @@ bool Light::setupShadowMap(cl_context context, cl_device_id device, QSize shadow
     // Init/resize filtered depth image
     if(_filteredDepth)
         clCheckError(clReleaseMemObject(_filteredDepth), "clReleaseMemObject");
-    cl_image_format format= CLUtils::gl2clFormat(storedDepthFormat);
     cl_int error;
-    _filteredDepth= clCreateImage2D(context, CL_MEM_READ_WRITE, &format,
+    _filteredDepth= clCreateImage2D(context, CL_MEM_READ_WRITE, clFormatGL(storedDepthFormat),
                                     shadowMapSize.width(), shadowMapSize.height(), 0,
                                     0, &error);
     if(clCheckError(error, "clCreateImage2D"))

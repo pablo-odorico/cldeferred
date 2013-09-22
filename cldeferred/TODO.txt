@@ -3,6 +3,12 @@
 OpenCL 1.2
 - Check clGetGLContextInfoKHR to make clutils portable
 
+Contar juan
+    CLUtils cleanup
+    toImage
+	clFormatGL
+	metering
+
 Roadmap
     Shading
     HDR

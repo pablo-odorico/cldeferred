@@ -48,12 +48,11 @@ bool Bloom::resize(QSize size)
     _size= size;
 
     cl_int error;
-    cl_image_format bloomFormat= CLUtils::gl2clFormat(GL_RGBA16F);
 
     // Create/resize the visible image
     if(_visibleImage)
         clCheckError(clReleaseMemObject(_visibleImage), "clReleaseMemObject");
-    _visibleImage= clCreateImage2D(_context, CL_MEM_READ_WRITE, &bloomFormat,
+    _visibleImage= clCreateImage2D(_context, CL_MEM_READ_WRITE, clFormatGL(GL_RGBA16F),
                                    size.width(), size.height(), 0, 0, &error);
     if(clCheckError(error, "clCreateImage2D"))
         return false;
@@ -64,7 +63,7 @@ bool Bloom::resize(QSize size)
     _brightImages.resize(_brightLevels);
 
     for(int i=0; i<_brightLevels; i++) {
-        _brightImages[i]= clCreateImage2D(_context, CL_MEM_READ_WRITE, &bloomFormat,
+        _brightImages[i]= clCreateImage2D(_context, CL_MEM_READ_WRITE, clFormatGL(GL_RGBA16F),
             brightSize(i).width(), brightSize(i).height(), 0, 0, &error);
         if(clCheckError(error, "clCreateImage2D"))
             return false;

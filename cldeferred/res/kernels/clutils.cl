@@ -92,4 +92,13 @@ float3 reflect(float3 V, float3 N)
     return V - 2.0f * dot(V, N) * N;
 }
 
+//
+// Misc
+//
+
+float2 normPos(int2 pos, int2 size)
+{
+    return (float2)((float)pos.x/size.x, (float)pos.y/size.y);
+}
+
 #endif // CLUTILS_CL

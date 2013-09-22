@@ -77,8 +77,7 @@ void CLDeferred::finalizeInit()
 
     if(!scene.loadScene("models/untitled/untitled2.obj"))
         debugFatal("Could not load scene!");
-    //scene.camera().lookAt(QVector3D(-8, .5f, -8), QVector3D(0, 0, 0));
-    scene.camera().lookAt(QVector3D(-5.28565, 5.13663, -11.9598), QVector3D(-5.28565, 5.13663, -11.9598)+QVector3D(0.0942199, -0.670006, 0.736353));
+    scene.camera().lookAt(QVector3D(-8, 7, -8), QVector3D(0, 0.5f, 0));
     scene.camera().setMoveSpeed(5);
 
     DirLight* dirLight= new DirLight();
@@ -114,10 +113,10 @@ void CLDeferred::finalizeInit()
     lastRenderTime= sceneTime.nsecsElapsed();
     fpsLastTime= sceneTime.nsecsElapsed();
 
-    if(!exposure.init(clCtx(), clDevice()))
+    if(!autoExposure.init(clCtx(), clDevice()))
         debugFatal("Could not init exposure.");
-    exposure.setAdjustSpeed(3.0f / targetFPS); // Appox, works OK for 50hz
-    exposure.setUpdatePeriod(2);
+    autoExposure.setAdjustSpeed(3.0f / targetFPS); // Appox, works OK for 50hz
+    autoExposure.setUpdatePeriod(2);
 
     if(!bloom.init(clCtx(), clDevice()))
         debugFatal("Could not init bloom.");
@@ -160,8 +159,9 @@ void CLDeferred::resizeGL(QSize size)
 
     outputTexAA.setSize(size);
     outputTexAA.bind();
+    // This image could be WRITE_ONLY
     outputImageAA= clCreateFromGLTexture2D(
-        clCtx(), CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, outputTexAA.textureId(), &error);
+        clCtx(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, outputTexAA.textureId(), &error);
     if(clCheckError(error, "clCreateFromGLTexture2D"))
         debugFatal("Could not map output texture AA.");
 }
@@ -310,7 +310,7 @@ void CLDeferred::acquireCLObjects()
 void CLDeferred::updateExposure()
 {
     // Always use outputImage (AA won't afect the exposure)
-    exposure.update(clQueue(), bloom.visibleImage());//outputImage);
+    autoExposure.update(clQueue(), bloom.visibleImage());//outputImage);
 }
 
 void CLDeferred::releaseCLObjects()
@@ -367,7 +367,7 @@ void CLDeferred::deferredPass()
     int    dirLightCount= scene.lightManager().dirLightCount();
     cl_mem dirLightStructs= scene.lightManager().dirStructs();
     int    lightsWithShadows= scene.lightManager().lightsWithShadows();
-    float  expo= exposure.exposure();
+    float  expo= autoExposure.exposure();
     float  brightThreshold= bloom.brightThreshold();
 
     // Launch kernel
@@ -475,14 +475,14 @@ void CLDeferred::keyPressEvent(QKeyEvent *event)
     if(key == Qt::Key_M) enableAA= !enableAA;
     if(key == Qt::Key_Right) dirLightAngle= qMin(dirLightAngle + 1.0f, 179.0f);
     if(key == Qt::Key_Left) dirLightAngle= qMax(dirLightAngle - 1.0f, 1.0f);
-    if(key == Qt::Key_L) scene.lightManager().spotLight(0)->enableShadows(true);
-    if(key == Qt::Key_K) scene.lightManager().spotLight(0)->enableShadows(false);
-    if(key == Qt::Key_I) scene.lightManager().spotLight(1)->enableShadows(true);
-    if(key == Qt::Key_O) scene.lightManager().spotLight(1)->enableShadows(false);
     if(key == Qt::Key_Up) bloom.setBrightThreshold(bloom.brightThreshold() + 0.1f);
     if(key == Qt::Key_Down) bloom.setBrightThreshold(bloom.brightThreshold() - 0.1f);
     if(key == Qt::Key_T) bloom.setBrightBlend(bloom.brightBlend() + 0.1f);
     if(key == Qt::Key_G) bloom.setBrightBlend(bloom.brightBlend() - 0.1f);
+
+    if(key == Qt::Key_E) autoExposure.toggleEnabled();
+    if(key == Qt::Key_R)
+        autoExposure.setMeteringMode((AutoExposure::MeteringMode)(((int)autoExposure.meteringMode() + 1) % 4));
 
 }
 
