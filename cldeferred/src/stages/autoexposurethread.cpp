@@ -1,20 +1,20 @@
-#include "exposurethread.h"
+#include "autoexposurethread.h"
 #include "debug.h"
 #include <cassert>
 
-ExposureThread::ExposureThread(QObject *parent) :
+AutoExposureThread::AutoExposureThread(QObject *parent) :
     QThread(parent), _lumas(0),
     _meteringWeights(0), _meteringMode(WeightedMetering)
 {
 }
 
-ExposureThread::~ExposureThread()
+AutoExposureThread::~AutoExposureThread()
 {
     free(_lumas);
     free(_meteringWeights);
 }
 
-void ExposureThread::update(uchar* lumas, QSize size)
+void AutoExposureThread::update(uchar* lumas, QSize size)
 {
     if(_working.available()) {
         debugWarning("Thread busy, ignoring.");
@@ -41,7 +41,7 @@ void ExposureThread::update(uchar* lumas, QSize size)
     _workPending.release();
 }
 
-ExposureThread::LumaData ExposureThread::exposureData()
+AutoExposureThread::LumaData AutoExposureThread::exposureData()
 {
     LumaData ret;
     _outputDataLock.lock();
@@ -50,13 +50,13 @@ ExposureThread::LumaData ExposureThread::exposureData()
     return ret;
 }
 
-void ExposureThread::stop()
+void AutoExposureThread::stop()
 {
     // Set the stop flag
     _stop.release();
 }
 
-void ExposureThread::updateMeteringWeights()
+void AutoExposureThread::updateMeteringWeights()
 {
     debugMsg("Updating metering weights.");
 
@@ -103,7 +103,7 @@ void ExposureThread::updateMeteringWeights()
     _currentMeteringMode= _meteringMode;
 }
 
-void ExposureThread::run()
+void AutoExposureThread::run()
 {
     while(!_stop.tryAcquire()) {
         // Wait for a job to come in, but check every 250 msecs if we need to stop

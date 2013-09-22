@@ -1,3 +1,12 @@
+//
+// Stores the luma of src on the first channel of dst. dst can have any size and
+// aspect ratio (eg. 256x256).
+//
+// Configuration defines:
+// - GAMMA_CORRECT: If src is in linear space, then GAMMA_CORRECT should be set
+//   with the gamma value so the gamma-corrected luma value is stored.
+
+
 #include "clutils.cl"
 
 kernel void lumaDownsample(

@@ -3,13 +3,14 @@
 
 #include <QtCore>
 #include "utils/clutils.h"
-#include "exposurethread.h"
+#include "autoexposurethread.h"
 
 class AutoExposure : public QObject
 {
 Q_OBJECT
 public:
-    typedef ExposureThread::MeteringMode MeteringMode;
+    typedef AutoExposureThread::MeteringMode MeteringMode;
+    typedef AutoExposureThread::LumaData LumaData;
 
     AutoExposure();
     ~AutoExposure();
@@ -44,13 +45,13 @@ public:
     float averageLuma() const { return _exposureData.average; }
     float meteringAverageLuma() const { return _exposureData.meteringAverage; }
 
-    QSize computeSize() const { return _downSize; }
+    QSize computeSize() const { return _lumaSize; }
 
     // For debugging
     cl_mem lumaImage() { return _lumaImage; }
 
 private:
-    size_t lumaDataBytes() { return _downSize.width() * _downSize.height(); }
+    size_t lumaDataBytes() { return _lumaSize.width() * _lumaSize.height(); }
     bool _initialized;
 
     float _exposure;
@@ -60,14 +61,13 @@ private:
     int _updatePeriod;
     int _updateCounter;
 
-    cl_kernel _downKernel;
-
-    QSize _downSize;
+    QSize _lumaSize;
     uchar* _lumaData;
     cl_mem _lumaImage;
+    cl_kernel _downKernel;
 
-    ExposureThread _thread;
-    ExposureThread::LumaData _exposureData;
+    LumaData _exposureData;
+    AutoExposureThread _thread;
 
 private slots:
     void updateExposureData();

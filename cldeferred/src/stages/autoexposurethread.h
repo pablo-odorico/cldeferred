@@ -1,9 +1,9 @@
-#ifndef EXPOSURETHREAD_H
-#define EXPOSURETHREAD_H
+#ifndef AUTOEXPOSURETHREAD_H
+#define AUTOEXPOSURETHREAD_H
 
 #include <QtGui>
 
-class ExposureThread : public QThread
+class AutoExposureThread : public QThread
 {
     Q_OBJECT
 public:
@@ -20,8 +20,8 @@ public:
         float meteringAverage;
     } LumaData;
 
-    explicit ExposureThread(QObject *parent = 0);
-    ~ExposureThread();
+    explicit AutoExposureThread(QObject *parent = 0);
+    ~AutoExposureThread();
 
     // 1. start()
     // 2. Enqueue a computation with update
