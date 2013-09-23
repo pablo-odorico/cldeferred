@@ -10,7 +10,7 @@ class AutoExposure : public QObject
 Q_OBJECT
 public:
     typedef AutoExposureThread::MeteringMode MeteringMode;
-    typedef AutoExposureThread::LumaData LumaData;
+    typedef AutoExposureThread::LumaData     LumaData;
 
     AutoExposure();
     ~AutoExposure();
@@ -21,6 +21,7 @@ public:
 
     // Update will block until the luma image is computed and downloaded, but
     // then it will return after enqueing the work to ExposureThread
+    // image should be LINEAR
     void update(cl_command_queue queue, cl_mem image);
 
     bool enabled() { return _autoExposure; }
@@ -73,4 +74,4 @@ private slots:
     void updateExposureData();
 };
 
-#endif // EXPOSURE_H
+#endif // AUTOEXPOSURE_H

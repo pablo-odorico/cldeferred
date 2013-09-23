@@ -2,8 +2,8 @@
 #include "debug.h"
 
 Bloom::Bloom() :
-    _initialized(false), _visibleImage(0),
-    _brightBlend(1.0f), _brightThres(0.5f)
+    _initialized(false), _enabled(true),
+    _bloomBlend(1.0f), _bloomThres(0.5f)
 {
 }
 
@@ -12,6 +12,14 @@ bool Bloom::init(cl_context context, cl_device_id device)
     assert(!_initialized);
 
     _context= context;
+
+    // Load the downsample kernel
+    CLUtils::KernelDefines downDefines;
+    downDefines["DST_BLUR_SIZE"]= "3";
+    _downKernel= CLUtils::loadKernelPath(_context, device, ":/kernels/bloomDown.cl",
+            "bloomDown", downDefines, QStringList("../res/kernels/"));
+    if(!_downKernel)
+        return false;
 
     // Load the bloom blend kernel
     CLUtils::KernelDefines blendDefines;
@@ -22,52 +30,46 @@ bool Bloom::init(cl_context context, cl_device_id device)
     if(!_blendKernel)
         return false;
 
-    // Load the downsample kernel
-    CLUtils::KernelDefines downDefines;
-    downDefines["RAD"]= "2";
-    _downKernel= CLUtils::loadKernelPath(_context, device, ":/kernels/downHalfFilter.cl",
-            "downHalfFilter", downDefines);
-    if(!_downKernel)
-        return false;
-
-    // Load the upsample kernel
-    CLUtils::KernelDefines upDefines;
-    upDefines["RAD"]= "0";
-    _upKernel= CLUtils::loadKernelPath(_context, device, ":/kernels/downHalfFilter.cl",
-            "downHalfFilter", upDefines);
-    if(!_upKernel)
+    // Load the bloom bypass kernel (uses the same defines as _blendKernel)
+    _bypassKernel= CLUtils::loadKernelPath(_context, device, ":/kernels/bloomBlend.cl",
+            "bloomBypass", blendDefines, QStringList("../res/kernels/"));
+    if(!_bypassKernel)
         return false;
 
     _initialized= true;
     return true;
 }
 
-bool Bloom::resize(QSize size)
+bool Bloom::resize(QSize inputSize)
 {
     assert(_initialized);
-    _size= size;
+
+    if(_inputSize == inputSize)
+        return true;
+    _inputSize= inputSize;
+    // Choose between 3 and 4 levels, depending on the resolution: 4 for 1080p, 3 for 720p
+    _levels= qMax(3, inputSize.width()/450);
+
+    // Release previous images
+    foreach(cl_mem mem, _images)
+        clCheckError(clReleaseMemObject(mem), "clReleaseMemObject");
 
     cl_int error;
 
-    // Create/resize the visible image
-    if(_visibleImage)
-        clCheckError(clReleaseMemObject(_visibleImage), "clReleaseMemObject");
-    _visibleImage= clCreateImage2D(_context, CL_MEM_READ_WRITE, clFormatGL(GL_RGBA16F),
-                                   size.width(), size.height(), 0, 0, &error);
-    if(clCheckError(error, "clCreateImage2D"))
-        return false;
+    // Create/resize the input image and it's downsamples
+    _images.resize(_levels);
 
-    // Create/resize the bright image and it's downsamples
-    foreach(cl_mem mem, _brightImages)
-        clCheckError(clReleaseMemObject(mem), "clReleaseMemObject");
-    _brightImages.resize(_brightLevels);
-
-    for(int i=0; i<_brightLevels; i++) {
-        _brightImages[i]= clCreateImage2D(_context, CL_MEM_READ_WRITE, clFormatGL(GL_RGBA16F),
-            brightSize(i).width(), brightSize(i).height(), 0, 0, &error);
+    QString bloomSizes= "";
+    for(int i=0; i<_levels; i++) {
+        const QSize size= imageSize(i);
+        _images[i]= clCreateImage2D(_context, CL_MEM_READ_WRITE, clFormatGL(GL_RGBA16F),
+                size.width(), size.height(), 0, 0, &error);
         if(clCheckError(error, "clCreateImage2D"))
             return false;
+
+        bloomSizes += QString(" (%1 x %2)").arg(size.width()).arg(size.height());
     }
+    debugMsg("Bloom level sizes:%s", qPrintable(bloomSizes));
 
     return true;
 }
@@ -76,57 +78,47 @@ bool Bloom::update(cl_command_queue queue, cl_mem outputImage)
 {
     assert(_initialized);
 
-    // Downsample the brightImage
-    for(int i=0; i<_brightLevels-1; i++) {
-        const QSize size1= brightSize(i);
-        const QSize size2= brightSize(i+1);
-        cl_int2 srcSize= { size1.width(), size1.height() };
-        cl_int2 dstSize= { size2.width(), size2.height() };
+    if(!_enabled) {
+        // If blur is not enabled, call the bypass kernel and return
         int ai= 0;
-        //clKernelArg(_downKernel, ai++, srcSize);
-        //clKernelArg(_downKernel, ai++, dstSize);
-        clKernelArg(_downKernel, ai++, _brightImages[i]);
-        clKernelArg(_downKernel, ai++, _brightImages[i+1]);
-        if(!clLaunchKernel(_downKernel, queue, size2))
+        clKernelArg(_bypassKernel, ai++, _images[0]);
+        clKernelArg(_bypassKernel, ai++, outputImage);
+        return clLaunchKernel(_bypassKernel, queue, _inputSize);
+    }
+
+    // Downsample _level-1 times
+    for(int i=0; i<_levels-1; i++) {
+        const QSize size= imageSize(i);
+        cl_int2 srcSize= { size.width(), size.height() };
+        cl_mem blurWeights= CLUtils::gaussianKernel(clInfo.context, clInfo.queue, QSize(3,3));
+
+        int ai= 0;
+        clKernelArg(_downKernel, ai++, _images[i]);
+        clKernelArg(_downKernel, ai++, _images[i+1]);
+        clKernelArg(_downKernel, ai++, srcSize);
+        clKernelArg(_downKernel, ai++, blurWeights);
+        if(!clLaunchKernel(_downKernel, queue, imageSize(i+1)))
             return false;
     }
 
-    for(int i=_brightLevels-1; i>0; i--) {
-        const QSize size1= brightSize(i);
-        const QSize size2= brightSize(i-1);
-        cl_int2 srcSize= { size1.width(), size1.height() };
-        cl_int2 dstSize= { size2.width(), size2.height() };
-        int ai= 0;
-        //clKernelArg(_downKernel, ai++, srcSize);
-        //clKernelArg(_downKernel, ai++, dstSize);
-        clKernelArg(_upKernel, ai++, _brightImages[i]);
-        clKernelArg(_upKernel, ai++, _brightImages[i-1]);
-        if(!clLaunchKernel(_upKernel, queue, size2))
-            return false;
-    }
-
-    //assert(_brightLevels == 4);
-
+    // Call bloomBlend using _image[0] as the input image, and the last downsample
+    // as the bloom image.
     int ai= 0;
-    clKernelArg(_blendKernel, ai++, _visibleImage);
-    clKernelArg(_blendKernel, ai++, _brightImages[0]);
-    clKernelArg(_blendKernel, ai++, _brightImages[1]);
-    clKernelArg(_blendKernel, ai++, _brightImages[2]);
-    clKernelArg(_blendKernel, ai++, _brightImages[2]);
+    clKernelArg(_blendKernel, ai++, _images[0]);
+    clKernelArg(_blendKernel, ai++, _enabled ? _images[_levels-1] : _images[0]);
     clKernelArg(_blendKernel, ai++, outputImage);
-    clKernelArg(_blendKernel, ai++, _brightBlend);
-    return clLaunchKernel(_blendKernel, queue, _size);
-
+    clKernelArg(_blendKernel, ai++, _bloomBlend);
+    return clLaunchKernel(_blendKernel, queue, _inputSize);
 }
 
-QSize Bloom::brightSize(int level)
+QSize Bloom::imageSize(int level)
 {
-    assert(level <= _brightLevels);
+    assert(level>=0 and level<=_levels);
 
     // The first level will have the same size as the visibleImage
     if(!level)
-        return _size;
+        return _inputSize;
 
-    const QSize baseSize= CLUtils::roundUp(_size, 1 << (_brightLevels-1));
+    const QSize baseSize= CLUtils::roundUp(_inputSize, 1 << (_levels-1));
     return baseSize / (1 << level);
 }

@@ -1,6 +1,6 @@
 //
-// Stores the luma of src on the first channel of dst. dst can have any size and
-// aspect ratio (eg. 256x256).
+// Stores the luma of src on the all the channels of dst. dst can have any size
+// and aspect ratio (eg. 256x256).
 //
 // Configuration defines:
 // - GAMMA_CORRECT: If src is in linear space, then GAMMA_CORRECT should be set
@@ -21,13 +21,14 @@ kernel void lumaDownsample(
 
     const sampler_t sampler= CLK_NORMALIZED_COORDS_TRUE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_LINEAR;
 
-    const float3 srcColor= read_image3f(src, sampler, normPos(dstPos, dstSize));
+    const float3 srcColor= read_image3f(src, sampler, normalizePos(dstPos, dstSize));
     float luma= dot(srcColor, (float3)(0.299f, 0.587f, 0.114f));
 
 #ifdef GAMMA_CORRECT
     luma= native_powr(luma, 1.0f/GAMMA_CORRECT);
 #endif
 
+    // Input values may be over 1.0f, so the luma has to be clamped.
     luma= clamp(luma, 0.0f, 1.0f);
 
     write_imagef(dst, dstPos, (float4)(luma));

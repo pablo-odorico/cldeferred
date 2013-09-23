@@ -77,7 +77,8 @@ void CLDeferred::finalizeInit()
 
     if(!scene.loadScene("models/untitled/untitled2.obj"))
         debugFatal("Could not load scene!");
-    scene.camera().lookAt(QVector3D(-8, 7, -8), QVector3D(0, 0.5f, 0));
+    //scene.camera().lookAt(QVector3D(-8, 7, -8), QVector3D(0, 0.5f, 0));
+    scene.camera().lookAt(QVector3D(9.10233, 2.11752, -0.262795), QVector3D(9.10233, 2.11752, -0.262795)+QVector3D(-0.997687, 0.0263598, -0.0626599));
     scene.camera().setMoveSpeed(5);
 
     DirLight* dirLight= new DirLight();
@@ -309,8 +310,10 @@ void CLDeferred::acquireCLObjects()
 
 void CLDeferred::updateExposure()
 {
-    // Always use outputImage (AA won't afect the exposure)
-    autoExposure.update(clQueue(), bloom.visibleImage());//outputImage);
+    // Calculate the exposure based on the output of the deferred rendering stage
+    // "Bright" values (over 1.0f) in bloom.input will be clamped, so bloom has
+    // no effect on the exposure.
+    autoExposure.update(clQueue(), bloom.input());
 }
 
 void CLDeferred::releaseCLObjects()
@@ -376,8 +379,7 @@ void CLDeferred::deferredPass()
     clKernelArg(deferredKernel, ai++, gbNormals);
     clKernelArg(deferredKernel, ai++, gbDepth);
     clKernelArg(deferredKernel, ai++, occlusionBuffer.buffer());
-    clKernelArg(deferredKernel, ai++, bloom.visibleImage());
-    clKernelArg(deferredKernel, ai++, bloom.brightImage());
+    clKernelArg(deferredKernel, ai++, bloom.input());
     clKernelArg(deferredKernel, ai++, cameraStruct);
     clKernelArg(deferredKernel, ai++, spotLightCount);
     clKernelArg(deferredKernel, ai++, spotLightStructs);
@@ -473,12 +475,15 @@ void CLDeferred::keyPressEvent(QKeyEvent *event)
     const int key= event->key();
     if(key == Qt::Key_P) saveScreenshot();
     if(key == Qt::Key_M) enableAA= !enableAA;
+
     if(key == Qt::Key_Right) dirLightAngle= qMin(dirLightAngle + 1.0f, 179.0f);
     if(key == Qt::Key_Left) dirLightAngle= qMax(dirLightAngle - 1.0f, 1.0f);
+
+    if(key == Qt::Key_B) bloom.toggleEnabled();
     if(key == Qt::Key_Up) bloom.setBrightThreshold(bloom.brightThreshold() + 0.1f);
     if(key == Qt::Key_Down) bloom.setBrightThreshold(bloom.brightThreshold() - 0.1f);
-    if(key == Qt::Key_T) bloom.setBrightBlend(bloom.brightBlend() + 0.1f);
-    if(key == Qt::Key_G) bloom.setBrightBlend(bloom.brightBlend() - 0.1f);
+    if(key == Qt::Key_T) bloom.setBloomBlend(bloom.bloomBlend() + 0.1f);
+    if(key == Qt::Key_G) bloom.setBloomBlend(bloom.bloomBlend() - 0.1f);
 
     if(key == Qt::Key_E) autoExposure.toggleEnabled();
     if(key == Qt::Key_R)

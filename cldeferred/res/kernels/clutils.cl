@@ -96,7 +96,7 @@ float3 reflect(float3 V, float3 N)
 // Misc
 //
 
-float2 normPos(int2 pos, int2 size)
+float2 normalizePos(int2 pos, int2 size)
 {
     return (float2)((float)pos.x/size.x, (float)pos.y/size.y);
 }

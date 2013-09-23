@@ -1,6 +1,8 @@
 #include "clutils.h"
 #include "debug.h"
 
+#include <QVector2D>
+
 // X11 OpenGL functions
 #include <GL/glx.h>
 
@@ -44,6 +46,10 @@ bool CLUtils::setupOpenCLGL(cl_context* context, cl_command_queue* queue, cl_dev
     *queue= clCreateCommandQueue(*context, *device, CL_QUEUE_PROFILING_ENABLE, &error);
     if(clCheckError(error, "clCreateCommandQueue"))
         return false;
+
+    clInfo.context= *context;
+    clInfo.device= *device;
+    clInfo.queue= *queue;
 
     return true;
 }
@@ -97,7 +103,7 @@ cl_kernel CLUtils::loadKernelText(
     cl_build_status build_status;
     clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_STATUS, sizeof(cl_build_status), &build_status, NULL);
 
-    if(clCheckError(error, "Building program for kernel " + kernelName)) {
+    if(clCheckError(error, "Kernel '" + kernelName + "'")) {
         size_t logSize;
         clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &logSize);
         logSize++;
@@ -156,6 +162,50 @@ bool CLUtils::checkErrorFunc(cl_int error, QString msg, const char* file, const 
 inline uint qHash(const QSize& size, uint)
 {
     return qHash((qint64)size.width() + ((qint64)(size.height()) << 32));
+}
+
+cl_mem CLUtils::gaussianKernel(cl_context context, cl_command_queue queue, QSize size)
+{
+    static QHash<QSize,cl_mem> kernels;
+
+    if(kernels.contains(size))
+        return kernels[size];
+
+    cl_int error;
+
+    const size_t count= size.width() * size.height();
+    const size_t bytes= count * sizeof(float);
+
+    debugMsg("Creating gaussian kernel of %d x %d.", size.width(), size.height());
+    cl_mem kernel= clCreateBuffer(context, CL_MEM_READ_ONLY, bytes, NULL, &error);
+    if(clCheckError(error, "clCreateBuffer"))
+        return 0;
+
+    float sum= 0;
+    float weights[count];
+    for(int y=0; y<size.height(); y++) {
+        for(int x=0; x<size.width(); x++) {
+            const QVector2D vec((float)x/size.width()-0.5f,(float)y/size.height()-0.5f);
+            const float weight= exp(-10.0f * vec.lengthSquared());
+            weights[x + y * size.width()]= weight;
+            sum += weight;
+        }
+    }
+    // Normalize
+    for(uint i=0; i<count; i++)
+        weights[i] /= sum;
+/*
+    for(int y=0; y<size.height(); y++)
+        for(int x=0; x<size.width(); x++)
+            qDebug("%d %d %f", x,y, weights[x + y * size.width()]);
+*/
+
+    error= clEnqueueWriteBuffer(queue, kernel, CL_TRUE, 0, bytes, weights, 0, NULL, NULL);
+    if(clCheckError(error, "clEnqueueWriteBuffer"))
+        return 0;
+
+    kernels[size]= kernel;
+    return kernel;
 }
 
 QImage CLUtils::toImage(cl_context context, cl_device_id device, cl_command_queue queue,

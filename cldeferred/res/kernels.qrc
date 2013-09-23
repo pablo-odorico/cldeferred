@@ -6,5 +6,6 @@
         <file>kernels/lumaDownsample.cl</file>
         <file>kernels/bloomBlend.cl</file>
         <file>kernels/downHalfFilter.cl</file>
+        <file>kernels/bloomDown.cl</file>
     </qresource>
 </RCC>

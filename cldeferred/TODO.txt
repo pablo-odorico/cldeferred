@@ -6,8 +6,11 @@ OpenCL 1.2
 Contar juan
     CLUtils cleanup
     toImage
-	clFormatGL
-	metering
+    clFormatGL
+    metering
+    bloom una sola imagen en vez de dos
+    bicubic
+	gaussianKernel, clInfo
 
 Roadmap
     Shading

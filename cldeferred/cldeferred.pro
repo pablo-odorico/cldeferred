@@ -35,10 +35,10 @@ SOURCES += \
     src/utils/glutils.cpp \
     src/scene/dirlight.cpp \
     src/utils/analytics.cpp \
-    src/stages/bloom.cpp \
     src/stages/occlusionbuffer.cpp \
     src/stages/autoexposure.cpp \
-    src/stages/autoexposurethread.cpp
+    src/stages/autoexposurethread.cpp \
+    src/stages/bloom.cpp
 
 HEADERS += \
     src/fbo.h \
@@ -64,7 +64,8 @@ HEADERS += \
     src/stages/bloom.h \
     src/stages/occlusionbuffer.h \
     src/stages/autoexposure.h \
-    src/stages/autoexposurethread.h
+    src/stages/autoexposurethread.h \
+    src/utils/singleton.h
 
 OTHER_FILES += \
     TODO.txt \
@@ -80,7 +81,9 @@ OTHER_FILES += \
     res/kernels/fxaa.cl \
     res/kernels/lumaDownsample.cl \
     res/kernels/bloomBlend.cl \
-    res/kernels/downHalfFilter.cl
+    res/kernels/downHalfFilter.cl \
+    res/kernels/bicubic.cl \
+    res/kernels/bloomDown.cl
 
 RESOURCES += \
     res/shaders.qrc \

@@ -47,9 +47,9 @@ void deferredPass(
     read_only  image2d_t gbNormals,
     read_only  image2d_t gbDepth,
     read_only global uchar* occlusionBuffer,
-    // Two LINEAR output images for bloom effect
-    write_only image2d_t dstVisible,
-    write_only image2d_t dstBright,
+    // LINEAR output image, values over 1.0f are considered bright and used for the
+    // bloom efect
+    write_only image2d_t output,
     // Scene: Camera, Lights and Materials
     // constant cl_material* materials,
     constant cl_camera* camera,
@@ -157,13 +157,8 @@ void deferredPass(
     // Tone mapping for HDR, values over 1.0f are "bright"
     color= toneMap(color, exposure, brightThres);
 
-    // Extract and store LINEAR visible component
-    const float3 visibleColor= min(color, (float3)(1.0f));
-    write_imagef(dstVisible, pos, (float4)(visibleColor, 1.0f));
-
-    // Extract and store LINEAR bright component
-    const float3 brightColor= max(color - 1.0f, (float3)(0.0f));
-    write_imagef(dstBright, pos, (float4)(brightColor, 1.0f));
+    // Store LINEAR color value
+    write_imagef(output, pos, (float4)(color, 1.0f));
 }
 
 

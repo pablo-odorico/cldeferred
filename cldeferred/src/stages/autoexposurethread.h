@@ -68,4 +68,4 @@ private:
     LumaData _outputData;
 };
 
-#endif // EXPOSURETHREAD_H
+#endif // AUTOEXPOSURETHREAD_H

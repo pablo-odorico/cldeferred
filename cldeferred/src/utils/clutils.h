@@ -6,6 +6,7 @@
 #include <CL/cl_gl.h>
 #include <QtCore>
 #include <QImage>
+#include "singleton.h"
 
 //
 // Convenience macros
@@ -37,6 +38,14 @@
 // Returns a cl_image_format pointer from a GL Format, to be used in a safe manner in
 // clCreateImage* and related functions
 #define clFormatGL(glFormat) CLUtils::clFormatGLFunc(glFormat).data()
+
+// The clInfo singleton is provided for debugging purposes
+typedef struct {
+    cl_context context;
+    cl_device_id device;
+    cl_command_queue queue;
+} CLInfoStruct;
+#define clInfo Singleton<CLInfoStruct>::instance()
 
 class CLUtils
 {
@@ -79,7 +88,6 @@ public:
 
     //
     // QImage interop for debugging
-    // This function is NOT thread-safe.
     //
     static QImage toImage(cl_context context, cl_device_id device, cl_command_queue queue,
                           cl_mem image, bool saveAlpha=false);
@@ -92,6 +100,8 @@ public:
     // If error != CL_SUCCESS, checkError shows the error string and msg and returns true
     // Use the clCheckError macro
     static bool checkErrorFunc(cl_int error, QString msg, const char* file, const int line);
+
+    static cl_mem gaussianKernel(cl_context context, cl_command_queue queue, QSize size);
 
     //
     // Enum conversion

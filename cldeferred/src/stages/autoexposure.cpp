@@ -23,11 +23,11 @@ bool AutoExposure::init(cl_context context, cl_device_id device, QSize computeSi
     assert(!_initialized);
 
     _updatePeriod= updatePeriod;
-    _downSize= computeSize;
+    _lumaSize= computeSize;
 
     // Compile kernel and set arguments
     CLUtils::KernelDefines downDefines;
-    downDefines["GAMMA_CORRECT"]= "2.2f"; // visibleImage is linear
+    downDefines["GAMMA_CORRECT"]= "2.2f";
     _downKernel= CLUtils::loadKernelPath(context, device, ":/kernels/lumaDownsample.cl",
             "lumaDownsample", downDefines, QStringList("../res/kernels/"));
     if(!_downKernel) {
@@ -44,7 +44,7 @@ bool AutoExposure::init(cl_context context, cl_device_id device, QSize computeSi
     cl_int error;
     // This image could be WRITE_ONLY
     _lumaImage= clCreateImage2D(context, CL_MEM_READ_WRITE, clFormatGL(GL_R),
-            _downSize.width(), _downSize.height(), 0, 0, &error);
+            _lumaSize.width(), _lumaSize.height(), 0, 0, &error);
     if(clCheckError(error, "clCreateImage2D")) {
         free(_lumaData);
         return false;
@@ -76,19 +76,19 @@ void AutoExposure::update(cl_command_queue queue, cl_mem image)
     int ai= 0;
     clKernelArg(_downKernel, ai++, image);
     clKernelArg(_downKernel, ai++, _lumaImage);
-    if(!clLaunchKernel(_downKernel, queue, _downSize))
+    if(!clLaunchKernel(_downKernel, queue, _lumaSize))
         return;
 
     // Download image data and wait for the execution to be done (sync the queue)
     size_t origin[3]= { 0,0,0 };
-    size_t region[3]= { (size_t)_downSize.width(), (size_t)_downSize.height(), 1 };
+    size_t region[3]= { (size_t)_lumaSize.width(), (size_t)_lumaSize.height(), 1 };
     cl_int error= clEnqueueReadImage(queue, _lumaImage, CL_TRUE, origin, region,
-                                     _downSize.width(),0,_lumaData,0,0,0);
+                                     _lumaSize.width(),0,_lumaData,0,0,0);
     if(clCheckError(error, "clEnqueueReadImage"))
         return;
 
     // Enqueue update
-    _thread.update(_lumaData, _downSize);
+    _thread.update(_lumaData, _lumaSize);
 
     // When ExposureThread is done, it will emit updateDone signal and
     // the updateExposureData() will be called in a thread-safe manner.
