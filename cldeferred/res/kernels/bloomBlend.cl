@@ -39,7 +39,7 @@ kernel void bloomBlend(
     const float2 normPos= normalizePos(pos, get_image_dim(input));
     const int2 bloomSize= get_image_dim(bloom);
     const float2 bloomPos= (float2)(normPos.x*bloomSize.x + 0.5f, normPos.y*bloomSize.y + 0.5f);
-    float3 bright= bicubicSample(bloom, bloomPos);
+    float3 bright= bicubicSample3(bloom, bloomPos);
     bright= max(bright-1, (float3)(0));
 
     // Blend visible and bright images
@@ -54,7 +54,7 @@ kernel void bloomBlend(
     if(pos.x > size.x/2)
         bright= read_image3f(bloom, sampler, bloomPos);
     else
-        bright= bicubicSample(bloom, bloomPos);
+        bright= bicubicSample3(bloom, bloomPos);
     bright= max(bright-(float3)(1), (float3)(0));
 
     // Blend visible and bright images
