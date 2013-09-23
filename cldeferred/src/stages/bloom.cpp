@@ -87,10 +87,11 @@ bool Bloom::update(cl_command_queue queue, cl_mem outputImage)
     }
 
     // Downsample _level-1 times
+    cl_mem blurWeights= CLUtils::gaussianKernel(clInfo.context, clInfo.queue, QSize(3,3));
+
     for(int i=0; i<_levels-1; i++) {
         const QSize size= imageSize(i);
         cl_int2 srcSize= { size.width(), size.height() };
-        cl_mem blurWeights= CLUtils::gaussianKernel(clInfo.context, clInfo.queue, QSize(3,3));
 
         int ai= 0;
         clKernelArg(_downKernel, ai++, _images[i]);
@@ -105,7 +106,7 @@ bool Bloom::update(cl_command_queue queue, cl_mem outputImage)
     // as the bloom image.
     int ai= 0;
     clKernelArg(_blendKernel, ai++, _images[0]);
-    clKernelArg(_blendKernel, ai++, _enabled ? _images[_levels-1] : _images[0]);
+    clKernelArg(_blendKernel, ai++, _images[_levels-1]);
     clKernelArg(_blendKernel, ai++, outputImage);
     clKernelArg(_blendKernel, ai++, _bloomBlend);
     return clLaunchKernel(_blendKernel, queue, _inputSize);
