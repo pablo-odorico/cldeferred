@@ -45,6 +45,8 @@ protected:
     void run();
 
 private:
+    Q_DISABLE_COPY(AutoExposureThread)
+
     size_t bytes() { return _size.width() * _size.height() * sizeof(uchar); }
     size_t meteringBytes() { return _size.width() * _size.height() * sizeof(float); }
 

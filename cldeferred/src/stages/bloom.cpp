@@ -1,5 +1,7 @@
 #include "bloom.h"
+#include "analytics.h"
 #include "debug.h"
+
 
 Bloom::Bloom() :
     _initialized(false), _enabled(true),
@@ -98,7 +100,7 @@ bool Bloom::update(cl_command_queue queue, cl_mem outputImage)
         clKernelArg(_downKernel, ai++, _images[i+1]);
         clKernelArg(_downKernel, ai++, srcSize);
         clKernelArg(_downKernel, ai++, blurWeights);
-        if(!clLaunchKernel(_downKernel, queue, imageSize(i+1)))
+        if(!clLaunchKernelEvent(_downKernel, queue, imageSize(i+1), analytics.event("Bloom/Downsample"+QString::number(i+1))))
             return false;
     }
 
@@ -109,7 +111,7 @@ bool Bloom::update(cl_command_queue queue, cl_mem outputImage)
     clKernelArg(_blendKernel, ai++, _images[_levels-1]);
     clKernelArg(_blendKernel, ai++, outputImage);
     clKernelArg(_blendKernel, ai++, _bloomBlend);
-    return clLaunchKernel(_blendKernel, queue, _inputSize);
+    return clLaunchKernelEvent(_blendKernel, queue, _inputSize, analytics.event("Bloom/Blend"));
 }
 
 QSize Bloom::imageSize(int level)

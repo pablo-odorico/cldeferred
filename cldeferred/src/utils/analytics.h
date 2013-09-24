@@ -1,17 +1,24 @@
 #ifndef ANALYTICS_H
 #define ANALYTICS_H
 
+#include "clutils.h"
+#include "singleton.h"
+
+#define analytics Singleton<Analytics>::instance()
+
 class Analytics
 {
 public:
-    static Analytics& instance() {
-        static Analytics instance;
-        return instance;
-    }
+    void printTimes();
+
+    bool eventExists(QString name) { return _events.contains(name); }
+    cl_event& event(QString name) { return _events[name]; }
 
 private:
-    Analytics();
-    Analytics(const Analytics& other);
+    float elapsedMSecs(cl_ulong start, cl_ulong finish) {
+        return (double)(finish-start)/1e6; }
+
+    QHash<QString, cl_event> _events;
 };
 
 #endif // ANALYTICS_H

@@ -26,6 +26,8 @@ public:
     }
 
 private:
+    Q_DISABLE_COPY(OcclusionBuffer)
+
     bool updateKernel(int spotLightCount, int dirLightCount);
     bool updateBuffer();
 

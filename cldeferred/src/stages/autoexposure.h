@@ -5,10 +5,14 @@
 #include "utils/clutils.h"
 #include "autoexposurethread.h"
 
+void CL_CALLBACK exposureCallback(cl_event event, cl_int, void* user_data);
+
 class AutoExposure : public QObject
 {
 Q_OBJECT
 public:
+    friend void CL_CALLBACK exposureCallback(cl_event, cl_int, void*);
+
     typedef AutoExposureThread::MeteringMode MeteringMode;
     typedef AutoExposureThread::LumaData     LumaData;
 
@@ -52,6 +56,8 @@ public:
     cl_mem lumaImage() { return _lumaImage; }
 
 private:
+    Q_DISABLE_COPY(AutoExposure)
+
     size_t lumaDataBytes() { return _lumaSize.width() * _lumaSize.height(); }
     bool _initialized;
 
@@ -66,6 +72,8 @@ private:
     uchar* _lumaData;
     cl_mem _lumaImage;
     cl_kernel _downKernel;
+    cl_event& _downsampleEvent;
+    cl_event& _downloadEvent;
 
     LumaData _exposureData;
     AutoExposureThread _thread;

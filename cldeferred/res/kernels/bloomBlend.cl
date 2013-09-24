@@ -38,7 +38,8 @@ kernel void bloomBlend(
     // Read bloom color and extract the "bright" component
     const float2 normPos= normalizePos(pos, get_image_dim(input));
     const int2 bloomSize= get_image_dim(bloom);
-    const float2 bloomPos= (float2)(normPos.x*bloomSize.x + 0.5f, normPos.y*bloomSize.y + 0.5f);
+//const float2 bloomPos= (float2)(normPos.x*bloomSize.x + 0.5f, normPos.y*bloomSize.y + 0.5f);
+    const float2 bloomPos= (float2)(normPos.x*bloomSize.x - 1.0f, normPos.y*bloomSize.y);
     float3 bright= bicubicSample3(bloom, bloomPos);
     bright= max(bright-1, (float3)(0));
 

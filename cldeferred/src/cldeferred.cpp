@@ -1,6 +1,7 @@
 #include "cldeferred.h"
 #include <cassert>
 #include "debug.h"
+#include "analytics.h"
 
 const GLenum CLDeferred::diffuseMatFormat;
 const GLenum CLDeferred::normalsFormat;
@@ -240,6 +241,8 @@ void CLDeferred::renderGL()
 
     const qint64 fpsElapsed= now - fpsLastTime;
     if(fpsElapsed > 3e9) {
+        analytics.printTimes();
+
         int i= 0;
         const float elapsed1st = (times[i] - now       ) / 1e6f; i++;
         const float elapsedShad= (times[i] - times[i-1]) / 1e6f; i++;

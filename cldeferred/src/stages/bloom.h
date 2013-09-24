@@ -33,6 +33,8 @@ public:
 
 
 private:
+    Q_DISABLE_COPY(Bloom)
+
     bool _initialized;
     bool _enabled;
 

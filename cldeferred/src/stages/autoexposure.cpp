@@ -1,11 +1,14 @@
 #include "autoexposure.h"
 #include "debug.h"
+#include "analytics.h"
 #include <cassert>
 
 AutoExposure::AutoExposure()
     : QObject(), _initialized(false), _autoExposure(true),
       _updateCounter(0), _updatePeriod(1), _lumaData(0),
-      _exposure(1.0f), _adjustSpeed(0.05f)
+      _exposure(1.0f), _adjustSpeed(0.05f),
+      _downsampleEvent(analytics.event("AE/Downsample")),
+      _downloadEvent(analytics.event("AE/Download"))
 {
     connect(&_thread, SIGNAL(updateDone()), this, SLOT(updateExposureData()));
     _thread.start();
@@ -67,31 +70,39 @@ void AutoExposure::update(cl_command_queue queue, cl_mem image)
     _exposure *= 1.0f + qBound(-_adjustSpeed, 0.5f - _exposureData.meteringAverage, _adjustSpeed);
 
     _updateCounter++;
-    if(_updateCounter % _updatePeriod) {
-        // Interpolate here
+    if(_updateCounter % _updatePeriod)
         return;
-    }
     _updateCounter= 0;
 
     int ai= 0;
     clKernelArg(_downKernel, ai++, image);
     clKernelArg(_downKernel, ai++, _lumaImage);
-    if(!clLaunchKernel(_downKernel, queue, _lumaSize))
+    if(!clLaunchKernelEvent(_downKernel, queue, _lumaSize, _downsampleEvent))
         return;
 
     // Download image data and wait for the execution to be done (sync the queue)
     size_t origin[3]= { 0,0,0 };
     size_t region[3]= { (size_t)_lumaSize.width(), (size_t)_lumaSize.height(), 1 };
-    cl_int error= clEnqueueReadImage(queue, _lumaImage, CL_TRUE, origin, region,
-                                     _lumaSize.width(),0,_lumaData,0,0,0);
+    cl_int error= clEnqueueReadImage(queue, _lumaImage, CL_FALSE, origin, region,
+                                     _lumaSize.width(),0,_lumaData,0,0, &_downloadEvent);
     if(clCheckError(error, "clEnqueueReadImage"))
         return;
 
-    // Enqueue update
-    _thread.update(_lumaData, _lumaSize);
+    error= clSetEventCallback(_downloadEvent, CL_COMPLETE, exposureCallback, (void*)this);
+    clCheckError(error, "clSetEventCallback");
 
+    // When the download is done, exposureCallback will be called
+}
+
+// This callback will be called in non-blocking mode when lumaData is ready
+void CL_CALLBACK exposureCallback(cl_event event, cl_int, void* user_data)
+{
+    AutoExposure* object= static_cast<AutoExposure*>(user_data);
+    // Enqueue update
     // When ExposureThread is done, it will emit updateDone signal and
     // the updateExposureData() will be called in a thread-safe manner.
+    object->_thread.update(object->_lumaData, object->_lumaSize);
+    // The updateExposureData will be called after the thread has finished working
 }
 
 void AutoExposure::updateExposureData()
@@ -99,27 +110,3 @@ void AutoExposure::updateExposureData()
     _exposureData= _thread.exposureData();
 }
 
-
-/*
-
-For some reason, using event callbacks is using 100% of a CPU core...
-
-// exposureCallback will be called after the downsample is calculated
-// and downloaded to _lumaData
-error= clSetEventCallback(event, CL_COMPLETE, &exposureCallback, (void*)this);
-checkCLError(error, "clSetEventCallback");
-
-
-// This callback will be called in non-blocking mode when lumaData is ready
-void exposureCallback(cl_event event, cl_int, void* user_data)
-{
-    clReleaseEvent(event);
-    return;
-    Exposure& object= *static_cast<Exposure*>(user_data);
-    // Enqueue update
-    const int count= object._downSize.width() * object._downSize.height();
-    object._thread.update(object._lumaData, count);
-    // The updateExposureData will be called after the thread has finished working
-}
-
-*/

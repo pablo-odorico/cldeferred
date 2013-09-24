@@ -208,7 +208,7 @@ cl_mem CLUtils::gaussianKernel(cl_context context, cl_command_queue queue, QSize
     return kernel;
 }
 
-QImage CLUtils::toImage(cl_context context, cl_device_id device, cl_command_queue queue,
+QImage CLUtils::image(cl_context context, cl_device_id device, cl_command_queue queue,
                         cl_mem image, bool saveAlpha)
 {
     cl_int error;
@@ -249,13 +249,15 @@ QImage CLUtils::toImage(cl_context context, cl_device_id device, cl_command_queu
     if(!convKernel) {
         debugMsg("Creating conversion kernel.");
         const char* convKernelText= \
-        "kernel void conv(read_only image2d_t src, write_only image2d_t dst) { "
-        "  int2 p= (int2)(get_global_id(0), get_global_id(1));                 "
-        "  int2 size= get_image_dim(dst);                                      "
-        "  if(p.x >= size.x || p.y >= size.y) return;                          "
-        "  sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;"
-        "  write_imagef(dst, p, read_imagef(src, sampler, (int2)(p.x,size.y-1-p.y)));"
-        "}";
+        "kernel void conv(read_only image2d_t src, write_only image2d_t dst) {  "
+        "    int2 p= (int2)(get_global_id(0), get_global_id(1));                  "
+        "    int2 size= get_image_dim(dst);                                       "
+        "    if(p.x >= size.x || p.y >= size.y) return;                           "
+        "    sampler_t sampler= CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;"
+        "    float4 color= read_imagef(src, sampler, (int2)(p.x,size.y-1-p.y));   "
+        "    if(get_image_channel_order(src)==CLK_R) color.yzw= (float3)(color.x);"
+        "    write_imagef(dst, p, color);                                         "
+        "}                                                                      ";
 
         convKernel= loadKernelText(context, device, convKernelText, "conv");
         if(!convKernel)

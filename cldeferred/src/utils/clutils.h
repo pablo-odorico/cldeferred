@@ -34,6 +34,8 @@
 // Returns FALSE on error.
 #define clLaunchKernel(kernel,queue,size) \
     (!clCheckError(clEnqueueNDRangeKernel(queue,kernel,2,NULL,clNDRange(size),clWorkGroup(),0,NULL,NULL), #kernel))
+#define clLaunchKernelEvent(kernel,queue,size,event) \
+    (!clCheckError(clEnqueueNDRangeKernel(queue,kernel,2,NULL,clNDRange(size),clWorkGroup(),0,NULL,&(event)), #kernel))
 
 // Returns a cl_image_format pointer from a GL Format, to be used in a safe manner in
 // clCreateImage* and related functions
@@ -89,8 +91,8 @@ public:
     //
     // QImage interop for debugging
     //
-    static QImage toImage(cl_context context, cl_device_id device, cl_command_queue queue,
-                          cl_mem image, bool saveAlpha=false);
+    static QImage image(cl_context context, cl_device_id device, cl_command_queue queue,
+                        cl_mem image, bool saveAlpha=false);
 
     //
     // Misc
