@@ -7,6 +7,7 @@
 #include <QtCore>
 #include <QImage>
 #include "singleton.h"
+#include "analytics.h" // Used in the clLaunchKernelEvent macro
 
 //
 // Convenience macros
@@ -34,8 +35,9 @@
 // Returns FALSE on error.
 #define clLaunchKernel(kernel,queue,size) \
     (!clCheckError(clEnqueueNDRangeKernel(queue,kernel,2,NULL,clNDRange(size),clWorkGroup(),0,NULL,NULL), #kernel))
-#define clLaunchKernelEvent(kernel,queue,size,event) \
-    (!clCheckError(clEnqueueNDRangeKernel(queue,kernel,2,NULL,clNDRange(size),clWorkGroup(),0,NULL,&(event)), #kernel))
+#define clLaunchKernelEvent(kernel,queue,size,eventName) \
+    (!clCheckError(clEnqueueNDRangeKernel(queue,kernel,2,NULL,clNDRange(size), \
+    clWorkGroup(),0,NULL,&(analytics.clEvent(eventName))), #kernel))
 
 // Returns a cl_image_format pointer from a GL Format, to be used in a safe manner in
 // clCreateImage* and related functions

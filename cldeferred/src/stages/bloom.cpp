@@ -85,7 +85,7 @@ bool Bloom::update(cl_command_queue queue, cl_mem outputImage)
         int ai= 0;
         clKernelArg(_bypassKernel, ai++, _images[0]);
         clKernelArg(_bypassKernel, ai++, outputImage);
-        return clLaunchKernel(_bypassKernel, queue, _inputSize);
+        return clLaunchKernelEvent(_bypassKernel, queue, _inputSize, "Bloom/Bypass");
     }
 
     // Downsample _level-1 times
@@ -100,7 +100,8 @@ bool Bloom::update(cl_command_queue queue, cl_mem outputImage)
         clKernelArg(_downKernel, ai++, _images[i+1]);
         clKernelArg(_downKernel, ai++, srcSize);
         clKernelArg(_downKernel, ai++, blurWeights);
-        if(!clLaunchKernelEvent(_downKernel, queue, imageSize(i+1), analytics.event("Bloom/Downsample"+QString::number(i+1))))
+        const QString eventName= "Bloom/Downsample" + QString::number(i+1);
+        if(!clLaunchKernelEvent(_downKernel, queue, imageSize(i+1), eventName))
             return false;
     }
 
@@ -111,7 +112,7 @@ bool Bloom::update(cl_command_queue queue, cl_mem outputImage)
     clKernelArg(_blendKernel, ai++, _images[_levels-1]);
     clKernelArg(_blendKernel, ai++, outputImage);
     clKernelArg(_blendKernel, ai++, _bloomBlend);
-    return clLaunchKernelEvent(_blendKernel, queue, _inputSize, analytics.event("Bloom/Blend"));
+    return clLaunchKernelEvent(_blendKernel, queue, _inputSize, "Bloom/Blend");
 }
 
 QSize Bloom::imageSize(int level)

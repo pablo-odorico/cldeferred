@@ -6,9 +6,7 @@
 AutoExposure::AutoExposure()
     : QObject(), _initialized(false), _autoExposure(true),
       _updateCounter(0), _updatePeriod(1), _lumaData(0),
-      _exposure(1.0f), _adjustSpeed(0.05f),
-      _downsampleEvent(analytics.event("AE/Downsample")),
-      _downloadEvent(analytics.event("AE/Download"))
+      _exposure(1.0f), _adjustSpeed(0.05f)
 {
     connect(&_thread, SIGNAL(updateDone()), this, SLOT(updateExposureData()));
     _thread.start();
@@ -77,19 +75,24 @@ void AutoExposure::update(cl_command_queue queue, cl_mem image)
     int ai= 0;
     clKernelArg(_downKernel, ai++, image);
     clKernelArg(_downKernel, ai++, _lumaImage);
-    if(!clLaunchKernelEvent(_downKernel, queue, _lumaSize, _downsampleEvent))
+    if(!clLaunchKernelEvent(_downKernel, queue, _lumaSize, "AE/Downsample"))
         return;
 
     // Download image data and wait for the execution to be done (sync the queue)
+    bool setupCallback= analytics.clEventExists("AE/Download");
+    cl_event& downloadEvent= analytics.clEvent("AE/Download");
+
     size_t origin[3]= { 0,0,0 };
     size_t region[3]= { (size_t)_lumaSize.width(), (size_t)_lumaSize.height(), 1 };
     cl_int error= clEnqueueReadImage(queue, _lumaImage, CL_FALSE, origin, region,
-                                     _lumaSize.width(),0,_lumaData,0,0, &_downloadEvent);
+                                     _lumaSize.width(),0,_lumaData,0,0, &downloadEvent);
     if(clCheckError(error, "clEnqueueReadImage"))
         return;
 
-    error= clSetEventCallback(_downloadEvent, CL_COMPLETE, exposureCallback, (void*)this);
-    clCheckError(error, "clSetEventCallback");
+    if(setupCallback) {
+        error= clSetEventCallback(downloadEvent, CL_COMPLETE, exposureCallback, (void*)this);
+        clCheckError(error, "clSetEventCallback");
+    }
 
     // When the download is done, exposureCallback will be called
 }

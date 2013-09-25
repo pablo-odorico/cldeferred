@@ -302,8 +302,8 @@ void CLDeferred::acquireCLObjects()
     // The shadow map images of the lights don't have to be acquired/released
 
     cl_int error;
-    error= clEnqueueAcquireGLObjects(clQueue(), acquiredBuffers.count(),
-                                     acquiredBuffers.data(), 0, 0, 0);
+    error= clEnqueueAcquireGLObjects(clQueue(), acquiredBuffers.count(), acquiredBuffers.data(),
+                                     0, 0, &analytics.clEvent("CLAcquire"));
     if(clCheckError(error, "clEnqueueAcquireGLObjects"))
         debugFatal("Could not acquire buffers.");
 
@@ -322,8 +322,8 @@ void CLDeferred::updateExposure()
 void CLDeferred::releaseCLObjects()
 {
     cl_int error;
-    error= clEnqueueReleaseGLObjects(clQueue(), acquiredBuffers.count(),
-                                     acquiredBuffers.data(), 0, 0, 0);
+    error= clEnqueueReleaseGLObjects(clQueue(), acquiredBuffers.count(), acquiredBuffers.data(),
+                                     0, 0, &analytics.clEvent("CLRelease"));
     if(clCheckError(error, "clEnqueueReleaseGLObjects"))
         debugFatal("Could not release buffers.");
 
@@ -391,7 +391,7 @@ void CLDeferred::deferredPass()
     clKernelArg(deferredKernel, ai++, lightsWithShadows);
     clKernelArg(deferredKernel, ai++, expo);
     clKernelArg(deferredKernel, ai++, brightThreshold);
-    clLaunchKernel(deferredKernel, clQueue(), gBuffer.size());
+    clLaunchKernelEvent(deferredKernel, clQueue(), gBuffer.size(), "Deferred");
 
     // Sync
     clCheckError(clFinish(clQueue()), "clFinish");
@@ -413,7 +413,7 @@ void CLDeferred::antialiasPass()
 
     clKernelArg(fxaaKernel, 0, outputImage);
     clKernelArg(fxaaKernel, 1, outputImageAA);
-    clLaunchKernel(fxaaKernel, clQueue(), gBuffer.size());
+    clLaunchKernelEvent(fxaaKernel, clQueue(), gBuffer.size(), "FXAA");
 
     // Sync
     clCheckError(clFinish(clQueue()), "clFinish");

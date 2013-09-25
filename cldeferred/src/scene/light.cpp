@@ -1,7 +1,8 @@
 #include "light.h"
 #include "scene.h"
 #include "debug.h"
-#include "assert.h"
+#include "analytics.h"
+#include <cassert>
 
 Light::Light() :
     _shadowMapping(false),
@@ -86,7 +87,7 @@ bool Light::updateShadowMap(const Scene& scene, cl_command_queue queue)
 
     clKernelArg(_downsampleKernel, 0, depthImage);
     clKernelArg(_downsampleKernel, 1, _filteredDepth);
-    if(!clLaunchKernel(_downsampleKernel, queue, _depthFbo.size()))
+    if(!clLaunchKernelEvent(_downsampleKernel, queue, _depthFbo.size(), "LightDownsample"))
         return false;
 
     if(!_depthFbo.releaseColorBuffers(queue))

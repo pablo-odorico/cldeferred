@@ -46,21 +46,6 @@ kernel void bloomBlend(
     // Blend visible and bright images
     float3 color= visible + bloomBlend * bright;
 
-/*
-    // Read bloom color and extract the "bright" component
-    const float2 normPos= normalizePos(pos, get_image_dim(input));
-    const int2 bloomSize= get_image_dim(bloom);
-    const float2 bloomPos= (float2)(normPos.x*bloomSize.x + 0.5f, normPos.y*bloomSize.y + 0.5f);
-    float3 bright;
-    if(pos.x > size.x/2)
-        bright= read_image3f(bloom, sampler, bloomPos);
-    else
-        bright= bicubicSample3(bloom, bloomPos);
-    bright= max(bright-(float3)(1), (float3)(0));
-
-    // Blend visible and bright images
-    float3 color= bloomBlend * bright;
-*/
 
 #ifdef GAMMA_CORRECT
     // Gamma-correct output color

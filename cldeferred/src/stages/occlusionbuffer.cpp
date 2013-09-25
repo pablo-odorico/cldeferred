@@ -1,5 +1,6 @@
 #include "occlusionbuffer.h"
 #include "debug.h"
+#include "analytics.h"
 #include <cassert>
 
 OcclusionBuffer::OcclusionBuffer()
@@ -120,7 +121,7 @@ bool OcclusionBuffer::update(cl_command_queue queue,
         clKernelArg(_kernel, ai++, dirLightDepthImgs[i]);
     clKernelArg(_kernel, ai++, _buffer);
 
-    return clLaunchKernel(_kernel, queue, screenSize);
+    return clLaunchKernelEvent(_kernel, queue, screenSize, "Occlusion");
 }
 
 cl_mem &OcclusionBuffer::buffer()

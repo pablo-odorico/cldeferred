@@ -72,8 +72,6 @@ private:
     uchar* _lumaData;
     cl_mem _lumaImage;
     cl_kernel _downKernel;
-    cl_event& _downsampleEvent;
-    cl_event& _downloadEvent;
 
     LumaData _exposureData;
     AutoExposureThread _thread;
