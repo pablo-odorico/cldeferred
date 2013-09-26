@@ -24,34 +24,36 @@ void CameraCL::updateStructCL(cl_command_queue queue)
 {
     assert(_initialized);
 
-    cl_camera clStruct;
     // TODO implement operators= for cl_float3 and QVector3D, etc.
 
-    memcpy(&clStruct.viewMatrix, _viewMatrix.transposed().data(), sizeof(cl_float16));
+    memcpy(&_clStruct.viewMatrix, _viewMatrix.transposed().data(), sizeof(cl_float16));
 
     QMatrix4x4 viewMatrixInv= _viewMatrix.inverted();
-    memcpy(&clStruct.viewMatrixInv, viewMatrixInv.transposed().data(), sizeof(cl_float16));
+    memcpy(&_clStruct.viewMatrixInv, viewMatrixInv.transposed().data(), sizeof(cl_float16));
 
-    memcpy(&clStruct.projMatrix, _projMatrix.transposed().data(), sizeof(cl_float16));
+    memcpy(&_clStruct.projMatrix, _projMatrix.transposed().data(), sizeof(cl_float16));
 
     QMatrix4x4 projMatrixInv= _projMatrix.inverted();
-    memcpy(&clStruct.projMatrixInv, projMatrixInv.transposed().data(), sizeof(cl_float16));
+    memcpy(&_clStruct.projMatrixInv, projMatrixInv.transposed().data(), sizeof(cl_float16));
 
-    QMatrix4x4 vpMatrixInv= (_projMatrix * _viewMatrix).inverted();
-    memcpy(&clStruct.vpMatrixInv, vpMatrixInv.transposed().data(), sizeof(cl_float16));
+    QMatrix4x4 vpMatrix= _projMatrix * _viewMatrix;
+    memcpy(&_clStruct.vpMatrix, vpMatrix.transposed().data(), sizeof(cl_float16));
 
-    clStruct.position.x= _position.x();
-    clStruct.position.y= _position.y();
-    clStruct.position.z= _position.z();
+    QMatrix4x4 vpMatrixInv= vpMatrix.inverted();
+    memcpy(&_clStruct.vpMatrixInv, vpMatrixInv.transposed().data(), sizeof(cl_float16));
+
+    _clStruct.position.x= _position.x();
+    _clStruct.position.y= _position.y();
+    _clStruct.position.z= _position.z();
 
     const QVector3D look= lookVector();
-    clStruct.lookVector.x= look.x();
-    clStruct.lookVector.y= look.y();
-    clStruct.lookVector.z= look.z();
+    _clStruct.lookVector.x= look.x();
+    _clStruct.lookVector.y= look.y();
+    _clStruct.lookVector.z= look.z();
 
     cl_int error;
     error= clEnqueueWriteBuffer(queue, _clMem, CL_FALSE, 0, sizeof(cl_camera),
-                             &clStruct, 0, NULL, NULL);
+                             &_clStruct, 0, NULL, NULL);
 
     clCheckError(error, "Enqueue write struct");
 }

@@ -21,6 +21,7 @@ private:
     bool _initialized;
 
     cl_mem _clMem;
+    cl_camera _clStruct;
 };
 
 #endif // CAMERACL_H

@@ -38,7 +38,8 @@ SOURCES += \
     src/stages/occlusionbuffer.cpp \
     src/stages/autoexposure.cpp \
     src/stages/autoexposurethread.cpp \
-    src/stages/bloom.cpp
+    src/stages/bloom.cpp \
+    src/stages/motionblur.cpp
 
 HEADERS += \
     src/fbo.h \
@@ -65,7 +66,8 @@ HEADERS += \
     src/stages/occlusionbuffer.h \
     src/stages/autoexposure.h \
     src/stages/autoexposurethread.h \
-    src/utils/singleton.h
+    src/utils/singleton.h \
+    src/stages/motionblur.h
 
 OTHER_FILES += \
     TODO.txt \
@@ -83,7 +85,8 @@ OTHER_FILES += \
     res/kernels/bloomBlend.cl \
     res/kernels/downHalfFilter.cl \
     res/kernels/bicubic.cl \
-    res/kernels/bloomDown.cl
+    res/kernels/bloomDown.cl \
+    res/kernels/motionBlur.cl
 
 RESOURCES += \
     res/shaders.qrc \
