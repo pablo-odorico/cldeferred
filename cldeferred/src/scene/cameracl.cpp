@@ -3,7 +3,7 @@
 
 CameraCL::CameraCL()
     : Camera()
-    , _initialized(false), _clMem(0)
+    , _initialized(false), _clMem(0), _vpMatrixChanged(false)
 {
 }
 
@@ -51,6 +51,7 @@ void CameraCL::updateStructCL(cl_command_queue queue)
 
     // Motion blur matrix: (PrevProj * PrevView) * (InvView * InvProj)
     QMatrix4x4 motionBlurMatrix= _lastVPMatrix * vpMatrixInv;
+    _vpMatrixChanged= vpMatrix != _lastVPMatrix;
     _lastVPMatrix= vpMatrix;
     memcpy(&_clStruct.motionBlurMatrix, motionBlurMatrix.transposed().data(), sizeof(cl_float16));
 

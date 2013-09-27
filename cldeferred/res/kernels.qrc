@@ -7,5 +7,6 @@
         <file>kernels/bloomBlend.cl</file>
         <file>kernels/downHalfFilter.cl</file>
         <file>kernels/bloomDown.cl</file>
+        <file>kernels/motionBlur.cl</file>
     </qresource>
 </RCC>

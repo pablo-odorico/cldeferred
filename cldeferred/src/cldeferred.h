@@ -91,6 +91,7 @@ private:
     // Misc
     bool enableAA;
 	bool enableMotionBlur;
+    bool doneMotionBlur;
     float dirLightAngle;
     QVector<cl_mem> acquiredBuffers;
 

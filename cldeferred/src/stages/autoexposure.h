@@ -5,7 +5,7 @@
 #include "utils/clutils.h"
 #include "autoexposurethread.h"
 
-void CL_CALLBACK exposureCallback(cl_event event, cl_int, void* user_data);
+void CL_CALLBACK exposureCallback(cl_event, cl_int, void* user_data);
 
 class AutoExposure : public QObject
 {

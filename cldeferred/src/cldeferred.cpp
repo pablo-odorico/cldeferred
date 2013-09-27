@@ -12,7 +12,7 @@ CLDeferred::CLDeferred()
     : CLGLWindow()
     , firstPassProgram(0), outputProgram(0)
     , fpsFrameCount(0), fpsLastTime(0)
-    , enableAA(true), enableMotionBlur(true)
+    , enableAA(true), enableMotionBlur(true), doneMotionBlur(false)
     , dirLightAngle(90.0f)
 {
 }
@@ -76,8 +76,9 @@ void CLDeferred::initializeCL()
     if(!fxaaKernel)
         debugFatal("Error loading kernel.");
 
-    // Load FXAA kernel with the pre-computed luma flag set
-    motionBlurKernel= loadKernelPath(clCtx(), clDevice(), ":/kernels/motionBlur.cl", "motionBlur");
+    // Motion blur kernel
+    motionBlurKernel= loadKernelPath(clCtx(), clDevice(), ":/kernels/motionBlur.cl",
+            "motionBlur", KernelDefines(), QStringList("../res/kernels/"));
     if(!motionBlurKernel)
         debugFatal("Error loading kernel.");
 }
@@ -188,12 +189,12 @@ void CLDeferred::resizeGL(QSize size)
 
 void CLDeferred::renderGL()
 {
-    const qint64 now= sceneTime.nsecsElapsed();
-    QVector<qint64> times;
+    Analytics::Event& event= analytics.event("renderGL");
+    event.start();
 
     // Move camera
+    const qint64 now= sceneTime.nsecsElapsed();
     scene.camera().move((now - lastRenderTime)/1000.0f);
-
 
     static float a= 0;
     a += 0.05f;
@@ -213,85 +214,57 @@ void CLDeferred::renderGL()
         const float aRad= dirLightAngle * (M_PI / 180.0f);
         const QVector3D pos(dist * cosf(aRad), dist * sinf(aRad), 0);
         light->lookAt(pos, QVector3D(0,0,0));
-    }
+    }    
 
     // Update OpenCL structs
     scene.updateStructsCL(clQueue());
 
     // 1st pass
     renderToGBuffer();
-    times << sceneTime.nsecsElapsed();
 
     // Update shadow maps: Render the scene once per each light with shadows
     renderShadowMaps();
-    times << sceneTime.nsecsElapsed();
 
+    // Acquire objects
     acquireCLObjects();
-    times << sceneTime.nsecsElapsed();
 
     // Update the occlusion buffer
     updateOcclusionBuffer();
-    times << sceneTime.nsecsElapsed();
 
     // Deferred
     deferredPass();
-    times << sceneTime.nsecsElapsed();
 
     // Bloom blending
     bloomPass();
-    times << sceneTime.nsecsElapsed();
 
     // Antialiasing
     antialiasPass();
-    times << sceneTime.nsecsElapsed();
 
     // Motion Blur
     motionBlurPass();
 
     // Exposure compensation
     updateExposure();
-    times << sceneTime.nsecsElapsed();
 
+    // Release CL objects and sync the queue
     releaseCLObjects();
-    times << sceneTime.nsecsElapsed();
+    clCheckError(clFinish(clQueue()), "clFinish");
 
     // Draw output texture
     drawOutput();
-    times << sceneTime.nsecsElapsed();
 
+    event.finish();
 
     const qint64 fpsElapsed= now - fpsLastTime;
     if(fpsElapsed > 3e9) {
         analytics.printTimes();
-
-        int i= 0;
-        const float elapsed1st = (times[i] - now       ) / 1e6f; i++;
-        const float elapsedShad= (times[i] - times[i-1]) / 1e6f; i++;
-        const float elapsedAcqi= (times[i] - times[i-1]) / 1e6f; i++;
-        const float elapsedOccl= (times[i] - times[i-1]) / 1e6f; i++;
-        const float elapsedDefe= (times[i] - times[i-1]) / 1e6f; i++;
-        const float elapsedBloo= (times[i] - times[i-1]) / 1e6f; i++;
-        const float elapsedAA  = (times[i] - times[i-1]) / 1e6f; i++;
-        const float elapsedExpo= (times[i] - times[i-1]) / 1e6f; i++;
-        const float elapsedRele= (times[i] - times[i-1]) / 1e6f; i++;
-        const float elapsedDraw= (times[i] - times[i-1]) / 1e6f; i++;
-        const float totalTime= elapsed1st + elapsedShad + elapsedAcqi + elapsedOccl
-                + elapsedDefe + elapsedBloo + elapsedAA + elapsedExpo + elapsedRele
-                + elapsedDraw;
-
-        qDebug(" ");
-        qDebug("FPS   : %.01f Hz. (Max. %.01f Hz.)", fpsFrameCount/(fpsElapsed/1e9d), 1000/totalTime);
-        qDebug("Times : G-Buffer | Shadow   | CL Aquire | Occlusion | Deferred  | Bloom    | FXAA     | Exposure | CL Release | Draw quad | TOTAL");
-        qDebug("        %2.02f ms. | %2.02f ms. | %2.02f ms.  | %2.02f ms.  | %2.02f ms.  | %2.02f ms. | %2.02f ms. | %2.02f ms. | %2.02f ms.   | %2.02f ms.  | %.02f ms.",
-               elapsed1st, elapsedShad, elapsedAcqi, elapsedOccl, elapsedDefe, elapsedBloo,
-               elapsedAA, elapsedExpo, elapsedRele, elapsedDraw, totalTime);
 
         fpsLastTime= now;
         fpsFrameCount= 0;
     }
 
     fpsFrameCount++;
-    lastRenderTime= now;
+    lastRenderTime= now;    
 }
 
 //
@@ -300,6 +273,9 @@ void CLDeferred::renderGL()
 
 void CLDeferred::renderToGBuffer()
 {
+    Analytics::Event& event= analytics.event("G-Buffer");
+    event.start();
+
     gBuffer.bind();
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -307,16 +283,28 @@ void CLDeferred::renderToGBuffer()
     scene.draw(firstPassProgram, Scene::MVPMatrix | Scene::ModelITMatrix);
 
     gBuffer.unbind();
+
+    glFinish();
+    event.finish();
 }
 
 void CLDeferred::renderShadowMaps()
 {
+    Analytics::Event& event= analytics.event("ShadowMaps");
+    event.start();
+
     // Update the shadow maps of all lights
     scene.updateShadowMaps(clQueue());
+
+    glFinish();
+    event.finish();
 }
 
 void CLDeferred::acquireCLObjects()
 {
+    Analytics::Event& event= analytics.event("CLAcquire");
+    event.start();
+
     acquiredBuffers.clear();
     acquiredBuffers << gBuffer.colorBuffers();
     acquiredBuffers << outputImage;
@@ -328,12 +316,11 @@ void CLDeferred::acquireCLObjects()
 
     cl_int error;
     error= clEnqueueAcquireGLObjects(clQueue(), acquiredBuffers.count(), acquiredBuffers.data(),
-                                     0, 0, &analytics.clEvent("CLAcquire"));
+                                     0, 0, 0);
     if(clCheckError(error, "clEnqueueAcquireGLObjects"))
         debugFatal("Could not acquire buffers.");
 
-    // Sync
-    clCheckError(clFinish(clQueue()), "clFinish");
+    event.finish();
 }
 
 void CLDeferred::updateExposure()
@@ -346,14 +333,16 @@ void CLDeferred::updateExposure()
 
 void CLDeferred::releaseCLObjects()
 {
+    Analytics::Event& event= analytics.event("CLRelease");
+    event.start();
+
     cl_int error;
     error= clEnqueueReleaseGLObjects(clQueue(), acquiredBuffers.count(), acquiredBuffers.data(),
-                                     0, 0, &analytics.clEvent("CLRelease"));
+                                     0, 0, 0);
     if(clCheckError(error, "clEnqueueReleaseGLObjects"))
         debugFatal("Could not release buffers.");
 
-    // Sync
-    clCheckError(clFinish(clQueue()), "clFinish");
+    event.finish();
 }
 
 
@@ -377,8 +366,6 @@ void CLDeferred::updateOcclusionBuffer()
                 gBuffer.size());
     if(!ok)
         debugFatal("Error updating occlusion buffer.");
-
-    clCheckError(clFinish(clQueue()), "clFinish");
 }
 
 void CLDeferred::deferredPass()
@@ -417,18 +404,12 @@ void CLDeferred::deferredPass()
     clKernelArg(deferredKernel, ai++, expo);
     clKernelArg(deferredKernel, ai++, brightThreshold);
     clLaunchKernelEvent(deferredKernel, clQueue(), gBuffer.size(), "Deferred");
-
-    // Sync
-    clCheckError(clFinish(clQueue()), "clFinish");
 }
 
 void CLDeferred::bloomPass()
 {
     if(!bloom.update(clQueue(), outputImage))
         debugFatal("Could not update bloom images.");
-
-    // Sync
-    clCheckError(clFinish(clQueue()), "clFinish");
 }
 
 void CLDeferred::antialiasPass()
@@ -439,14 +420,16 @@ void CLDeferred::antialiasPass()
     clKernelArg(fxaaKernel, 0, outputImage);
     clKernelArg(fxaaKernel, 1, outputImageAA);
     clLaunchKernelEvent(fxaaKernel, clQueue(), gBuffer.size(), "FXAA");
-
-    // Sync
-    clCheckError(clFinish(clQueue()), "clFinish");
 }
 
 void CLDeferred::motionBlurPass()
 {
     if(!enableMotionBlur)
+        return;
+
+    // If the camera has not moved, don't perform this pass
+    doneMotionBlur= scene.camera().vpMatrixChanged();
+    if(!doneMotionBlur)
         return;
 
     cl_mem input= enableAA ? outputImageAA : outputImage;
@@ -459,9 +442,6 @@ void CLDeferred::motionBlurPass()
     clKernelArg(motionBlurKernel, ai++, outputImageMotionBlur);
     clKernelArg(motionBlurKernel, ai++, cameraStruct);
     clLaunchKernelEvent(motionBlurKernel, clQueue(), gBuffer.size(), "MotionBlur");
-
-    // Sync
-    clCheckError(clFinish(clQueue()), "clFinish");
 }
 
 void CLDeferred::drawOutput()
@@ -471,7 +451,7 @@ void CLDeferred::drawOutput()
 
     outputProgram->bind();
 
-    if(enableMotionBlur) {
+    if(enableMotionBlur and doneMotionBlur) {
         outputTexMotionBlur.bind();
     } else {
         if(enableAA)
@@ -488,8 +468,9 @@ void CLDeferred::drawOutput()
     glEnd();
 
     outputProgram->release();
+
+    glFinish();
 }
-;
 
 
 //
@@ -527,6 +508,7 @@ void CLDeferred::keyPressEvent(QKeyEvent *event)
     const int key= event->key();
     if(key == Qt::Key_P) saveScreenshot();
     if(key == Qt::Key_M) enableAA= !enableAA;
+    if(key == Qt::Key_N) enableMotionBlur= !enableMotionBlur;
 
     if(key == Qt::Key_Right) dirLightAngle= qMin(dirLightAngle + 1.0f, 179.0f);
     if(key == Qt::Key_Left) dirLightAngle= qMax(dirLightAngle - 1.0f, 1.0f);

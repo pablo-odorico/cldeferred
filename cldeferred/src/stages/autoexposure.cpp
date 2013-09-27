@@ -98,7 +98,7 @@ void AutoExposure::update(cl_command_queue queue, cl_mem image)
 }
 
 // This callback will be called in non-blocking mode when lumaData is ready
-void CL_CALLBACK exposureCallback(cl_event event, cl_int, void* user_data)
+void CL_CALLBACK exposureCallback(cl_event, cl_int, void* user_data)
 {
     AutoExposure* object= static_cast<AutoExposure*>(user_data);
     // Enqueue update

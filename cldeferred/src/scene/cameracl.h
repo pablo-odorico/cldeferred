@@ -17,6 +17,10 @@ public:
     void updateStructCL(cl_command_queue queue);
     cl_mem structCL();
 
+    // Returns true when the view-projection matrix of the camera changed
+    // since the last call to updateStructCL
+    bool vpMatrixChanged() { return _vpMatrixChanged; }
+
 private:
     bool _initialized;
 
@@ -24,6 +28,7 @@ private:
     cl_camera _clStruct;
 
     QMatrix4x4 _lastVPMatrix;
+    bool _vpMatrixChanged;
 };
 
 #endif // CAMERACL_H

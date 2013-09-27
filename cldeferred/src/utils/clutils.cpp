@@ -31,10 +31,10 @@ bool CLUtils::setupOpenCLGL(cl_context* context, cl_command_queue* queue, cl_dev
 
 
     // Select default GPU
-//    cl_device_id devs[2];
-//    error= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 2, devs, NULL);
-//    *device= devs[1];
-    error= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, device, NULL);
+    cl_device_id devs[2];
+    error= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 2, devs, NULL);
+    *device= devs[1];
+//    error= clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, device, NULL);
     if(clCheckError(error, "clGetDeviceIDs"))
         return false;
 
