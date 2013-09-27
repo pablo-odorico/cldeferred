@@ -12,7 +12,8 @@ CLDeferred::CLDeferred()
     : CLGLWindow()
     , firstPassProgram(0), outputProgram(0)
     , fpsFrameCount(0), fpsLastTime(0)
-    , enableAA(true), dirLightAngle(90.0f)
+    , enableAA(true), enableMotionBlur(true)
+    , dirLightAngle(90.0f)
 {
 }
 
@@ -52,6 +53,10 @@ void CLDeferred::initializeGL()
     outputTexAA.setVerticalWrap(QGL::ClampToEdge);
     outputTexAA.setHorizontalWrap(QGL::ClampToEdge);
 
+    outputTexMotionBlur.setBindOptions(QGLTexture2D::InvertedYBindOption);
+    outputTexMotionBlur.setVerticalWrap(QGL::ClampToEdge);
+    outputTexMotionBlur.setHorizontalWrap(QGL::ClampToEdge);
+
 }
 
 void CLDeferred::initializeCL()
@@ -69,6 +74,11 @@ void CLDeferred::initializeCL()
     fxaaDefines["LUMA_IN_ALPHA"]= "1";
     fxaaKernel= loadKernelPath(clCtx(), clDevice(), ":/kernels/fxaa.cl", "fxaa", fxaaDefines);
     if(!fxaaKernel)
+        debugFatal("Error loading kernel.");
+
+    // Load FXAA kernel with the pre-computed luma flag set
+    motionBlurKernel= loadKernelPath(clCtx(), clDevice(), ":/kernels/motionBlur.cl", "motionBlur");
+    if(!motionBlurKernel)
         debugFatal("Error loading kernel.");
 }
 
@@ -166,6 +176,14 @@ void CLDeferred::resizeGL(QSize size)
         clCtx(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, outputTexAA.textureId(), &error);
     if(clCheckError(error, "clCreateFromGLTexture2D"))
         debugFatal("Could not map output texture AA.");
+
+    outputTexMotionBlur.setSize(size);
+    outputTexMotionBlur.bind();
+    // This image could be WRITE_ONLY
+    outputImageMotionBlur= clCreateFromGLTexture2D(
+        clCtx(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, outputTexMotionBlur.textureId(), &error);
+    if(clCheckError(error, "clCreateFromGLTexture2D"))
+        debugFatal("Could not map output texture Motion Blur.");
 }
 
 void CLDeferred::renderGL()
@@ -226,6 +244,9 @@ void CLDeferred::renderGL()
     // Antialiasing
     antialiasPass();
     times << sceneTime.nsecsElapsed();
+
+    // Motion Blur
+    motionBlurPass();
 
     // Exposure compensation
     updateExposure();
@@ -298,7 +319,11 @@ void CLDeferred::acquireCLObjects()
 {
     acquiredBuffers.clear();
     acquiredBuffers << gBuffer.colorBuffers();
-    acquiredBuffers << outputImage << outputImageAA;
+    acquiredBuffers << outputImage;
+    if(enableAA)
+        acquiredBuffers << outputImageAA;
+    if(enableMotionBlur)
+        acquiredBuffers << outputImageMotionBlur;
     // The shadow map images of the lights don't have to be acquired/released
 
     cl_int error;
@@ -419,6 +444,26 @@ void CLDeferred::antialiasPass()
     clCheckError(clFinish(clQueue()), "clFinish");
 }
 
+void CLDeferred::motionBlurPass()
+{
+    if(!enableMotionBlur)
+        return;
+
+    cl_mem input= enableAA ? outputImageAA : outputImage;
+    cl_mem cameraStruct= scene.camera().structCL();
+    cl_mem depth= gBuffer.colorBuffers()[2];
+
+    int ai= 0;
+    clKernelArg(motionBlurKernel, ai++, input);
+    clKernelArg(motionBlurKernel, ai++, depth);
+    clKernelArg(motionBlurKernel, ai++, outputImageMotionBlur);
+    clKernelArg(motionBlurKernel, ai++, cameraStruct);
+    clLaunchKernelEvent(motionBlurKernel, clQueue(), gBuffer.size(), "MotionBlur");
+
+    // Sync
+    clCheckError(clFinish(clQueue()), "clFinish");
+}
+
 void CLDeferred::drawOutput()
 {
     glViewport(0, 0, width(), height());
@@ -426,10 +471,14 @@ void CLDeferred::drawOutput()
 
     outputProgram->bind();
 
-    if(enableAA)
-        outputTexAA.bind();
-    else
-        outputTex.bind();
+    if(enableMotionBlur) {
+        outputTexMotionBlur.bind();
+    } else {
+        if(enableAA)
+            outputTexAA.bind();
+        else
+            outputTex.bind();
+    }
 
     glBegin(GL_QUADS);
         glVertex2f(-1,-1);

@@ -22,6 +22,8 @@ private:
 
     cl_mem _clMem;
     cl_camera _clStruct;
+
+    QMatrix4x4 _lastVPMatrix;
 };
 
 #endif // CAMERACL_H

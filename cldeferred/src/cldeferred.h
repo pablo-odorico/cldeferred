@@ -40,6 +40,7 @@ private:
     void deferredPass();
     void bloomPass();
     void antialiasPass();
+    void motionBlurPass();
     void updateExposure();
     void releaseCLObjects();
     // Final stage (OpenGL)
@@ -53,6 +54,8 @@ private:
     cl_kernel deferredKernel;
     // CL Kernel for antialiasing the output texture
     cl_kernel fxaaKernel;
+	// CL Kernel used for motion blur
+	cl_kernel motionBlurKernel;
     // GL Program used to render outputTex
     QOpenGLShaderProgram* outputProgram;
 
@@ -73,8 +76,10 @@ private:
     // Output texture and mapped OpenCL Image
     QGLTexture2D outputTex;
     QGLTexture2D outputTexAA;
+    QGLTexture2D outputTexMotionBlur;
     cl_mem outputImage;
     cl_mem outputImageAA;
+    cl_mem outputImageMotionBlur;
 
     // Time metrics
     QElapsedTimer sceneTime;
@@ -85,6 +90,7 @@ private:
 
     // Misc
     bool enableAA;
+	bool enableMotionBlur;
     float dirLightAngle;
     QVector<cl_mem> acquiredBuffers;
 

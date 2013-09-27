@@ -37,8 +37,6 @@ void CameraCL::updateStructCL(cl_command_queue queue)
     memcpy(&_clStruct.projMatrixInv, projMatrixInv.transposed().data(), sizeof(cl_float16));
 
     QMatrix4x4 vpMatrix= _projMatrix * _viewMatrix;
-    memcpy(&_clStruct.vpMatrix, vpMatrix.transposed().data(), sizeof(cl_float16));
-
     QMatrix4x4 vpMatrixInv= vpMatrix.inverted();
     memcpy(&_clStruct.vpMatrixInv, vpMatrixInv.transposed().data(), sizeof(cl_float16));
 
@@ -50,6 +48,11 @@ void CameraCL::updateStructCL(cl_command_queue queue)
     _clStruct.lookVector.x= look.x();
     _clStruct.lookVector.y= look.y();
     _clStruct.lookVector.z= look.z();
+
+    // Motion blur matrix: (PrevProj * PrevView) * (InvView * InvProj)
+    QMatrix4x4 motionBlurMatrix= _lastVPMatrix * vpMatrixInv;
+    _lastVPMatrix= vpMatrix;
+    memcpy(&_clStruct.motionBlurMatrix, motionBlurMatrix.transposed().data(), sizeof(cl_float16));
 
     cl_int error;
     error= clEnqueueWriteBuffer(queue, _clMem, CL_FALSE, 0, sizeof(cl_camera),

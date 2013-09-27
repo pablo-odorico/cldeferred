@@ -33,16 +33,17 @@ kernel void motionBlur(
     const int maxSamples= 5;
 
     // The number of samples will depend on the displacement magnitude and the
-    // step magnitude
-    int samples= length(deltaPos)/step;
-    // ...but should be at least 1, and no greater that maxSamples
-    samples= clamp(samples, 1, maxSamples);
+    // step magnitude, but should be at least 1, and no greater that maxSamples
+    const float deltaLen= length(deltaPos);
+    const int samples= clamp(deltaLen/step, 1, maxSamples);
+    const float2 sampleStep= (deltaPos/deltaLen) * step;
 
-    //
+    // Sample "backwards" from the current position to the old one
     float2 samplePos= (float2)(pos.x + 0.5f, pos.y + 0.5f);
+    float3 color= (float3)(0);
     for(int i=0; i<samples; i++) {
         color += read_image3f(input, sampler, samplePos);
-        samplePos += i * (float2)(step);
+        samplePos -= sampleStep;
     }
     color /= samples;
 

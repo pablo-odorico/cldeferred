@@ -9,11 +9,9 @@ typedef struct //__attribute__ ((packed))
     cl_float16 viewMatrixInv;
     cl_float16 projMatrix;
     cl_float16 projMatrixInv;
-    cl_float16 vpMatrix;
-    cl_float16 vpMatrixInv;    // Inverted View Proj matrix
+    cl_float16 vpMatrixInv;      // Inverted View Proj matrix
 
-    // * InvView * InvProj
-    cl_float16 motionBlurMatrix;
+    cl_float16 motionBlurMatrix; // PrevProj * PrevView * InvView * InvProj
 
     cl_float3  position;
     cl_float3  lookVector;
