@@ -54,8 +54,8 @@ private:
     cl_kernel deferredKernel;
     // CL Kernel for antialiasing the output texture
     cl_kernel fxaaKernel;
-	// CL Kernel used for motion blur
-	cl_kernel motionBlurKernel;
+    // CL Kernel used for motion blur
+    cl_kernel motionBlurKernel;
     // GL Program used to render outputTex
     QOpenGLShaderProgram* outputProgram;
 
@@ -85,12 +85,9 @@ private:
     QElapsedTimer sceneTime;
     qint64 lastRenderTime;
 
-    int fpsFrameCount;
-    qint64 fpsLastTime;
-
     // Misc
     bool enableAA;
-	bool enableMotionBlur;
+    bool enableMotionBlur;
     bool doneMotionBlur;
     float dirLightAngle;
     QVector<cl_mem> acquiredBuffers;

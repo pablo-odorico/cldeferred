@@ -1,5 +1,11 @@
 #include "analytics.h"
 
+Analytics::Analytics() :
+    fpsFrameCount(0), fpsLastTime(0)
+{
+    _timer.start();
+}
+
 void Analytics::printTimes()
 {
     float clTimeSum= 0;
@@ -22,7 +28,7 @@ void Analytics::printTimes()
         clTimeSum += execTime;
 
         qDebug("Event '%s' time %.02f ms.", qPrintable(name), execTime);
-    }    
+    }
 
     float timeSum= 0;
     QHashIterator<QString, Event> j(_events);
@@ -37,7 +43,20 @@ void Analytics::printTimes()
         qDebug("Event '%s' time %.02f ms.", qPrintable(name), execTime);
     }
 
-    qDebug("clEvent Time: %.2f", clTimeSum);
-    qDebug("Event Time: %.2f", timeSum);
-    qDebug("Total Time: %.2f", clTimeSum + timeSum);
+    qDebug("MaxFPS: %.1f Hz.", 1000/_events["renderGL"].elapsedMSecs());
+}
+
+void Analytics::fpsUpdate()
+{
+    const qint64 now= nowNSecs();
+    const qint64 fpsElapsed= now - fpsLastTime;
+    if(fpsElapsed > 3e9) {
+        printTimes();
+        qDebug("FPS: %.1f Hz.", fpsFrameCount/(double)(fpsElapsed/1e9));
+
+        fpsLastTime= now;
+        fpsFrameCount= 0;
+    }
+
+    fpsFrameCount++;
 }

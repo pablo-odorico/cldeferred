@@ -262,11 +262,8 @@ void CLDeferred::renderToGBuffer()
     Analytics::EventTimer eventTimer("G-Buffer");
 
     gBuffer.bind();
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     scene.draw(firstPassProgram, Scene::MVPMatrix | Scene::ModelITMatrix);
-
     gBuffer.unbind();
 
     glFinish();

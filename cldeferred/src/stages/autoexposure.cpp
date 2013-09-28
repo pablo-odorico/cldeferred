@@ -78,8 +78,7 @@ void AutoExposure::update(cl_command_queue queue, cl_mem image)
     if(!clLaunchKernelEvent(_downKernel, queue, _lumaSize, "AE/Downsample"))
         return;
 
-    // Download image data and wait for the execution to be done (sync the queue)
-    bool setupCallback= analytics.clEventExists("AE/Download");
+    // Download image data
     cl_event& downloadEvent= analytics.clEvent("AE/Download");
 
     size_t origin[3]= { 0,0,0 };
@@ -89,10 +88,8 @@ void AutoExposure::update(cl_command_queue queue, cl_mem image)
     if(clCheckError(error, "clEnqueueReadImage"))
         return;
 
-    if(setupCallback) {
-        error= clSetEventCallback(downloadEvent, CL_COMPLETE, exposureCallback, (void*)this);
-        clCheckError(error, "clSetEventCallback");
-    }
+    error= clSetEventCallback(downloadEvent, CL_COMPLETE, exposureCallback, (void*)this);
+    clCheckError(error, "clSetEventCallback");
 
     // When the download is done, exposureCallback will be called
 }
