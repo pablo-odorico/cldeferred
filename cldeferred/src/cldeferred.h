@@ -46,10 +46,13 @@ private:
     // Final stage (OpenGL)
     void drawOutput();
 
-    // GL Program used to fill the gbuffer
-    QOpenGLShaderProgram* firstPassProgram;
-    // Light occlusion buffer, used to calculate shadows
+    // Some pipeline stages
+    AutoExposure autoExposure;
+    Bloom bloom;
     OcclusionBuffer occlusionBuffer;
+
+    // GL Program used to fill the gbuffer
+    QOpenGLShaderProgram* firstPassProgram;      
     // CL Kernel for the 2nd pass
     cl_kernel deferredKernel;
     // CL Kernel for antialiasing the output texture
@@ -91,10 +94,6 @@ private:
     bool doneMotionBlur;
     float dirLightAngle;
     QVector<cl_mem> acquiredBuffers;
-
-    // HDR, bloom and exposure
-    AutoExposure autoExposure;
-    Bloom bloom;
 };
 
 #endif // CLDEFERRED_H
