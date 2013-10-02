@@ -55,11 +55,48 @@ void CameraCL::updateStructCL(cl_command_queue queue)
     _lastVPMatrix= vpMatrix;
     memcpy(&_clStruct.motionBlurMatrix, motionBlurMatrix.transposed().data(), sizeof(cl_float16));
 
+    setDoFParams();
+
     cl_int error;
     error= clEnqueueWriteBuffer(queue, _clMem, CL_FALSE, 0, sizeof(cl_camera),
                              &_clStruct, 0, NULL, NULL);
 
     clCheckError(error, "Enqueue write struct");
+}
+
+float CameraCL::getZ(float wordUnits)
+{
+    const float z= -_far * _near / (wordUnits * (_far-_near) - _far);
+    return qBound(0.0f, z, 1.0f);
+}
+
+QPointF CameraCL::getLineParams(float x1, float y1, float x2, float y2)
+{
+    const float a= (y2-y1) / (x2-x1);
+    const float b= y1 - a * x1;
+    return QPointF(a, b);
+}
+
+void CameraCL::setDoFParams()
+{
+    _clStruct.cocNearFar.x= _nearCoC;
+    _clStruct.cocNearFar.y= _farCoC;
+
+    QPointF line1= getLineParams(getZ(_minClampDist), _nearCoc,
+                                 getZ(_focusDistance-_depthOfField/2), 0);
+    QPointF line2= getLineParams(getZ(_focusDistance+_depthOfField/2), 0,
+                                 getZ(_maxClampDist), _farCoC);
+    _clStruct.cocParams.x= line1.x();
+    _clStruct.cocParams.y= line1.y();
+    _clStruct.cocParams.z= line2.x();
+    _clStruct.cocParams.w= line2.y();
+
+    // The CoC in pixels is calculated as
+    // z= sample z from depth buffer
+    // f1= cocParams.x * z + cocParams.y
+    // f2= cocParams.z * z + cocParams.w
+    // coc= clamp(f1, 0, cocNearFar.x) + clamp(f2, 0, cocNearFar.y)
+    // coc *= screenHeight
 }
 
 cl_mem CameraCL::structCL()

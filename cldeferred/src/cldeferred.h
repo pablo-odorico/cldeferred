@@ -84,6 +84,9 @@ private:
     cl_mem outputImageAA;
     cl_mem outputImageMotionBlur;
 
+    // Depth of field
+    cl_mem cocImage;
+
     // Time metrics
     QElapsedTimer sceneTime;
     qint64 lastRenderTime;

@@ -5,6 +5,7 @@
 
     // If included from C++, get types from cl.h
     #include <CL/cl_platform.h>
+    #define cl_float    float
 
 #else
 #ifdef CL_VERSION_1_0

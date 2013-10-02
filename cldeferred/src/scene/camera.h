@@ -44,8 +44,17 @@ public:
 
     void move(float elapsedMsecs);
 
+    // Depth of Field
+    void setDoFParams(float focusDistance, float depthOfField,
+                      float minClampDist, float maxClampDist,
+                      float nearCoC, float farCoC);
+
 protected:
     void updateViewMatrix();
+
+    // Clipping planes
+    float _near;
+    float _far;
 
     float _pitch;
     float _yaw;
@@ -56,6 +65,14 @@ protected:
 
     QMatrix4x4 _viewMatrix;
     QMatrix4x4 _projMatrix;
+
+    // Depth of Field parameters (in world units)
+    float _focusDistance;
+    float _depthOfField; // DoF centered in focusDistance
+    float _minClampDist;
+    float _maxClampDist;
+    float _nearCoC; // In normalized screen height units
+    float _farCoC;  // In normalized screen height units
 };
 
 #endif // CAMERA_H

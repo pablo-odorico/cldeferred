@@ -11,7 +11,8 @@ const GLenum CLDeferred::depthTestFormat;
 CLDeferred::CLDeferred()
     : CLGLWindow(), firstPassProgram(0), outputProgram(0),
     enableAA(true), enableMotionBlur(true), doneMotionBlur(false),
-    dirLightAngle(90.0f)
+    dirLightAngle(90.0f),
+    cocImage(0)
 {
 }
 
@@ -182,6 +183,13 @@ void CLDeferred::resizeGL(QSize size)
         clCtx(), CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, outputTexMotionBlur.textureId(), &error);
     if(clCheckError(error, "clCreateFromGLTexture2D"))
         debugFatal("Could not map output texture Motion Blur.");
+
+
+    if(cocImage) clReleaseMemObject(cocImage);
+    cocImage= clCreateImage2D(context, CL_MEM_READ_WRITE, clFormatGL(GL_R),
+            size.width(), size.height(), 0, 0, &error);
+    if(clCheckError(error, "clCreateImage2D"))
+        debugFatal("Could not create COC image.");
 }
 
 void CLDeferred::renderGL()

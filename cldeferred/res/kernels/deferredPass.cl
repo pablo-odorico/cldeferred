@@ -50,6 +50,8 @@ void deferredPass(
     // LINEAR output image, values over 1.0f are considered bright and used for the
     // bloom efect
     write_only image2d_t output,
+    // Circle-of-Confusion output image, must be 8-bit
+    write_only image2d_t cocImage,
     // Scene: Camera, Lights and Materials
     // constant cl_material* materials,
     constant cl_camera* camera,
@@ -60,7 +62,7 @@ void deferredPass(
     int lightsWithShadows,
     // HDR
     float exposure,
-    float brightThres
+    float bloomThreshold
 )
 {
     // Get global position
@@ -155,7 +157,7 @@ void deferredPass(
     }
 
     // Tone mapping for HDR, values over 1.0f are "bright"
-    color= toneMap(color, exposure, brightThres);
+    color= toneMap(color, exposure, bloomThreshold);
 
     // Store LINEAR color value
     write_imagef(output, pos, (float4)(color, 1.0f));

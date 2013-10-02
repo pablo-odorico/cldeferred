@@ -2,7 +2,7 @@
 
 Camera::Camera()
     : _pitch(0), _yaw(0), _position(0,0,0),
-    _moveSpeed(1.0f), _movementFlags(0)
+      _moveSpeed(1.0f), _movementFlags(0), _near(0), _far(0)
 {
     updateViewMatrix();
     setPerspective(60.0f, 16.0f/9.0f, 0.01f, 100.0f);
@@ -18,12 +18,16 @@ void Camera::setPerspective(float verticalFOV, float aspectRatio, float near, fl
 {
     _projMatrix.setToIdentity();
     _projMatrix.perspective(verticalFOV, aspectRatio, near, far);
+    _near= near;
+    _far= far;
 }
 
 void Camera::setOrthoProjection(float left, float right, float bottom, float top, float near, float far)
 {
     _projMatrix.setToIdentity();
     _projMatrix.ortho(left, right, bottom, top, near, far);
+    _near= near;
+    _far= far;
 }
 
 QVector3D Camera::lookVector() const
@@ -86,4 +90,16 @@ void Camera::move(float elapsedMsecs)
     _position += elapsedMsecs/1e6d * _moveSpeed * moveDir;
 
     updateViewMatrix();
+}
+
+void Camera::setDoFParams(float focusDistance, float depthOfField,
+                          float minClampDist, float maxClampDist,
+                          float nearCoC, float farCoC)
+{
+    _focusDistance= focusDistance;
+    _depthOfField= depthOfField;
+    _minClampDist= minClampDist,
+    _maxClampDist= maxClampDist;
+    _nearCoC= nearCoC;
+    _farCoC= farCoC;
 }

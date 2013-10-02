@@ -22,6 +22,9 @@ public:
     bool vpMatrixChanged() { return _vpMatrixChanged; }
 
 private:
+    void setDoFParams();
+    float getZ(float wordUnits); // Returns the Z-Buffer value
+
     bool _initialized;
 
     cl_mem _clMem;

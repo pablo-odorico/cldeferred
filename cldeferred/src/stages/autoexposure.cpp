@@ -43,7 +43,7 @@ bool AutoExposure::init(cl_context context, cl_device_id device, QSize computeSi
     }
 
     cl_int error;
-    // This image could be WRITE_ONLY
+    // This image could be WRITE_ONLY, READ_WRITE is used for debugging purposes
     _lumaImage= clCreateImage2D(context, CL_MEM_READ_WRITE, clFormatGL(GL_R),
             _lumaSize.width(), _lumaSize.height(), 0, 0, &error);
     if(clCheckError(error, "clCreateImage2D")) {
